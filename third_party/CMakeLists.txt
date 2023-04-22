@@ -13,7 +13,7 @@ target_include_directories(glm INTERFACE glm)
 add_definitions(-DVK_NO_PROTOTYPES)
 add_library(imgui STATIC)
 
-target_include_directories(imgui PUBLIC imgui glfw imgui/backends)
+target_include_directories(imgui PUBLIC imgui imgui/backends)
 
 target_sources(imgui PRIVATE 
     imgui/imgui.h
