@@ -1,8 +1,8 @@
 [submodule "third_party/imgui"]
-    path = ./third_party/imgui
+    path = third_party/imgui
     url = https://github.com/ocornut/imgui.git
 [submodule "third_party/stb"]
-    path = ./third_party/stb
+    path = third_party/stb
     url = https://github.com/nothings/stb.git
 [submodule "third_party/volk"]
 	path = third_party/volk
@@ -14,5 +14,5 @@
 	path = third_party/vma
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
 [submodule "third_party/assimp"]
-    path = third/assimp
+    path = third_party/assimp
     url = https://github.com/assimp/assimp.git
