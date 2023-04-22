@@ -73,7 +73,7 @@ VulkanPhysicalDevice& VulkanInstance::getSuitableGPU(VkSurfaceKHR surface, const
     }
 
     // Check if the best candidate is suitable at all
-    if (candidates.rbegin()->first > 0) {
+    if (!candidates.empty() && candidates.rbegin()->first > 0) {
         return **candidates.rbegin()->second;
     }
     else {

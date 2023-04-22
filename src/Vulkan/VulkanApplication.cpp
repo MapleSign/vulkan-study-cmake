@@ -79,16 +79,14 @@ VulkanApplication::VulkanApplication():
     );
 
     std::vector<ObjDesc> objDescs{ renderMeshes.size() };
-    std::transform(renderMeshes.begin(), renderMeshes.end(), objDescs.begin(),
-        [&](const auto& pair) { 
-            ObjDesc od;
-            auto& mesh = resManager->getRenderMesh(pair.second);
-            od.vertexAddress = getBufferDeviceAddress(device->getHandle(), mesh.vertexBuffer.buffer);
-            od.indexAddress = getBufferDeviceAddress(device->getHandle(), mesh.indexBuffer.buffer);
-            od.materialAddress = getBufferDeviceAddress(device->getHandle(), mesh.matBuffer.buffer);
-            od.materialIndexAddress = getBufferDeviceAddress(device->getHandle(), mesh.matIndicesBuffer.buffer);
-            return od;
-        });
+    for (const auto& pair : renderMeshes) {
+        auto& od = objDescs[pair.second];
+        auto& mesh = resManager->getRenderMesh(pair.second);
+        od.vertexAddress = getBufferDeviceAddress(device->getHandle(), mesh.vertexBuffer.buffer);
+        od.indexAddress = getBufferDeviceAddress(device->getHandle(), mesh.indexBuffer.buffer);
+        od.materialAddress = getBufferDeviceAddress(device->getHandle(), mesh.matBuffer.buffer);
+        od.materialIndexAddress = getBufferDeviceAddress(device->getHandle(), mesh.matIndicesBuffer.buffer);
+    }
     auto& objDescBuffer = resManager->requireBufferWithData(objDescs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
@@ -306,6 +304,7 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentImage)
     ubo.view = view;
     ubo.proj = glm::perspective(glm::radians(45.0f), (float)extent.width / (float)extent.height, 0.1f, 100.0f);
     ubo.proj[1][1] *= -1;
+    globalData.uniformBuffers[currentImage][0]->update(&ubo, sizeof(ubo));
 
     auto& buffer = globalData.uniformBuffers[currentImage][1];
     void* bufferData;

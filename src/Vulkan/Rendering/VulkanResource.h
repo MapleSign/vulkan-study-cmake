@@ -33,7 +33,7 @@ struct ObjectData {
 };
 
 struct SceneData {
-    VulkanDescriptorPool* descriptorPool;
+    VulkanDescriptorPool* descriptorPool{ nullptr };
     std::vector<VulkanDescriptorSet*> descriptorSets;
     std::vector<std::vector<VulkanBuffer*>> uniformBuffers;
 
