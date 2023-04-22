@@ -121,7 +121,7 @@ void Model::processMesh(aiMesh* mesh, const aiScene* scene)
         std::vector<Texture> specularMaps = loadMaterialTextures(material,
             aiTextureType_SPECULAR, TextureType::SPECULAR);
         if (specularMaps.empty())
-            textures.emplace_back(TextureType::SPECULAR, "textures/black.jpg");
+            textures.push_back({ TextureType::SPECULAR, "assets/textures/black.jpg" });
         else
             textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 

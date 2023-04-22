@@ -30,7 +30,7 @@ VulkanApplication::VulkanApplication():
     resManager = std::make_unique<VulkanResourceManager>(*device, device->getCommandPool());
 
     scene = std::make_unique<Scene>();
-    scene->addModel("nanosuit", "models/nanosuit/nanosuit.obj");
+    scene->addModel("nanosuit", "assets/models/nanosuit/nanosuit.obj");
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
     scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
 
@@ -39,7 +39,7 @@ VulkanApplication::VulkanApplication():
         for (auto& mesh : model->getMeshes()) {
             std::vector<RenderTexture> textures;
             for (const auto& texture : mesh.textures) {
-                textures.emplace_back(texture.path.c_str(), sampler);
+                textures.push_back({ texture.path.c_str(), sampler });
             }
 
             renderMeshes.emplace(
@@ -51,12 +51,12 @@ VulkanApplication::VulkanApplication():
 
     renderContext = std::make_unique<VulkanRenderContext>(*device, surface, window->getExtent(), threadCount);
 
-    auto vertShader = resManager->createShaderModule("shaders/spv/vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
+    auto vertShader = resManager->createShaderModule("shaders/spv/shader.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
     vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
     vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
 
-    auto fragShader = resManager->createShaderModule("shaders/spv/frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+    auto fragShader = resManager->createShaderModule("shaders/spv/shader.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
     fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
 
     fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
@@ -260,8 +260,9 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
         auto& renderMesh = resManager->getRenderMesh(id);
         pushConstants.objId = id;
 
-        vkCmdPushConstants(commandBuffer.getHandle(), renderPipeline->getPipelineLayout().getHandle(),
-            VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstantRaster), &pushConstants);
+        const auto& pipelineLayout = renderPipeline->getPipelineLayout();
+        vkCmdPushConstants(commandBuffer.getHandle(), pipelineLayout.getHandle(),
+            pipelineLayout.getPushConstantRanges()[0].stageFlags, 0, sizeof(PushConstantRaster), &pushConstants);
 
         vkCmdBindVertexBuffers(commandBuffer.getHandle(), 0, 1, &renderMesh.vertexBuffer.buffer, &renderMesh.vertexBuffer.offset);
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Vulkan/VulkanCommon.h"
-#include "Vulkan/VulkanResource.h"
+#include "Vulkan/Rendering/VulkanResource.h"
 
 #include "Vertex.h"
 #include "Texture.h"

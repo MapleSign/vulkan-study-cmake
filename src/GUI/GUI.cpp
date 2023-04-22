@@ -37,6 +37,13 @@ GUI::GUI(const VulkanInstance& instance, const GlfwWindow& window, const VulkanD
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
+    ImGui_ImplVulkan_LoadFunctions(
+        [](const char* name, void* data) {
+            return vkGetInstanceProcAddr(reinterpret_cast<VulkanInstance*>(data)->getHandle(), name);
+        }, 
+        const_cast<VulkanInstance*>(&instance)
+    );
+
     ImGui_ImplVulkan_InitInfo init_info{};
     init_info.Instance = instance.getHandle();
     init_info.PhysicalDevice = device.getGPU().getHandle();

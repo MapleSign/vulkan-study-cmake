@@ -9,12 +9,14 @@
 VulkanPipelineLayout::VulkanPipelineLayout(const VulkanDevice& device,
     const std::vector<std::unique_ptr<VulkanDescriptorSetLayout>>& descriptorSetLayouts,
     const std::vector<VkPushConstantRange>& pushConstantRanges) :
-    device{ device }
+    device{ device }, pushConstantRanges{ pushConstantRanges }
 {
     std::vector<VkDescriptorSetLayout> descriptorSetLayoutHandles{};
     descriptorSetLayoutHandles.reserve(descriptorSetLayouts.size());
-    for (const auto& dsl : descriptorSetLayouts)
+    for (const auto& dsl : descriptorSetLayouts) {
+        this->descriptorSetLayouts.push_back(dsl.get());
         descriptorSetLayoutHandles.push_back(dsl->getHandle());
+    }
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -35,3 +37,8 @@ VulkanPipelineLayout::~VulkanPipelineLayout() {
 }
 
 VkPipelineLayout VulkanPipelineLayout::getHandle() const { return pipelineLayout; }
+
+const std::vector<VkPushConstantRange>& VulkanPipelineLayout::getPushConstantRanges() const
+{
+    return pushConstantRanges;
+}

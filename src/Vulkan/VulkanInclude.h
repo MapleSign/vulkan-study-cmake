@@ -8,7 +8,7 @@
 #include "VulkanSwapChain.h"
 #include "VulkanImage.h"
 #include "VulkanImageView.h"
-#include "VulkanRenderContext.h"
+#include "Rendering/VulkanRenderContext.h"
 #include "VulkanGraphicsPipeline.h"
 #include "VulkanPipelineLayout.h"
 #include "VulkanTexture.h"
@@ -18,9 +18,9 @@
 #include "VulkanDescriptorSetLayout.h"
 #include "VulkanDescriptorPool.h"
 #include "VulkanDescriptorSet.h"
-#include "VulkanRenderPipeline.h"
-#include "VulkanResource.h"
-#include "VulkanRayTracingBuilder.h"
+#include "Rendering/VulkanRenderPipeline.h"
+#include "Rendering/VulkanResource.h"
+#include "Rendering/VulkanRayTracingBuilder.h"
 #include "VulkanRayTracingPipeline.h"
 
 class VulkanInstance;

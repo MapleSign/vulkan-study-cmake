@@ -13,8 +13,12 @@ public:
 	~VulkanPipelineLayout();
 
 	VkPipelineLayout getHandle() const;
+	const std::vector<VkPushConstantRange>& getPushConstantRanges() const;
 
 private:
 	const VulkanDevice& device;
+	std::vector<VulkanDescriptorSetLayout*> descriptorSetLayouts;
+	std::vector<VkPushConstantRange> pushConstantRanges;
+
     VkPipelineLayout pipelineLayout;
 };

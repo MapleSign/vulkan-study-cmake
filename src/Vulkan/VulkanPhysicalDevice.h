@@ -47,11 +47,11 @@ public:
 private:
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
-	VkPhysicalDeviceProperties properties;
-	VkPhysicalDeviceFeatures features;
+	VkPhysicalDeviceProperties properties{};
+	VkPhysicalDeviceFeatures features{};
 
-	VkPhysicalDeviceRayTracingPipelinePropertiesKHR rtProperties;
-	VkPhysicalDeviceProperties2 properties2;
+	VkPhysicalDeviceRayTracingPipelinePropertiesKHR rtProperties{};
+	VkPhysicalDeviceProperties2 properties2{};
 
 	std::vector<VkQueueFamilyProperties> queueFamilies;
 	std::vector<VkExtensionProperties> extensions;

@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-#include <Volk/volk.h>
+#include <volk.h>
 
 #include <stdexcept>
 #include <vector>

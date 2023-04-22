@@ -1,13 +1,48 @@
 set(ENGINE_FILES 
+    Camera.h
+    Mesh.h
+    Model.h
+    Scene.h
+    Vertex.h
+
     Camera.cpp
-    main.cpp
     Mesh.cpp
     Model.cpp
     Scene.cpp
     Vertex.cpp
+    
+    main.cpp
 )
 
 set(VULKAN_FRAMEWORK_FILES 
+    ./Vulkan/VulkanApplication.h
+    ./Vulkan/VulkanBuffer.h
+    ./Vulkan/VulkanCommandBuffer.h
+    ./Vulkan/VulkanCommandPool.h
+    ./Vulkan/VulkanCommon.h
+    ./Vulkan/VulkanDescriptorPool.h
+    ./Vulkan/VulkanDescriptorSet.h
+    ./Vulkan/VulkanDescriptorSetLayout.h
+    ./Vulkan/VulkanDevice.h
+    ./Vulkan/VulkanFence.h
+    ./Vulkan/VulkanFrameBuffer.h
+    ./Vulkan/VulkanGraphicsPipeline.h
+    ./Vulkan/VulkanImage.h
+    ./Vulkan/VulkanImageView.h
+    ./Vulkan/VulkanInclude.h
+    ./Vulkan/VulkanInstance.h
+    ./Vulkan/VulkanPhysicalDevice.h
+    ./Vulkan/VulkanPipeline.h
+    ./Vulkan/VulkanPipelineLayout.h
+    ./Vulkan/VulkanQueue.h
+    ./Vulkan/VulkanRayTracingPipeline.h
+    ./Vulkan/VulkanRenderPass.h
+    ./Vulkan/VulkanRenderTarget.h
+    ./Vulkan/VulkanSemaphore.h
+    ./Vulkan/VulkanShaderModule.h
+    ./Vulkan/VulkanSwapChain.h
+    ./Vulkan/VulkanTexture.h
+
     ./Vulkan/VulkanApplication.cpp
     ./Vulkan/VulkanBuffer.cpp
     ./Vulkan/VulkanCommandBuffer.cpp
@@ -37,43 +72,34 @@ set(VULKAN_FRAMEWORK_FILES
 )
 
 set(RENDERING_FILES 
-    ./Vulkan/Rendering/VulkanApplication.cpp
-    ./Vulkan/Rendering/VulkanBuffer.cpp
-    ./Vulkan/Rendering/VulkanCommandBuffer.cpp
-    ./Vulkan/Rendering/VulkanCommandPool.cpp
-    ./Vulkan/Rendering/VulkanCommon.cpp
-    ./Vulkan/Rendering/VulkanDescriptorPool.cpp
-    ./Vulkan/Rendering/VulkanDescriptorSet.cpp
-    ./Vulkan/Rendering/VulkanDescriptorSetLayout.cpp
-    ./Vulkan/Rendering/VulkanDevice.cpp
-    ./Vulkan/Rendering/VulkanFence.cpp
-    ./Vulkan/Rendering/VulkanFrameBuffer.cpp
-    ./Vulkan/Rendering/VulkanGraphicsPipeline.cpp
-    ./Vulkan/Rendering/VulkanImage.cpp
-    ./Vulkan/Rendering/VulkanImageView.cpp
-    ./Vulkan/Rendering/VulkanInstance.cpp
-    ./Vulkan/Rendering/VulkanPhysicalDevice.cpp
-    ./Vulkan/Rendering/VulkanPipeline.cpp
-    ./Vulkan/Rendering/VulkanPipelineLayout.cpp
-    ./Vulkan/Rendering/VulkanQueue.cpp
-    ./Vulkan/Rendering/VulkanRayTracingPipeline.cpp
-    ./Vulkan/Rendering/VulkanRenderPass.cpp
-    ./Vulkan/Rendering/VulkanRenderTarget.cpp
-    ./Vulkan/Rendering/VulkanSemaphore.cpp
-    ./Vulkan/Rendering/VulkanShaderModule.cpp
-    ./Vulkan/Rendering/VulkanSwapChain.cpp
-    ./Vulkan/Rendering/VulkanTexture.cpp
+    ./Vulkan/Rendering/VulkanRayTracingBuilder.h
+    ./Vulkan/Rendering/VulkanRenderContext.h
+    ./Vulkan/Rendering/VulkanRenderFrame.h
+    ./Vulkan/Rendering/VulkanRenderPipeline.h
+    ./Vulkan/Rendering/VulkanResource.h
+
+    ./Vulkan/Rendering/VulkanRayTracingBuilder.cpp
+    ./Vulkan/Rendering/VulkanRenderContext.cpp
+    ./Vulkan/Rendering/VulkanRenderFrame.cpp
+    ./Vulkan/Rendering/VulkanRenderPipeline.cpp
+    ./Vulkan/Rendering/VulkanResource.cpp
 )
 
 set(PLATFORM_FILES 
+    ./Platform/GlfwWindow.h
+
     ./Platform/GlfwWindow.cpp
 )
 
 set(GUI_FILES 
+    ./GUI/GUI.h
+
     ./GUI/GUI.cpp
 )
 
 set(COMPONENT_FILES 
+    ./Component/TransformComponent.h
+
     ./Component/TransformComponent.cpp
 )
 
@@ -87,11 +113,15 @@ add_executable(vulkan_study
     ${COMPONENT_FILES}
 )
 
-set_property(TARGET vulkan_study PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:vulkan_study>")
+# set_property(TARGET vulkan_study PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:vulkan_study>")
+set_property(TARGET vulkan_study PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
 
-target_include_directories(vulkan_study PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-target_link_libraries(vulkan_study vkbootstrap vma glm tinyobjloader imgui stb_image)
+target_include_directories(vulkan_study PUBLIC 
+    "${CMAKE_CURRENT_SOURCE_DIR}" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan"
+)
+target_link_libraries(vulkan_study vma glm imgui stb volk)
 
-target_link_libraries(vulkan_study Vulkan::Vulkan sdl2)
+target_link_libraries(vulkan_study Vulkan::Vulkan glfw assimp::assimp)
 
 add_dependencies(vulkan_study Shaders)

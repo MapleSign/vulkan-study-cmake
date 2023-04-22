@@ -5,8 +5,8 @@
 #include <map>
 #include <unordered_set>
 
-#include "../Vertex.h"
-#include "../Light.h"
+#include "Vertex.h"
+#include "Light.h"
 
 #include "VulkanCommon.h"
 #include "VulkanDescriptorSet.h"
@@ -148,7 +148,7 @@ public:
     const std::vector<std::unique_ptr<VulkanTexture>>& getTextures() const;
     size_t getTextureNum() const;
 
-    constexpr RenderMesh& getRenderMesh(RenderMeshID id) {
+    inline RenderMesh& getRenderMesh(RenderMeshID id) {
         return meshes[id];
     };
 
