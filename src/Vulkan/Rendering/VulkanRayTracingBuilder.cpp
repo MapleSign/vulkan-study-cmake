@@ -10,7 +10,8 @@ VulkanRayTracingBuilder::~VulkanRayTracingBuilder()
 {
 }
 
-void VulkanRayTracingBuilder::createRayTracingPipeline(const std::vector<VulkanShaderModule>& rtShaders)
+void VulkanRayTracingBuilder::createRayTracingPipeline(
+	const std::vector<VulkanShaderModule>& rtShaders, VulkanDescriptorSetLayout& globalDescSetLayout)
 {
 	std::vector<VulkanShaderResource> shaderResources{};
 	for (const auto& shader : rtShaders) {
@@ -66,6 +67,100 @@ void VulkanRayTracingBuilder::createRayTracingPipeline(const std::vector<VulkanS
 	group.generalShader = VK_SHADER_UNUSED_KHR;
 	group.closestHitShader = VulkanRayTracingPipeline::ClosestHit;
 	rtShaderGroups.push_back(group);
+
+	std::vector<VkPipelineShaderStageCreateInfo> stageInfos;
+	for (const auto& s : rtShaders) {
+		stageInfos.push_back(s.getShaderStageInfo());
+	}
+
+	std::vector<VulkanDescriptorSetLayout*> setLayouts;
+	for (auto& [setIndex, rtSetLayout] : rtDescriptorSetLayouts) {
+		setLayouts.push_back(rtSetLayout.get());
+	}
+	setLayouts.push_back(&globalDescSetLayout);
+	rtPipelineLayout = std::make_unique<VulkanPipelineLayout>(device, setLayouts, pushConstantRanges);
+
+	VulkanRTPipelineState state{};
+	state.groupInfos = rtShaderGroups;
+	state.stageInfos = stageInfos;
+	state.pipelineLayout = rtPipelineLayout.get();
+	rtPipeline = std::make_unique<VulkanRayTracingPipeline>(device, state);
+}
+
+void VulkanRayTracingBuilder::createRtShaderBindingTable()
+{
+	auto rtProperties = device.getGPU().getRTProperties();
+	uint32_t missCount{ 1 };
+	uint32_t hitCount{ 1 };
+	auto handleCount = 1 + missCount + hitCount;
+	uint32_t handleSize = rtProperties.shaderGroupHandleSize;
+
+	uint32_t handleSizeAligned = alignUp(handleSize, rtProperties.shaderGroupHandleAlignment);
+
+	rgenRegion.stride = alignUp(handleSizeAligned, rtProperties.shaderGroupBaseAlignment);
+	rgenRegion.size = rgenRegion.stride;  // The size member of pRayGenShaderBindingTable must be equal to its stride member
+	missRegion.stride = handleSizeAligned;
+	missRegion.size = alignUp(missCount * handleSizeAligned, rtProperties.shaderGroupBaseAlignment);
+	hitRegion.stride = handleSizeAligned;
+	hitRegion.size = alignUp(hitCount * handleSizeAligned, rtProperties.shaderGroupBaseAlignment);
+
+	// Get the shader group handles
+	uint32_t dataSize = handleCount * handleSize;
+	std::vector<uint8_t> handles(dataSize);
+	VK_CHECK(vkGetRayTracingShaderGroupHandlesKHR(device.getHandle(), rtPipeline->getHandle(), 0, handleCount, dataSize, handles.data()));
+
+	// Allocate a buffer for storing the SBT.
+	VkDeviceSize sbtSize = rgenRegion.size + missRegion.size + hitRegion.size + callRegion.size;
+	rtSBTBuffer = &resManager.requireBuffer(sbtSize,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+		| VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	VkDeviceAddress sbtAddress = getBufferDeviceAddress(device.getHandle(), rtSBTBuffer->getHandle());
+	rgenRegion.deviceAddress = sbtAddress;
+	missRegion.deviceAddress = sbtAddress + rgenRegion.size;
+	hitRegion.deviceAddress = sbtAddress + rgenRegion.size + missRegion.size;
+
+	// Helper to retrieve the handle data
+	auto getHandle = [&](int i) { return handles.data() + i * handleSize; };
+
+	// Map the SBT buffer and write in the handles.
+	auto* pSBTBuffer = rtSBTBuffer->map();
+	uint8_t* pData{ nullptr };
+	uint32_t handleIdx{ 0 };
+
+	// Raygen
+	pData = pSBTBuffer;
+	memcpy(pData, getHandle(handleIdx++), handleSize);
+
+	// Miss
+	pData = pSBTBuffer + rgenRegion.size;
+	for (uint32_t c = 0; c < missCount; c++)
+	{
+		memcpy(pData, getHandle(handleIdx++), handleSize);
+		pData += missRegion.stride;
+	}
+
+	// Hit
+	pData = pSBTBuffer + rgenRegion.size + missRegion.size;
+	for (uint32_t c = 0; c < hitCount; c++)
+	{
+		memcpy(pData, getHandle(handleIdx++), handleSize);
+		pData += hitRegion.stride;
+	}
+
+	rtSBTBuffer->unmap();
+}
+
+void VulkanRayTracingBuilder::raytrace(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const PushConstantRayTracing& pcRay)
+{
+	std::vector<VkDescriptorSet> descSets{ rtDescriptorSet->getHandle(), globalSet.getHandle() };
+	vkCmdBindPipeline(cmdBuf.getHandle(), rtPipeline->getBindPoint(), rtPipeline->getHandle());
+	vkCmdBindDescriptorSets(cmdBuf.getHandle(), rtPipeline->getBindPoint(), rtPipelineLayout->getHandle(), 0,
+		toU32(descSets.size()), descSets.data(), 0, nullptr);
+	auto pcRange = rtPipelineLayout->getPushConstantRanges()[0];
+	vkCmdPushConstants(cmdBuf.getHandle(), rtPipelineLayout->getHandle(),
+		pcRange.stageFlags, pcRange.offset, pcRange.size, &pcRay);
 }
 
 void VulkanRayTracingBuilder::buildBlas(const std::vector<BlasInput>& input, VkBuildAccelerationStructureFlagsKHR flags)

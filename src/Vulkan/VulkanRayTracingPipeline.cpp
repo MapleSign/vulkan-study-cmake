@@ -2,28 +2,23 @@
 
 #include <array>
 
-VulkanRayTracingPipeline::VulkanRayTracingPipeline(const VulkanDevice& device) :
-	device{ device }
+VulkanRayTracingPipeline::VulkanRayTracingPipeline(const VulkanDevice& device, const VulkanRTPipelineState& pipelineState) :
+	VulkanPipeline{}, device{ device }, state{ pipelineState }
 {
-	//// All stages
-	//std::array<VkPipelineShaderStageCreateInfo, ShaderGroupCount> stages{};
+	bindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
 
-	//VkPipelineShaderStageCreateInfo stage{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-	//stage.pName = "main";  // All the same entry point
-	//// Raygen
-	//stage.module = nvvk::createShaderModule(device.getHandle(), nvh::loadFile("spv/raytrace.rgen.spv", true, defaultSearchPaths, true));
-	//stage.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-	//stages[eRaygen] = stage;
-	//// Miss
-	//stage.module = nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytrace.rmiss.spv", true, defaultSearchPaths, true));
-	//stage.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
-	//stages[eMiss] = stage;
-	//// Hit Group - Closest Hit
-	//stage.module = nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytrace.rchit.spv", true, defaultSearchPaths, true));
-	//stage.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-	//stages[eClosestHit] = stage;
+	VkRayTracingPipelineCreateInfoKHR rtPipelineCreateInfo{ VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR };
+	rtPipelineCreateInfo.stageCount = toU32(pipelineState.stageInfos.size());
+	rtPipelineCreateInfo.pStages = pipelineState.stageInfos.data();
+	rtPipelineCreateInfo.groupCount = toU32(pipelineState.groupInfos.size());
+	rtPipelineCreateInfo.pGroups = pipelineState.groupInfos.data();
+	rtPipelineCreateInfo.layout = pipelineState.pipelineLayout->getHandle();
+	rtPipelineCreateInfo.maxPipelineRayRecursionDepth = pipelineState.maxPipelineRayRecursionDepth;
+
+	VK_CHECK(vkCreateRayTracingPipelinesKHR(device.getHandle(), {}, {}, 1, &rtPipelineCreateInfo, nullptr, &pipeline));
 }
 
 VulkanRayTracingPipeline::~VulkanRayTracingPipeline()
 {
+	vkDestroyPipeline(device.getHandle(), pipeline, nullptr);
 }

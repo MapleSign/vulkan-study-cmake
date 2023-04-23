@@ -12,7 +12,7 @@ public:
 
     ~VulkanBuffer();
 
-    void map(void*& target);
+    uint8_t* map();
     void unmap();
     void update(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
 

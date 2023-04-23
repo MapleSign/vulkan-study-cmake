@@ -58,20 +58,22 @@ VulkanBuffer::~VulkanBuffer()
     }
 }
 
-void VulkanBuffer::map(void*& target)
+uint8_t* VulkanBuffer::map()
 {
-    vkMapMemory(device.getHandle(), memory, this->offset, this->size, 0, &target);
+    vkMapMemory(device.getHandle(), memory, this->offset, this->size, 0, &mappedData);
+    return reinterpret_cast<uint8_t*>(mappedData);
 }
 
 void VulkanBuffer::unmap()
 {
+    assert(mappedData != nullptr);
     vkUnmapMemory(device.getHandle(), memory);
 }
 
 void VulkanBuffer::update(const void *data, VkDeviceSize size, VkDeviceSize offset)
 {
-    map(mappedData);
-    memcpy(reinterpret_cast<uint8_t *>(mappedData) + offset, data, static_cast<size_t>(size));
+    auto* mdata = map();
+    memcpy(reinterpret_cast<uint8_t *>(mdata) + offset, data, static_cast<size_t>(size));
     unmap();
 }
 

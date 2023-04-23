@@ -44,3 +44,8 @@ constexpr bool hasFlag(VkFlags item, VkFlags flag)
 }
 
 VkTransformMatrixKHR toTransformMatrixKHR(glm::mat4 matrix);
+
+constexpr uint32_t alignUp(uint32_t size, uint32_t alignment)
+{
+    return (size + alignment - 1) & ~(alignment - 1);
+}

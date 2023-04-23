@@ -3,6 +3,7 @@
 #include "VulkanCommon.h"
 #include "VulkanDevice.h"
 #include "VulkanResource.h"
+#include "VulkanPipelineLayout.h"
 #include "VulkanRayTracingPipeline.h"
 
 struct BuildAccelerationStructure
@@ -15,13 +16,23 @@ struct BuildAccelerationStructure
 	VulkanAccelerationStructure cleanupAS;
 };
 
+struct PushConstantRayTracing {
+	glm::vec4 clearColor;
+	glm::vec3 lightPosition;
+	float lightIntensity;
+	int lightType;
+};
+
 class VulkanRayTracingBuilder
 {
 public:
 	VulkanRayTracingBuilder(const VulkanDevice& device, VulkanResourceManager& resManager, const VulkanImageView& offscreenColor);
 	~VulkanRayTracingBuilder();
 
-	void createRayTracingPipeline(const std::vector<VulkanShaderModule>& rtShaders);
+	void createRayTracingPipeline(const std::vector<VulkanShaderModule>& rtShaders, VulkanDescriptorSetLayout& globalDescSetLayout);
+	void createRtShaderBindingTable();
+
+	void raytrace(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const PushConstantRayTracing& pcRay);
 
 	void buildBlas(const std::vector<BlasInput>& input, VkBuildAccelerationStructureFlagsKHR flags);
 
@@ -65,4 +76,13 @@ private:
 
 	std::unique_ptr<VulkanDescriptorSet> rtDescriptorSet;
 	std::vector<VkRayTracingShaderGroupCreateInfoKHR> rtShaderGroups;
+
+	std::unique_ptr<VulkanPipelineLayout> rtPipelineLayout;
+	std::unique_ptr<VulkanRayTracingPipeline> rtPipeline;
+
+	VulkanBuffer* rtSBTBuffer;
+	VkStridedDeviceAddressRegionKHR rgenRegion{};
+	VkStridedDeviceAddressRegionKHR missRegion{};
+	VkStridedDeviceAddressRegionKHR hitRegion{};
+	VkStridedDeviceAddressRegionKHR callRegion{};
 };

@@ -42,7 +42,10 @@ VulkanRenderPipeline::VulkanRenderPipeline(const VulkanDevice& device, VulkanSha
         descriptorSetLayouts.emplace_back(new VulkanDescriptorSetLayout(device, setIndex, setResources));
     }
 
-    pipelineLayout = std::make_unique<VulkanPipelineLayout>(device, descriptorSetLayouts, pushConstantRanges);
+    std::vector<VulkanDescriptorSetLayout*> descSetLayoutPointers{ descriptorSetLayouts.size() };
+    std::transform(descriptorSetLayouts.begin(), descriptorSetLayouts.end(), descSetLayoutPointers.begin(),
+        [](auto& dsl) { return dsl.get(); });
+    pipelineLayout = std::make_unique<VulkanPipelineLayout>(device, descSetLayoutPointers, pushConstantRanges);
 
     recreatePipeline(extent, renderPass);
 }

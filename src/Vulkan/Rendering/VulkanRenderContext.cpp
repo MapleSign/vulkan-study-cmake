@@ -22,7 +22,8 @@ VulkanRenderContext::VulkanRenderContext(VulkanDevice& device, VkSurfaceKHR surf
 		frameSyncObjects.emplace_back(device);
 	}
 
-	recreateSwapChain(extent);
+	if (surface != VK_NULL_HANDLE)
+		recreateSwapChain(extent);
 }
 
 VulkanRenderContext::~VulkanRenderContext() {

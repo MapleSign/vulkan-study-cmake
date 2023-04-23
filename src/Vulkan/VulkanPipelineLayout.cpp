@@ -7,14 +7,14 @@
 #include "VulkanPipelineLayout.h"
 
 VulkanPipelineLayout::VulkanPipelineLayout(const VulkanDevice& device,
-    const std::vector<std::unique_ptr<VulkanDescriptorSetLayout>>& descriptorSetLayouts,
+    const std::vector<VulkanDescriptorSetLayout*>& descriptorSetLayouts,
     const std::vector<VkPushConstantRange>& pushConstantRanges) :
     device{ device }, pushConstantRanges{ pushConstantRanges }
 {
     std::vector<VkDescriptorSetLayout> descriptorSetLayoutHandles{};
     descriptorSetLayoutHandles.reserve(descriptorSetLayouts.size());
     for (const auto& dsl : descriptorSetLayouts) {
-        this->descriptorSetLayouts.push_back(dsl.get());
+        this->descriptorSetLayouts.push_back(dsl);
         descriptorSetLayoutHandles.push_back(dsl->getHandle());
     }
 

@@ -108,47 +108,7 @@ VulkanApplication::VulkanApplication():
     ); 
     lightData.update();
 
-    //rtBuilder = std::make_unique<VulkanRayTracingBuilder>(device);
-
-    //// BLAS - Storing each primitive in a geometry
-    //std::vector<BlasInput> allBlas;
-    //allBlas.reserve(renderMeshes.size());
-    //for (const auto& [p_mesh, id] : renderMeshes)
-    //{
-    //    auto blas = resManager->requireBlasInput(resManager->getRenderMesh(id));
-
-    //    // We could add more geometry in each BLAS, but we add only one for now
-    //    allBlas.emplace_back(blas);
-    //}
-    //rtBuilder->buildBlas(allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
-
-    //// TLAS
-    //std::vector<VkAccelerationStructureInstanceKHR> tlas;
-    //tlas.reserve(renderMeshes.size());
-    //uint32_t i = 0;
-    //for (const auto& [p_mesh, id] : renderMeshes)
-    //{
-    //    VkAccelerationStructureInstanceKHR rayInst{};
-    //    rayInst.transform = toTransformMatrixKHR(resManager->getRenderMesh(id).tranformMatrix); // Position of the instance
-    //    rayInst.instanceCustomIndex = 0; // gl_InstanceCustomIndexEXT
-    //    rayInst.accelerationStructureReference = rtBuilder->getBlasDeviceAddress(i);
-    //    rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    //    rayInst.mask = 0xFF; //  Only be hit if rayMask & instance.mask != 0
-    //    rayInst.instanceShaderBindingTableRecordOffset = 0; // We will use the same hit group for all objects
-    //    tlas.emplace_back(rayInst);
-
-    //    ++i;
-    //}
-    //rtBuilder->buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
-
-    //std::vector<VulkanShaderModule> rtShaders{};
-    //rtShaders.emplace_back(resManager->createShaderModule("shaders/raytrace.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR, "main"));
-    //rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
-    //rtShaders.back().addShaderResourceUniform(ShaderResourceType::StorageImage, 0, 1);
-    //rtShaders.emplace_back(resManager->createShaderModule("shaders/raytrace.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR, "main"));
-    //rtShaders.emplace_back(resManager->createShaderModule("shaders/raytrace.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, "main"));
-
-
+    buildRayTracing();
 
     gui = std::make_unique<GUI>(*instance, *window, *device, renderContext->getRenderPass());
 }
@@ -169,6 +129,56 @@ VulkanApplication::~VulkanApplication()
     vkDestroySurfaceKHR(instance->getHandle(), surface, nullptr);
     instance.reset();
     window.reset();
+}
+
+void VulkanApplication::buildRayTracing()
+{
+    rtBuilder = std::make_unique<VulkanRayTracingBuilder>(device, *resManager);
+
+    // BLAS - Storing each primitive in a geometry
+    std::vector<BlasInput> allBlas;
+    allBlas.reserve(renderMeshes.size());
+    for (const auto& [p_mesh, id] : renderMeshes)
+    {
+        auto blas = resManager->requireBlasInput(resManager->getRenderMesh(id));
+
+        // We could add more geometry in each BLAS, but we add only one for now
+        allBlas.emplace_back(blas);
+    }
+    rtBuilder->buildBlas(allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
+
+    // TLAS
+    std::vector<VkAccelerationStructureInstanceKHR> tlas;
+    tlas.reserve(renderMeshes.size());
+    uint32_t i = 0;
+    for (const auto& [p_mesh, id] : renderMeshes)
+    {
+        VkAccelerationStructureInstanceKHR rayInst{};
+        rayInst.transform = toTransformMatrixKHR(resManager->getRenderMesh(id).tranformMatrix); // Position of the instance
+        rayInst.instanceCustomIndex = 0; // gl_InstanceCustomIndexEXT
+        rayInst.accelerationStructureReference = rtBuilder->getBlasDeviceAddress(i);
+        rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        rayInst.mask = 0xFF; //  Only be hit if rayMask & instance.mask != 0
+        rayInst.instanceShaderBindingTableRecordOffset = 0; // We will use the same hit group for all objects
+        tlas.emplace_back(rayInst);
+
+        ++i;
+    }
+    rtBuilder->buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
+
+    std::vector<VulkanShaderModule> rtShaders{};
+    rtShaders.emplace_back(resManager->createShaderModule("shaders/raytrace.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR, "main"));
+    rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
+    rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
+    rtShaders.back().addShaderResourceUniform(ShaderResourceType::StorageImage, 0, 1);
+    rtShaders.emplace_back(resManager->createShaderModule("shaders/raytrace.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR, "main"));
+    rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
+    rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
+    rtShaders.emplace_back(resManager->createShaderModule("shaders/raytrace.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, "main"));
+    rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
+
+    rtBuilder->createRayTracingPipeline(rtShaders, *renderPipeline->getDescriptorSetLayouts()[0]);
+    rtBuilder->createRtShaderBindingTable();
 }
 
 void VulkanApplication::mainLoop()
@@ -307,9 +317,7 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentImage)
     globalData.uniformBuffers[currentImage][0]->update(&ubo, sizeof(ubo));
 
     auto& buffer = globalData.uniformBuffers[currentImage][1];
-    void* bufferData;
-    buffer->map(bufferData);
-    ObjectData* objData = reinterpret_cast<ObjectData*>(bufferData);
+    ObjectData* objData = reinterpret_cast<ObjectData*>(buffer->map());
     for (const auto& [mesh, id] : renderMeshes) {
         objData[id].model = mesh->parent->transComp.getTransformMatrix() * mesh->transComp.getTransformMatrix();
     }

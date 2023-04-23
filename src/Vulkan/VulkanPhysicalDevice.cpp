@@ -39,6 +39,7 @@ VulkanPhysicalDevice::~VulkanPhysicalDevice() {
 VkPhysicalDevice VulkanPhysicalDevice::getHandle() const { return physicalDevice; }
 
 const VkPhysicalDeviceProperties& VulkanPhysicalDevice::getProperties() const { return properties; }
+const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& VulkanPhysicalDevice::getRTProperties() const { return rtProperties; }
 const VkPhysicalDeviceFeatures VulkanPhysicalDevice::getFeatures() const { return features; }
 const std::vector<VkQueueFamilyProperties>& VulkanPhysicalDevice::getQueueFamalies() const { return queueFamilies; }
 const std::vector<VkExtensionProperties>& VulkanPhysicalDevice::getExtensions() const { return extensions; }

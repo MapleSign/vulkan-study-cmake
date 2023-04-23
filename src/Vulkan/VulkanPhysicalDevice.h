@@ -27,6 +27,7 @@ public:
 	VkPhysicalDevice getHandle() const;
 
 	const VkPhysicalDeviceProperties& getProperties() const;
+	const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& getRTProperties() const;
 	const VkPhysicalDeviceFeatures getFeatures() const;
 	const std::vector<VkQueueFamilyProperties>& getQueueFamalies() const;
 	const std::vector<VkExtensionProperties>& getExtensions() const;

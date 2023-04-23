@@ -8,7 +8,7 @@ class VulkanPipelineLayout
 {
 public:
 	VulkanPipelineLayout(const VulkanDevice& device, 
-		const std::vector<std::unique_ptr<VulkanDescriptorSetLayout>>& descriptorSetLayouts, 
+		const std::vector<VulkanDescriptorSetLayout*>& descriptorSetLayouts, 
 		const std::vector<VkPushConstantRange>& pushConstantRanges);
 	~VulkanPipelineLayout();
 
