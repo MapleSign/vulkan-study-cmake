@@ -53,6 +53,7 @@ public:
         const VulkanFramebuffer& framebuffer, uint32_t frameIndex);
 
     void updateUniformBuffer(uint32_t currentImage);
+    void updateTlas();
 
     glm::mat4 processInput(GLFWwindow* window, glm::mat4 view, FPSCamera& camera, float deltaTime);
 

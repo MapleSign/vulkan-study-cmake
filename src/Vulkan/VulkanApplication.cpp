@@ -134,7 +134,8 @@ void VulkanApplication::buildRayTracing()
 
         ++i;
     }
-    rtBuilder->buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
+    rtBuilder->buildTlas(tlas, 
+        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR);
 
     std::vector<VulkanShaderModule> rtShaders{};
     rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytrace.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR, "main"));
@@ -202,6 +203,7 @@ void VulkanApplication::drawFrame()
     auto syncIndex = renderContext->getSyncIndex();
 
     updateUniformBuffer(syncIndex);
+    updateTlas();
 
     frame.getCommandBuffer().reset(0);
     recordCommand(frame.getCommandBuffer(), frame.getRenderTarget(), frame.getFramebuffer(), syncIndex);
@@ -293,6 +295,31 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentImage)
     }
 
     graphicBuilder->update(deltaTime, scene.get());
+}
+
+void VulkanApplication::updateTlas()
+{
+    std::vector<VkAccelerationStructureInstanceKHR> tlas;
+    tlas.reserve(renderMeshes.size());
+    uint32_t i = 0;
+    for (const auto& [p_mesh, id] : renderMeshes)
+    {
+        VkAccelerationStructureInstanceKHR rayInst{};
+        rayInst.transform = toTransformMatrixKHR(resManager->getRenderMesh(id).tranformMatrix); // Position of the instance
+        rayInst.instanceCustomIndex = 0; // gl_InstanceCustomIndexEXT
+        rayInst.accelerationStructureReference = rtBuilder->getBlasDeviceAddress(i);
+        rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        rayInst.mask = 0xFF; //  Only be hit if rayMask & instance.mask != 0
+        rayInst.instanceShaderBindingTableRecordOffset = 0; // We will use the same hit group for all objects
+        tlas.emplace_back(rayInst);
+
+        ++i;
+    }
+    rtBuilder->buildTlas(
+        tlas,
+        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR, 
+        true
+    );
 }
 
 glm::mat4 VulkanApplication::processInput(GLFWwindow* window, glm::mat4 view, FPSCamera& camera, float deltaTime)

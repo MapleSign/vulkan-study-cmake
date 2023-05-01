@@ -411,11 +411,13 @@ void VulkanRayTracingBuilder::cmdCreateTlas(
 		device.getHandle(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, 
 		&buildInfo, &countInstance, &sizeInfo);
 
-	VkAccelerationStructureCreateInfoKHR createInfo{ VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
-	createInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-	createInfo.size = sizeInfo.accelerationStructureSize;
+	if (update == false) {
+		VkAccelerationStructureCreateInfoKHR createInfo{ VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
+		createInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+		createInfo.size = sizeInfo.accelerationStructureSize;
 
-	tlas = resManager.requireAS(createInfo);
+		tlas = resManager.requireAS(createInfo);
+	}
 
 	// Allocate the scratch memory
 	scratchBuffer = &resManager.requireBuffer(
@@ -425,7 +427,7 @@ void VulkanRayTracingBuilder::cmdCreateTlas(
 	VkDeviceAddress scratchAddress = getBufferDeviceAddress(device.getHandle(), scratchBuffer->getHandle());
 
 	// Update build information
-	buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
+	buildInfo.srcAccelerationStructure = update ? tlas.handle : VK_NULL_HANDLE;
 	buildInfo.dstAccelerationStructure = tlas.handle;
 	buildInfo.scratchData.deviceAddress = scratchAddress;
 
