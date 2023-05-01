@@ -21,15 +21,19 @@ public:
 	BaseCamera* addBaseCamera(const char* cameraName);
 	FPSCamera* addFPSCamera(const char* cameraName);
 	BaseCamera* getCamera(const char* cameraName);
+	const BaseCamera* getCamera(const char* cameraName) const;
 	BaseCamera* getActiveCamera();
+	const BaseCamera* getActiveCamera() const;
 	void setCamera(const char* cameraName);
 	std::unordered_map<std::string, std::unique_ptr<BaseCamera>>& getCameraMap();
 
 	DirLight* getDirLight();
+	const DirLight* getDirLight() const;
 
 	PointLight* addPointLight(const char* name, glm::vec3 pos = {0.f, 0.f, 10.f}, glm::vec3 color = {1.f, 1.f, 1.f }, float intensity = 80.f);
 	PointLight* getPointLight(const char* name);
 	std::unordered_map<std::string, std::unique_ptr<PointLight>>& getPointLightMap();
+	const std::unordered_map<std::string, std::unique_ptr<PointLight>>& getPointLightMap() const;
 private:
 	BaseCamera* activeCamera;
 

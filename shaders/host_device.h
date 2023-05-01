@@ -67,6 +67,8 @@ struct ObjDesc
 struct GlobalData {
     mat4 view;
     mat4 proj;
+    mat4 viewInverse;
+    mat4 projInverse;
 };
 
 struct ObjectData {

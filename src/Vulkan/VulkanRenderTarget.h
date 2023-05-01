@@ -15,6 +15,7 @@ struct VulkanAttatchment
 	VkSampleCountFlagBits sample{ VK_SAMPLE_COUNT_1_BIT };
 	VkImageUsageFlags usage{ VK_IMAGE_USAGE_SAMPLED_BIT };
 	VkImageLayout initialLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
+	VkImageLayout finalLayout{ VK_IMAGE_LAYOUT_UNDEFINED };
 
 	VulkanAttatchment() = default;
 	VulkanAttatchment(VkFormat format, VkSampleCountFlagBits sample, VkImageUsageFlags usage):
@@ -36,6 +37,7 @@ public:
 	const std::vector<VulkanImage>& getImages() const;
 	const std::vector<VulkanImageView>& getViews() const;
 	VkExtent2D getExtent() const;
+	const std::vector<VulkanAttatchment>& getAttatchments() const;
 
 private:
 	const VulkanDevice& device;

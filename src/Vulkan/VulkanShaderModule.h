@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "VulkanCommon.h"
 #include "VulkanDevice.h"
 
@@ -26,6 +28,11 @@ struct VulkanShaderResource
     uint32_t offset;
     uint32_t size;
 };
+
+void createLayoutInfo(
+    const std::vector<VulkanShaderResource>& resources, 
+    std::vector<VkPushConstantRange>& pushConstantRanges, 
+    std::unordered_map<uint32_t, std::vector<VulkanShaderResource>>& descriptorResourceSets);
 
 class VulkanShaderModule
 {

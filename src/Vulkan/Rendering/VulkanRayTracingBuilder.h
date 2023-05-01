@@ -29,7 +29,7 @@ public:
 	VulkanRayTracingBuilder(const VulkanDevice& device, VulkanResourceManager& resManager, const VulkanImageView& offscreenColor);
 	~VulkanRayTracingBuilder();
 
-	void createRayTracingPipeline(const std::vector<VulkanShaderModule>& rtShaders, VulkanDescriptorSetLayout& globalDescSetLayout);
+	void createRayTracingPipeline(const std::vector<VulkanShaderModule>& rtShaders, const VulkanDescriptorSetLayout& globalDescSetLayout);
 	void createRtShaderBindingTable();
 
 	void raytrace(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const PushConstantRayTracing& pcRay);
@@ -72,9 +72,8 @@ private:
 	VulkanAccelerationStructure tlas;
 
 	std::unordered_map<uint32_t, std::unique_ptr<VulkanDescriptorSetLayout>> rtDescriptorSetLayouts;
-	std::unordered_map<uint32_t, std::unique_ptr<VulkanDescriptorPool>> rtDescriptorPools;
 
-	std::unique_ptr<VulkanDescriptorSet> rtDescriptorSet;
+	VulkanDescriptorSet* rtDescriptorSet;
 	std::vector<VkRayTracingShaderGroupCreateInfoKHR> rtShaderGroups;
 
 	std::unique_ptr<VulkanPipelineLayout> rtPipelineLayout;

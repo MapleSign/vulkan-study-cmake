@@ -47,7 +47,7 @@ public:
 	virtual void move(CameraDirection direction, float deltaTime);
 	virtual void rotate(float dyaw, float dpitch, float droll);
 
-	glm::mat4 calcLookAt(void);
+	glm::mat4 calcLookAt(void) const;
 };
 
 class FPSCamera : public BaseCamera {

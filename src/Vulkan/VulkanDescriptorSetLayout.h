@@ -18,6 +18,7 @@ public:
 
     const VkDescriptorSetLayout& getHandle() const;
     const std::vector<VkDescriptorSetLayoutBinding>& getBindings() const;
+    VkDescriptorType getType(size_t i) const;
     uint32_t getSetIndex() const;
 
 private:

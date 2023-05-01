@@ -33,5 +33,4 @@ private:
     const VulkanDevice& device;
 
     VulkanRTPipelineState state;
-    VkPipeline pipeline;
 };

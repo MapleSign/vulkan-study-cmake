@@ -81,7 +81,6 @@ void GUI::newFrame() const
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    ImGui::ShowDemoWindow();
 }
 
 void GUI::render() const

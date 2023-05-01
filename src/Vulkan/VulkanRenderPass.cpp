@@ -4,45 +4,55 @@
 #include "VulkanDevice.h"
 #include "VulkanRenderPass.h"
 
-VulkanRenderPass::VulkanRenderPass(const VulkanDevice &device, VkFormat swapChainImageFormat):
-    device{device}
+VulkanRenderPass::VulkanRenderPass(const VulkanDevice& device,
+    const std::vector<VulkanAttatchment>& attachments,
+    const std::vector<LoadStoreInfo>& loadStoreInfos) :
+    device{ device }
 {
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = swapChainImageFormat;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    std::vector<VkAttachmentDescription> attachDescs{ attachments.size() };
+    for (size_t i = 0; i < attachments.size(); ++i) {
+        VkAttachmentDescription attachDesc{};
+        attachDesc.format = attachments[i].format;
+        attachDesc.samples = attachments[i].sample;
 
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachDesc.loadOp = loadStoreInfos[i].load_op;
+        attachDesc.storeOp = loadStoreInfos[i].store_op;
 
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        attachDesc.initialLayout = attachments[i].initialLayout;
+        attachDesc.finalLayout = attachments[i].finalLayout == VK_IMAGE_LAYOUT_UNDEFINED ?
+            isDepthStencilFormat(attachments[i].format) ? 
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            : attachments[i].finalLayout;
 
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachDescs[i] = attachDesc;
+    }
 
-    VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = findDepthFormat(device.getGPU().getHandle());
-    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    std::vector<VkAttachmentReference> colorRefs;
+    VkAttachmentReference depthRef;
+    for (size_t i = 0; i < attachDescs.size(); ++i) {
+        VkAttachmentReference ref{};
+        ref.attachment = toU32(i);
 
-    VkAttachmentReference depthAttachmentRef{};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        if (isDepthStencilFormat(attachDescs[i].format)) {
+            ref.layout = attachDescs[i].initialLayout == VK_IMAGE_LAYOUT_UNDEFINED ?
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : attachDescs[i].initialLayout;
+            depthRef = ref;
+        }
+        else {
+            ref.layout = attachDescs[i].initialLayout == VK_IMAGE_LAYOUT_UNDEFINED ?
+                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : attachDescs[i].initialLayout;
+            colorRefs.push_back(ref);
+        }
+    }
 
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+    subpass.colorAttachmentCount = toU32(colorRefs.size());
+    subpass.pColorAttachments = colorRefs.data();
+    subpass.pDepthStencilAttachment = &depthRef;
 
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -54,11 +64,10 @@ VulkanRenderPass::VulkanRenderPass(const VulkanDevice &device, VkFormat swapChai
     dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-    std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.attachmentCount = toU32(attachDescs.size());
+    renderPassInfo.pAttachments = attachDescs.data();
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;

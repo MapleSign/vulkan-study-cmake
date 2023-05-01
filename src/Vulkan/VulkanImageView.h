@@ -17,6 +17,7 @@ public:
     VkImageView getHandle() const;
 
     VulkanImage& getImage();
+    constexpr const VulkanImage& getImage() const { return image; }
 
 private:
     VkImageView imageView{};

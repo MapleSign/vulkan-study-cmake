@@ -42,7 +42,7 @@ void BaseCamera::rotate(float dyaw, float dpitch, float droll)
 
 }
 
-glm::mat4 BaseCamera::calcLookAt(void)
+glm::mat4 BaseCamera::calcLookAt(void) const
 {
 	return glm::lookAt(position, position + front, up);
 }

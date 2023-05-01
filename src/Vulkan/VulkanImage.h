@@ -7,7 +7,8 @@ class VulkanImage
 {
 public:
     VulkanImage(const VulkanDevice& device, const VkExtent3D& extent, VkFormat format, VkImageTiling tiling,
-        VkImageUsageFlags usage, VkMemoryPropertyFlags properties, uint32_t mipLevels);
+        VkImageUsageFlags usage, VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+        uint32_t mipLevels = 1);
 
     VulkanImage(const VulkanDevice& device, VkImage handle, const VkExtent3D& extent, VkFormat format, VkImageUsageFlags usage, uint32_t mipLevels = 1);
 
@@ -37,6 +38,7 @@ private:
     VkSampleCountFlagBits sampleCount{};
     VkImageUsageFlags usage{};
     uint32_t mipLevels{ 1 };
+    VkImageLayout initialLayout{};
 
     const VulkanDevice &device;
 };

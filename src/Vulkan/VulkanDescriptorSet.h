@@ -10,8 +10,10 @@ using BindingMap = std::map<uint32_t, std::map<uint32_t, T>>;
 class VulkanDescriptorSet
 {
 public:
-	VulkanDescriptorSet(const VulkanDevice& device,
-		VulkanDescriptorPool& descriptorPool,
+	VulkanDescriptorSet(
+		const VulkanDevice& device, 
+		VulkanDescriptorPool& descPool,
+		const VulkanDescriptorSetLayout& descSetLayout,
 		const BindingMap<VkDescriptorBufferInfo>& bufferInfos = {},
 		const BindingMap<VkDescriptorImageInfo>& imageInfos = {});
 
@@ -30,7 +32,7 @@ public:
 
 private:
 	const VulkanDevice& device;
-	const VulkanDescriptorPool& descriptorPool;
+	const VulkanDescriptorSetLayout& descSetLayout;
 	VkDescriptorSet descriptorSet;
 
 	BindingMap<VkDescriptorBufferInfo> bufferInfos;

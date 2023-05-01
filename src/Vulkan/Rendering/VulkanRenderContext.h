@@ -22,11 +22,12 @@ struct FrameSyncObject {
 class VulkanRenderContext
 {
 public:
-	VulkanRenderContext(VulkanDevice& device, VkSurfaceKHR surface, VkExtent2D extent, size_t threadCount = 1);
+	VulkanRenderContext(VulkanDevice& device, VkSurfaceKHR surface, VkExtent2D extent, 
+		size_t threadCount = 1, VulkanRenderTarget::CreateFunc func = VulkanRenderTarget::DEFAULT_CREATE_FUNC);
 
 	~VulkanRenderContext();
 
-	void generateFrames(VulkanRenderTarget::CreateFunc createFunc = VulkanRenderTarget::DEFAULT_CREATE_FUNC);
+	void generateFrames(std::vector<std::unique_ptr<VulkanRenderTarget>>& renderTargets);
 
 	VkResult beginFrame();
 	VkResult submit(VulkanQueue& queue);
@@ -40,6 +41,8 @@ public:
 	void handleSurfaceChange();
 
 	void recreateSwapChain(const VkExtent2D& extent);
+
+	void setCreateFunc(VulkanRenderTarget::CreateFunc func);
 
 	VulkanRenderFrame& getActiveFrame() const;
 	uint32_t getActiveFrameIndex() const;

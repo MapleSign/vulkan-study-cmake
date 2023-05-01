@@ -16,10 +16,12 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const VulkanDevice &device, const
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = toU32(pipelineState.vertexBindingDescriptions.size());
-    vertexInputInfo.pVertexBindingDescriptions = pipelineState.vertexBindingDescriptions.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = toU32(pipelineState.vertexAttributeDescriptions.size());
-    vertexInputInfo.pVertexAttributeDescriptions = pipelineState.vertexAttributeDescriptions.data();
+    if (!pipelineState.vertexAttributeDescriptions.empty()) {
+        vertexInputInfo.vertexBindingDescriptionCount = toU32(pipelineState.vertexBindingDescriptions.size());
+        vertexInputInfo.pVertexBindingDescriptions = pipelineState.vertexBindingDescriptions.data();
+        vertexInputInfo.vertexAttributeDescriptionCount = toU32(pipelineState.vertexAttributeDescriptions.size());
+        vertexInputInfo.pVertexAttributeDescriptions = pipelineState.vertexAttributeDescriptions.data();
+    }
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -52,7 +54,7 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const VulkanDevice &device, const
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
 
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.cullMode = pipelineState.cullMode;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     rasterizer.depthBiasEnable = VK_FALSE;
@@ -71,8 +73,8 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const VulkanDevice &device, const
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthTestEnable = pipelineState.depthStencilState.depth_test_enable;
+    depthStencil.depthWriteEnable = pipelineState.depthStencilState.depth_write_enable;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
     depthStencil.minDepthBounds = 0.0f; // Optional

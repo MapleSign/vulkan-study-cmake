@@ -7,22 +7,16 @@
 class VulkanDescriptorPool
 {
 public:
-    VulkanDescriptorPool(const VulkanDevice& device, const VulkanDescriptorSetLayout& layout, uint32_t poolSize);
+    VulkanDescriptorPool(const VulkanDevice& device, const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 
     ~VulkanDescriptorPool();
 
-    VkDescriptorSet allocate();
-
-    uint32_t getSetIndex() const;
-
-    const VulkanDescriptorSetLayout& getLayout() const;
-    VkDescriptorType getType(size_t i) const;
+    VkDescriptorSet allocate(const VulkanDescriptorSetLayout& descSetLayout);
 
 private:
 	const VulkanDevice& device;
-	const VulkanDescriptorSetLayout& layout;
     VkDescriptorPool descriptorPool;
 
-    uint32_t poolSize;
+    uint32_t maxSets;
     std::vector<VkDescriptorPoolSize> poolSizes{};
 };

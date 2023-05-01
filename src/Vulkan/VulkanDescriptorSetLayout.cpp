@@ -70,6 +70,11 @@ VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() {
 const VkDescriptorSetLayout &VulkanDescriptorSetLayout::getHandle() const { return descriptorSetLayout; }
 const std::vector<VkDescriptorSetLayoutBinding>& VulkanDescriptorSetLayout::getBindings() const { return bindings; }
 
+VkDescriptorType VulkanDescriptorSetLayout::getType(size_t i) const
+{
+    return bindings[i].descriptorType;
+}
+
 uint32_t VulkanDescriptorSetLayout::getSetIndex() const
 {
     return set;

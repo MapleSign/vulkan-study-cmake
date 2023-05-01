@@ -53,3 +53,8 @@ const std::vector<VulkanImage>& VulkanRenderTarget::getImages() const { return i
 const std::vector<VulkanImageView>& VulkanRenderTarget::getViews() const { return imageViews; }
 
 VkExtent2D VulkanRenderTarget::getExtent() const { return extent; }
+
+const std::vector<VulkanAttatchment>& VulkanRenderTarget::getAttatchments() const
+{
+    return attatchments;
+}

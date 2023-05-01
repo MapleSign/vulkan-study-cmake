@@ -73,16 +73,26 @@ set(VULKAN_FRAMEWORK_FILES
 
 set(RENDERING_FILES 
     ./Vulkan/Rendering/VulkanRayTracingBuilder.h
+    ./Vulkan/Rendering/VulkanGraphicsBuilder.h
     ./Vulkan/Rendering/VulkanRenderContext.h
     ./Vulkan/Rendering/VulkanRenderFrame.h
     ./Vulkan/Rendering/VulkanRenderPipeline.h
     ./Vulkan/Rendering/VulkanResource.h
+    ./Vulkan/Rendering/VulkanSubpass.h
 
     ./Vulkan/Rendering/VulkanRayTracingBuilder.cpp
+    ./Vulkan/Rendering/VulkanGraphicsBuilder.cpp
     ./Vulkan/Rendering/VulkanRenderContext.cpp
     ./Vulkan/Rendering/VulkanRenderFrame.cpp
     ./Vulkan/Rendering/VulkanRenderPipeline.cpp
     ./Vulkan/Rendering/VulkanResource.cpp
+    ./Vulkan/Rendering/VulkanSubpass.cpp
+)
+
+set(SUBPASSES_FILES
+    ./Vulkan/Rendering/Subpasses/GlobalSubpass.h
+
+    ./Vulkan/Rendering/Subpasses/GlobalSubpass.cpp
 )
 
 set(PLATFORM_FILES 
@@ -103,11 +113,20 @@ set(COMPONENT_FILES
     ./Component/TransformComponent.cpp
 )
 
+source_group("\\" FILES ${ENGINE_FILES})
+source_group("platform\\" FILES ${PLATFORM_FILES})
+source_group("gui\\" FILES ${GUI_FILES})
+source_group("component\\" FILES ${COMPONENT_FILES})
+source_group("vulkan\\" FILES ${VULKAN_FRAMEWORK_FILES})
+source_group("vulkan\\rendering\\" FILES ${RENDERING_FILES})
+source_group("vulkan\\rendering\\subpasses" FILES ${SUBPASSES_FILES})
+
 # Add source to this project's executable.
 add_executable(vulkan_study 
     ${ENGINE_FILES}
     ${VULKAN_FRAMEWORK_FILES}
     ${RENDERING_FILES}
+    ${SUBPASSES_FILES}
     ${PLATFORM_FILES}
     ${GUI_FILES}
     ${COMPONENT_FILES}

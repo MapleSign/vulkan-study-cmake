@@ -7,8 +7,15 @@
 #include "VulkanSwapChain.h"
 #include "VulkanShaderModule.h"
 #include "VulkanPipelineLayout.h"
-#include "VulkanRenderPass.h"
 #include "VulkanPipeline.h"
+
+class VulkanRenderPass;
+
+struct DepthStencilState
+{
+    VkBool32 depth_test_enable{ VK_TRUE };
+    VkBool32 depth_write_enable{ VK_TRUE };
+};
 
 struct VulkanPipelineState {
     const VulkanPipelineLayout* pipelineLayout;
@@ -20,6 +27,10 @@ struct VulkanPipelineState {
 
     std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
     std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
+
+    VkCullModeFlags cullMode{ VK_CULL_MODE_BACK_BIT };
+
+    DepthStencilState depthStencilState{};
 };
 
 class VulkanGraphicsPipeline : public VulkanPipeline

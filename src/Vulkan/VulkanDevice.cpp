@@ -30,8 +30,19 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
     VkPhysicalDeviceVulkan12Features features12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     features12.bufferDeviceAddress = VK_TRUE;
     features12.runtimeDescriptorArray = VK_TRUE;
+    features12.descriptorIndexing = VK_TRUE;
 
     deviceFeatures.pNext = &features12;
+
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
+    rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
+
+    features12.pNext = &rtPipelineFeatures;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+    asFeatures.accelerationStructure = VK_TRUE;
+
+    rtPipelineFeatures.pNext = &asFeatures;
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

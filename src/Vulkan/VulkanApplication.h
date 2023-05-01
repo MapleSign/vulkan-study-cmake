@@ -18,12 +18,6 @@
 
 class GlfwWindow;
 
-struct PushConstantRaster {
-    glm::vec3 viewPos;
-    int objId;
-    int lightNum;
-};
-
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
 };
@@ -32,7 +26,10 @@ const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME, 
     VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, 
     VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, 
-    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
+    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+    VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+    VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME
 };
 
 class VulkanApplication
@@ -72,6 +69,7 @@ private:
 
     std::unique_ptr<VulkanResourceManager> resManager;
     std::unique_ptr<VulkanRayTracingBuilder> rtBuilder;
+    std::unique_ptr<VulkanGraphicsBuilder> graphicBuilder;
 
     uint32_t threadCount;
 	std::unique_ptr<VulkanRenderContext> renderContext;
@@ -80,15 +78,12 @@ private:
 
     std::unique_ptr<Scene> scene;
     
-    PushConstantRaster pushConstants;
-    SceneData lightData;
-    SceneData globalData;
+    SceneData postData;
     std::unordered_map<const Mesh*, RenderMeshID> renderMeshes;
 
-    std::unique_ptr<VulkanDescriptorPool> globalDescriptorPool;
-    std::unique_ptr<VulkanDescriptorPool> lightDescriptorPool;
-
     std::unique_ptr<GUI> gui;
+    bool useRayTracer;
+    glm::vec4 clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 
     std::vector<const char*> getRequiredExtensions();
     static void mouse_callback(GLFWwindow* window, double xpos, double ypos);

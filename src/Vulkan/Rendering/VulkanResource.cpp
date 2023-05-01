@@ -5,13 +5,27 @@
 VulkanResourceManager::VulkanResourceManager(const VulkanDevice& device, VulkanCommandPool& commandPool):
     device{device}, commandPool{commandPool}
 {
+    std::vector<VkDescriptorPoolSize> poolSizes{
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
+    requireDescriptorPool(poolSizes, 1000);
 }
 
 VulkanResourceManager::~VulkanResourceManager()
 {
     descriptorSetSet.clear();
 
-    descriptorPoolSet.clear();
+    descriptorPools.clear();
 
     bufferSet.clear();
 
@@ -23,12 +37,12 @@ VulkanResourceManager::~VulkanResourceManager()
 
 RenderMeshID VulkanResourceManager::requireRenderMesh(
     const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const RenderMaterial& mat, 
-    VulkanPipeline* pipeline, VulkanDescriptorPool& descriptorPool, uint32_t threadCount, 
+    VulkanPipeline* pipeline, const VulkanDescriptorSetLayout& descSetLayout, uint32_t threadCount,
     const std::map<uint32_t, std::pair<VkDeviceSize, size_t>>& bufferSizeInfos, const BindingMap<RenderTexture>& textureInfosMap)
 {
     RenderMesh mesh{};
     mesh.pipeline = pipeline;
-    mesh.descriptorPool = &descriptorPool;
+    mesh.descSetLayout = &descSetLayout;
 
     VkBufferUsageFlags flag = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
     VkBufferUsageFlags rayTracingFlags = // used also for building acceleration structures 
@@ -95,7 +109,7 @@ RenderMeshID VulkanResourceManager::requireRenderMesh(
 
     for (uint32_t i = 0; i < threadCount; ++i)
     {
-        mesh.descriptorSets.push_back(&requireDescriptorSet(descriptorPool, bufferInfos, imageInfos));
+        mesh.descriptorSets.push_back(&requireDescriptorSet(descSetLayout, bufferInfos, imageInfos));
     }
 
     meshes.emplace_back(std::move(mesh));
@@ -145,33 +159,36 @@ RenderMeshID VulkanResourceManager::requireRenderMesh(
     return meshes.size() - 1;
 }
 
-SceneData VulkanResourceManager::requireSceneData(VulkanDescriptorPool& descriptorPool, uint32_t threadCount, 
+SceneData VulkanResourceManager::requireSceneData(const VulkanDescriptorSetLayout& descSetLayout, uint32_t threadCount,
     const std::map<uint32_t, std::pair<VkDeviceSize, size_t>>& bufferSizeInfos)
 {
     SceneData sceneData{};
-    sceneData.descriptorPool = &descriptorPool;
+    sceneData.descSetLayout = &descSetLayout;
     sceneData.uniformBuffers.resize(threadCount);
 
     VkDeviceSize uniformBufferSize = 0;
     for (auto& [binding, bufferSizeInfo] : bufferSizeInfos) {
-        if (descriptorPool.getType(binding) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+        if (descSetLayout.getType(binding) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
             uniformBufferSize += bufferSizeInfo.first * bufferSizeInfo.second;
     }
 
     BindingMap<VkDescriptorBufferInfo> bufferInfos{};
     for (uint32_t threadIdx = 0; threadIdx < threadCount; ++threadIdx) {
-        auto& uniformBuffer = requireBuffer(uniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        sceneData.uniformBuffers[threadIdx].push_back(&uniformBuffer);
+        if (uniformBufferSize != 0) {
+            auto& uniformBuffer = requireBuffer(uniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            sceneData.uniformBuffers[threadIdx].push_back(&uniformBuffer);
+        }
 
         VkDeviceSize offset = 0;
         for (const auto& [bindingIndex, bufferSizeInfo] : bufferSizeInfos)
         {
             bufferInfos[bindingIndex] = {};
-            if (descriptorPool.getType(bindingIndex) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+            if (descSetLayout.getType(bindingIndex) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+                auto& uniformBuffer = sceneData.uniformBuffers[threadIdx][0];
                 for (size_t i = 0; i < bufferSizeInfo.second; ++i) {
                     VkDescriptorBufferInfo info{};
-                    info.buffer = uniformBuffer.getHandle();
+                    info.buffer = uniformBuffer->getHandle();
                     info.offset = offset;
                     info.range = bufferSizeInfo.first;
                     bufferInfos[bindingIndex][i] = info;
@@ -195,7 +212,7 @@ SceneData VulkanResourceManager::requireSceneData(VulkanDescriptorPool& descript
 
     for (uint32_t i = 0; i < threadCount; ++i)
     {
-        sceneData.descriptorSets.push_back(&requireDescriptorSet(descriptorPool, bufferInfos, {}));
+        sceneData.descriptorSets.push_back(&requireDescriptorSet(descSetLayout, bufferInfos, {}));
     }
 
     return sceneData;
@@ -225,17 +242,17 @@ void VulkanResourceManager::destroyBuffer(VulkanBuffer* buffer)
     bufferSet.erase(buffer);
 }
 
-VulkanDescriptorSet& VulkanResourceManager::requireDescriptorSet(VulkanDescriptorPool& descriptorPool, const BindingMap<VkDescriptorBufferInfo>& bufferInfos, const BindingMap<VkDescriptorImageInfo>& imageInfos)
+VulkanDescriptorSet& VulkanResourceManager::requireDescriptorSet(const VulkanDescriptorSetLayout& descSetLayout, const BindingMap<VkDescriptorBufferInfo>& bufferInfos, const BindingMap<VkDescriptorImageInfo>& imageInfos)
 {
-    auto descriptorSet = new VulkanDescriptorSet(device, descriptorPool, bufferInfos, imageInfos);
+    auto descriptorSet = new VulkanDescriptorSet(device, *descriptorPools.front(), descSetLayout, bufferInfos, imageInfos);
     descriptorSetSet.emplace(descriptorSet);
     return *descriptorSet;
 }
 
-VulkanDescriptorPool& VulkanResourceManager::requireDescriptorPool(const VulkanDescriptorSetLayout& layout, uint32_t poolSize)
+VulkanDescriptorPool& VulkanResourceManager::requireDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets)
 {
-    auto descriptorPool = new VulkanDescriptorPool(device, layout, poolSize);
-    descriptorPoolSet.emplace(descriptorPool);
+    auto descriptorPool = new VulkanDescriptorPool(device, poolSizes, maxSets);
+    descriptorPools.emplace_back(descriptorPool);
     return *descriptorPool;
 }
 

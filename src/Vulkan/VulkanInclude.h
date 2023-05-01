@@ -21,6 +21,7 @@
 #include "Rendering/VulkanRenderPipeline.h"
 #include "Rendering/VulkanResource.h"
 #include "Rendering/VulkanRayTracingBuilder.h"
+#include "Rendering/VulkanGraphicsBuilder.h"
 #include "VulkanRayTracingPipeline.h"
 
 class VulkanInstance;

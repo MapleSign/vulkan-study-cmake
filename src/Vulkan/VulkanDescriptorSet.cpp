@@ -4,12 +4,14 @@
 #include "VulkanDescriptorSet.h"
 
 
-VulkanDescriptorSet::VulkanDescriptorSet(const VulkanDevice& device,
-    VulkanDescriptorPool& descriptorPool,
+VulkanDescriptorSet::VulkanDescriptorSet(
+    const VulkanDevice& device,
+    VulkanDescriptorPool& descPool,
+    const VulkanDescriptorSetLayout& descSetLayout,
     const BindingMap<VkDescriptorBufferInfo>& bufferInfos,
     const BindingMap<VkDescriptorImageInfo>& imageInfos) :
 
-    device{ device }, descriptorPool{ descriptorPool }, descriptorSet{ descriptorPool.allocate() },
+    device{ device }, descSetLayout{ descSetLayout }, descriptorSet{ descPool.allocate(descSetLayout) },
     bufferInfos{ bufferInfos }, imageInfos{ imageInfos }
 {
     for (const auto& bindingItem : this->bufferInfos) {
@@ -36,7 +38,7 @@ void VulkanDescriptorSet::update()
 
 VkWriteDescriptorSet VulkanDescriptorSet::makeWrite(uint32_t dstBinding, uint32_t arrayElement)
 {
-    const auto& bindings = descriptorPool.getLayout().getBindings();
+    const auto& bindings = descSetLayout.getBindings();
     const auto& binding = *std::find_if(bindings.begin(), bindings.end(), [=](const auto& b) { return b.binding == dstBinding; });
 
     VkWriteDescriptorSet descriptorWrite{};
@@ -78,7 +80,7 @@ void VulkanDescriptorSet::addWrite(uint32_t dstBinding, const VkWriteDescriptorS
 
 VkWriteDescriptorSet VulkanDescriptorSet::makeWriteArray(uint32_t dstBinding)
 {
-    const auto& bindings = descriptorPool.getLayout().getBindings();
+    const auto& bindings = descSetLayout.getBindings();
     const auto& binding = *std::find_if(bindings.begin(), bindings.end(), [=](const auto& b) { return b.binding == dstBinding; });
 
     VkWriteDescriptorSet descriptorWrite{};

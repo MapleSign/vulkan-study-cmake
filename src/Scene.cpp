@@ -54,7 +54,17 @@ BaseCamera* Scene::getCamera(const char* cameraName)
 	return cameraMap[cameraName].get();
 }
 
+const BaseCamera* Scene::getCamera(const char* cameraName) const
+{
+	return cameraMap.at(cameraName).get();
+}
+
 BaseCamera* Scene::getActiveCamera()
+{
+	return activeCamera;
+}
+
+const BaseCamera* Scene::getActiveCamera() const
 {
 	return activeCamera;
 }
@@ -70,6 +80,11 @@ std::unordered_map<std::string, std::unique_ptr<BaseCamera>>& Scene::getCameraMa
 }
 
 DirLight* Scene::getDirLight()
+{
+	return dirLight.get();
+}
+
+const DirLight* Scene::getDirLight() const
 {
 	return dirLight.get();
 }
@@ -97,6 +112,11 @@ PointLight* Scene::getPointLight(const char* name)
 }
 
 std::unordered_map<std::string, std::unique_ptr<PointLight>>& Scene::getPointLightMap()
+{
+	return pointLightMap;
+}
+
+const std::unordered_map<std::string, std::unique_ptr<PointLight>>& Scene::getPointLightMap() const
 {
 	return pointLightMap;
 }

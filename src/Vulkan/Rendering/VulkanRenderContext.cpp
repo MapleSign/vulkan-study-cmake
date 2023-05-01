@@ -15,8 +15,9 @@ FrameSyncObject::FrameSyncObject(const VulkanDevice& device):
 {
 }
 
-VulkanRenderContext::VulkanRenderContext(VulkanDevice& device, VkSurfaceKHR surface, VkExtent2D extent, size_t threadCount):
-	device{device}, surface{surface}, createFunc{VulkanRenderTarget::DEFAULT_CREATE_FUNC}, threadCount{threadCount}
+VulkanRenderContext::VulkanRenderContext(VulkanDevice& device, VkSurfaceKHR surface, VkExtent2D extent, 
+	size_t threadCount, VulkanRenderTarget::CreateFunc func):
+	device{device}, surface{surface}, createFunc{func}, threadCount{threadCount}
 {
 	for (size_t i = 0; i < threadCount; ++i) {
 		frameSyncObjects.emplace_back(device);
@@ -33,12 +34,9 @@ VulkanRenderContext::~VulkanRenderContext() {
 	frameSyncObjects.clear();
 }
 
-void VulkanRenderContext::generateFrames(VulkanRenderTarget::CreateFunc createFunc) {
-	auto extent = swapChain->getExtent3D();
-	for (auto imageHandle : swapChain->getImages()) {
-		VulkanImage image{ device, imageHandle, extent, swapChain->getImageFormat(), swapChain->getImageUsage() };
-		auto renderTarget = createFunc(std::move(image));
-		frames.emplace_back(std::make_unique<VulkanRenderFrame>(device, std::move(renderTarget), *renderPass, device.getCommandPool()));
+void VulkanRenderContext::generateFrames(std::vector<std::unique_ptr<VulkanRenderTarget>>& renderTargets) {
+	for (std::unique_ptr<VulkanRenderTarget>& rt : renderTargets) {
+		frames.emplace_back(std::make_unique<VulkanRenderFrame>(device, std::move(rt), *renderPass, device.getCommandPool()));
 	}
 }
 
@@ -121,11 +119,26 @@ void VulkanRenderContext::recreateSwapChain(const VkExtent2D& extent) {
 	swapChain.reset();
 	swapChain = std::make_unique<VulkanSwapChain>(device, surface, extent);
 
+	auto extent3d = swapChain->getExtent3D();
+	std::vector<std::unique_ptr<VulkanRenderTarget>> renderTargets{};
+	for (auto imageHandle : swapChain->getImages()) {
+		VulkanImage image{ device, imageHandle, extent3d, swapChain->getImageFormat(), swapChain->getImageUsage() };
+		renderTargets.push_back(createFunc(std::move(image)));
+	}
+
 	renderPass.reset();
-	renderPass = std::make_unique<VulkanRenderPass>(device, swapChain->getImageFormat());
+	auto attatchments = renderTargets.back()->getAttatchments();
+	attatchments.front().finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
+	renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos);
 
 	frames.clear();
-	generateFrames(createFunc);
+	generateFrames(renderTargets);
+}
+
+void VulkanRenderContext::setCreateFunc(VulkanRenderTarget::CreateFunc func)
+{
+	createFunc = func;
 }
 
 VulkanRenderFrame& VulkanRenderContext::getActiveFrame() const {

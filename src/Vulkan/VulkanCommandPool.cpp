@@ -93,7 +93,12 @@ void VulkanCommandPool::transitionImageLayout(const VulkanImage &image, VkImageL
         destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     }
     else {
-        throw std::invalid_argument("unsupported layout transition!");
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = 0;
+
+        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        //throw std::invalid_argument("unsupported layout transition!");
     }
 
     vkCmdPipelineBarrier(

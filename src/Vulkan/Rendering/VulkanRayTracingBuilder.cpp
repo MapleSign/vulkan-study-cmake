@@ -8,10 +8,17 @@ VulkanRayTracingBuilder::VulkanRayTracingBuilder(
 
 VulkanRayTracingBuilder::~VulkanRayTracingBuilder()
 {
+	vkDestroyAccelerationStructureKHR(device.getHandle(), tlas.handle, nullptr);
+	for (auto& blas : blasList)
+		vkDestroyAccelerationStructureKHR(device.getHandle(), blas.handle, nullptr);
+
+	rtPipeline.reset();
+	rtPipelineLayout.reset();
+	rtDescriptorSetLayouts.clear();
 }
 
 void VulkanRayTracingBuilder::createRayTracingPipeline(
-	const std::vector<VulkanShaderModule>& rtShaders, VulkanDescriptorSetLayout& globalDescSetLayout)
+	const std::vector<VulkanShaderModule>& rtShaders, const VulkanDescriptorSetLayout& globalDescSetLayout)
 {
 	std::vector<VulkanShaderResource> shaderResources{};
 	for (const auto& shader : rtShaders) {
@@ -21,18 +28,10 @@ void VulkanRayTracingBuilder::createRayTracingPipeline(
 	std::vector<VkPushConstantRange> pushConstantRanges;
 	std::unordered_map<uint32_t, std::vector<VulkanShaderResource>> descriptorResourceSets;
 
-	for (const auto& res : shaderResources) {
-		if (res.type == ShaderResourceType::PushConstant) {
-			pushConstantRanges.push_back({ res.stageFlags, res.offset, res.size });
-			continue;
-		}
-
-		descriptorResourceSets[res.set].push_back(res);
-	}
+	createLayoutInfo(shaderResources, pushConstantRanges, descriptorResourceSets);
 
 	for (const auto& [setIndex, setResources] : descriptorResourceSets) {
 		rtDescriptorSetLayouts[setIndex] = std::make_unique<VulkanDescriptorSetLayout>(device, setIndex, setResources);
-		rtDescriptorPools[setIndex] = std::make_unique<VulkanDescriptorPool>(device, *rtDescriptorSetLayouts[setIndex], 1);
 	}
 	
 	VkWriteDescriptorSetAccelerationStructureKHR descASInfo{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
@@ -40,7 +39,7 @@ void VulkanRayTracingBuilder::createRayTracingPipeline(
 	descASInfo.pAccelerationStructures = &tlas.handle;
 	VkDescriptorImageInfo imageInfo{ {}, offscreenColor->getHandle(), VK_IMAGE_LAYOUT_GENERAL };
 
-	rtDescriptorSet = std::make_unique<VulkanDescriptorSet>(device, *rtDescriptorPools[0]);
+	rtDescriptorSet = &resManager.requireDescriptorSet(*rtDescriptorSetLayouts[0], {}, {});
 	rtDescriptorSet->addWrite(0, &descASInfo);
 	rtDescriptorSet->addWrite(1, imageInfo);
 	rtDescriptorSet->update();
@@ -77,7 +76,7 @@ void VulkanRayTracingBuilder::createRayTracingPipeline(
 	for (auto& [setIndex, rtSetLayout] : rtDescriptorSetLayouts) {
 		setLayouts.push_back(rtSetLayout.get());
 	}
-	setLayouts.push_back(&globalDescSetLayout);
+	setLayouts.push_back(const_cast<VulkanDescriptorSetLayout*>(&globalDescSetLayout));
 	rtPipelineLayout = std::make_unique<VulkanPipelineLayout>(device, setLayouts, pushConstantRanges);
 
 	VulkanRTPipelineState state{};
@@ -161,6 +160,9 @@ void VulkanRayTracingBuilder::raytrace(VulkanCommandBuffer& cmdBuf, const Vulkan
 	auto pcRange = rtPipelineLayout->getPushConstantRanges()[0];
 	vkCmdPushConstants(cmdBuf.getHandle(), rtPipelineLayout->getHandle(),
 		pcRange.stageFlags, pcRange.offset, pcRange.size, &pcRay);
+
+	auto extent = offscreenColor->getImage().getExtent();
+	vkCmdTraceRaysKHR(cmdBuf.getHandle(), &rgenRegion, &missRegion, &hitRegion, &callRegion, extent.width, extent.height, 1);
 }
 
 void VulkanRayTracingBuilder::buildBlas(const std::vector<BlasInput>& input, VkBuildAccelerationStructureFlagsKHR flags)

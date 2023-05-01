@@ -69,3 +69,31 @@ VkShaderModule VulkanShaderModule::getHandle() const {
 VkPipelineShaderStageCreateInfo VulkanShaderModule::getShaderStageInfo() const {
     return shaderStageInfo;
 }
+
+void createLayoutInfo(const std::vector<VulkanShaderResource>& resources, std::vector<VkPushConstantRange>& pushConstantRanges, std::unordered_map<uint32_t, std::vector<VulkanShaderResource>>& descriptorResourceSets)
+{
+    for (const auto& res : resources) {
+        if (res.type == ShaderResourceType::PushConstant) {
+            auto it = std::find_if(pushConstantRanges.begin(), pushConstantRanges.end(),
+                [&](auto& pcRange) { return pcRange.offset == res.offset; });
+
+            if (it != pushConstantRanges.end())
+                it->stageFlags |= res.stageFlags;
+            else
+                pushConstantRanges.push_back({ res.stageFlags, res.offset, res.size });
+        }
+        else {
+            if (descriptorResourceSets.end() != descriptorResourceSets.find(res.set)) {
+                auto it = std::find_if(descriptorResourceSets[res.set].begin(), descriptorResourceSets[res.set].end(),
+                    [&](auto& r) { return r.binding == res.binding; });
+
+                if (it != descriptorResourceSets[res.set].end()) {
+                    it->stageFlags |= res.stageFlags;
+                    continue;
+                }
+            }
+
+            descriptorResourceSets[res.set].push_back(res);
+        }
+    }
+}

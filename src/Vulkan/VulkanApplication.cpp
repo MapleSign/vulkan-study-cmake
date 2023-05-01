@@ -14,7 +14,7 @@
 #include "VulkanApplication.h"
 
 VulkanApplication::VulkanApplication():
-    threadCount{2}
+    threadCount{1}
 {
     volkInitialize();
 
@@ -31,6 +31,9 @@ VulkanApplication::VulkanApplication():
 
     scene = std::make_unique<Scene>();
     scene->addModel("nanosuit", "assets/models/nanosuit/nanosuit.obj");
+    auto model = scene->getModel("nanosuit");
+    model->transComp.translate.z = -20.f;
+    model->transComp.translate.y = -5.f;
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
     scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
 
@@ -49,64 +52,30 @@ VulkanApplication::VulkanApplication():
         }
     }
 
+    graphicBuilder = std::make_unique<VulkanGraphicsBuilder>(*device, *resManager, window->getExtent());
+
     renderContext = std::make_unique<VulkanRenderContext>(*device, surface, window->getExtent(), threadCount);
 
-    auto vertShader = resManager->createShaderModule("shaders/spv/shader.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
-    vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
-    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
+    auto vertShader = resManager->createShaderModule("shaders/spv/passthrough.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
 
-    auto fragShader = resManager->createShaderModule("shaders/spv/shader.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
-    fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+    auto fragShader = resManager->createShaderModule("shaders/spv/post.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+    fragShader.addShaderResourcePushConstant(0, sizeof(float));
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 0);
 
-    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager->getTextureNum(), VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+    renderPipeline = std::make_unique<VulkanRenderPipeline>(*device, *resManager, std::move(vertShader), std::move(fragShader));
+    renderPipeline->prepare();
+    renderPipeline->getPipelineState().vertexAttributeDescriptions.clear();
+    renderPipeline->getPipelineState().vertexBindingDescriptions.clear();
+    renderPipeline->getPipelineState().cullMode = VK_CULL_MODE_NONE;
+    renderPipeline->getPipelineState().depthStencilState.depth_test_enable = VK_FALSE;
+    renderPipeline->getPipelineState().depthStencilState.depth_write_enable = VK_FALSE;
+    renderPipeline->recreatePipeline(renderContext->getSwapChain().getExtent(), renderContext->getRenderPass());
 
-    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 0);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 1);
-
-    renderPipeline = std::make_unique<VulkanRenderPipeline>(*device, std::move(vertShader), std::move(fragShader), 
-        renderContext->getSwapChain().getExtent(), renderContext->getRenderPass());
-
-    globalDescriptorPool = std::make_unique<VulkanDescriptorPool>(*device, *renderPipeline->getDescriptorSetLayouts()[0], threadCount);
-    lightDescriptorPool = std::make_unique<VulkanDescriptorPool>(*device, *renderPipeline->getDescriptorSetLayouts()[1], threadCount);
-
-    globalData = resManager->requireSceneData(*globalDescriptorPool, threadCount,
-        {
-            {0, {device->getGPU().pad_uniform_buffer_size(sizeof(GlobalData)), 1}}, 
-            {1, {device->getGPU().pad_uniform_buffer_size(sizeof(ObjectData) * renderMeshes.size()), 1}},
-        }
-    );
-
-    std::vector<ObjDesc> objDescs{ renderMeshes.size() };
-    for (const auto& pair : renderMeshes) {
-        auto& od = objDescs[pair.second];
-        auto& mesh = resManager->getRenderMesh(pair.second);
-        od.vertexAddress = getBufferDeviceAddress(device->getHandle(), mesh.vertexBuffer.buffer);
-        od.indexAddress = getBufferDeviceAddress(device->getHandle(), mesh.indexBuffer.buffer);
-        od.materialAddress = getBufferDeviceAddress(device->getHandle(), mesh.matBuffer.buffer);
-        od.materialIndexAddress = getBufferDeviceAddress(device->getHandle(), mesh.matIndicesBuffer.buffer);
+    postData = resManager->requireSceneData(*renderPipeline->getDescriptorSetLayouts()[0], threadCount, {});
+    for (auto& descSet : postData.descriptorSets) {
+        descSet->addWrite(0, VkDescriptorImageInfo{ sampler, graphicBuilder->getOffscreenColor()->getHandle(), VK_IMAGE_LAYOUT_GENERAL });
     }
-    auto& objDescBuffer = resManager->requireBufferWithData(objDescs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    std::vector<VkDescriptorImageInfo> imageInfos{ resManager->getTextureNum() };
-    std::transform(resManager->getTextures().begin(), resManager->getTextures().end(), imageInfos.begin(), 
-        [](const auto& tex) { return tex->getImageInfo(); });
-
-    for (auto& dset : globalData.descriptorSets) {
-        dset->addWrite(2, objDescBuffer.getBufferInfo());
-        dset->addWriteArray(3, imageInfos.data());
-    }
-    globalData.update();
-
-    lightData = resManager->requireSceneData(*lightDescriptorPool, threadCount,
-        {
-            {0, {device->getGPU().pad_uniform_buffer_size(sizeof(DirLight)), 1}},
-            {1, {device->getGPU().pad_uniform_buffer_size(sizeof(PointLight) * 16), 1}}
-        }
-    ); 
-    lightData.update();
+    postData.update();
 
     buildRayTracing();
 
@@ -116,13 +85,14 @@ VulkanApplication::VulkanApplication():
 VulkanApplication::~VulkanApplication()
 {
     resManager.reset();
-    globalDescriptorPool.reset();
-    lightDescriptorPool.reset();
 
     gui.reset();
 
     renderPipeline.reset();
     renderContext.reset();
+
+    graphicBuilder.reset();
+    rtBuilder.reset();
 
     device.reset();
 
@@ -133,7 +103,7 @@ VulkanApplication::~VulkanApplication()
 
 void VulkanApplication::buildRayTracing()
 {
-    rtBuilder = std::make_unique<VulkanRayTracingBuilder>(device, *resManager);
+    rtBuilder = std::make_unique<VulkanRayTracingBuilder>(*device, *resManager, *graphicBuilder->getOffscreenColor());
 
     // BLAS - Storing each primitive in a geometry
     std::vector<BlasInput> allBlas;
@@ -167,17 +137,17 @@ void VulkanApplication::buildRayTracing()
     rtBuilder->buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 
     std::vector<VulkanShaderModule> rtShaders{};
-    rtShaders.emplace_back(resManager->createShaderModule("shaders/raytrace.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR, "main"));
+    rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytrace.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR, "main"));
     rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::StorageImage, 0, 1);
-    rtShaders.emplace_back(resManager->createShaderModule("shaders/raytrace.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR, "main"));
+    rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytrace.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR, "main"));
     rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
-    rtShaders.emplace_back(resManager->createShaderModule("shaders/raytrace.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, "main"));
+    rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytrace.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, "main"));
     rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
 
-    rtBuilder->createRayTracingPipeline(rtShaders, *renderPipeline->getDescriptorSetLayouts()[0]);
+    rtBuilder->createRayTracingPipeline(rtShaders, *graphicBuilder->getGlobalData().descSetLayout);
     rtBuilder->createRtShaderBindingTable();
 }
 
@@ -188,6 +158,22 @@ void VulkanApplication::mainLoop()
         glfwPollEvents();
 
         gui->newFrame();
+        ImGui::Begin("Debug");
+        ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
+        ImGui::Checkbox("Ray Tracer mode", &useRayTracer);  // Switch between raster and ray tracing
+
+        /*if (ImGui::CollapsingHeader("Light"))
+        {
+            ImGui::RadioButton("Point", &helloVk.m_pcRaster.lightType, 0);
+            ImGui::SameLine();
+            ImGui::RadioButton("Infinite", &helloVk.m_pcRaster.lightType, 1);
+
+            ImGui::SliderFloat3("Position", &helloVk.m_pcRaster.lightPosition.x, -20.f, 20.f);
+            ImGui::SliderFloat("Intensity", &helloVk.m_pcRaster.lightIntensity, 0.f, 150.f);
+        }*/
+
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::End();
 
         drawFrame();
     }
@@ -243,42 +229,33 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
 {
     commandBuffer.begin(0);
 
-    std::vector<VkClearValue> clearValues{2};
+    if (!useRayTracer) {
+        graphicBuilder->draw(commandBuffer, clearColor);
+    }
+    else {
+        rtBuilder->raytrace(commandBuffer, *graphicBuilder->getGlobalData().descriptorSets[frameIndex], { clearColor });
+    }
+    
+    std::vector<VkClearValue> clearValues{ 2 };
     //clearValues[0].color = {{0.2f, 0.3f, 0.3f, 1.0f}};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-    clearValues[1].depthStencil = {1.0f, 0};
+    clearValues[0].color = { clearColor.r, clearColor.g, clearColor.b, clearColor.a };
+    clearValues[1].depthStencil = { 1.0f, 0 };
     commandBuffer.beginRenderPass(renderTarget, renderContext->getRenderPass(), framebuffer, clearValues, VK_SUBPASS_CONTENTS_INLINE);
-
-
+    
     commandBuffer.bindPipeline(renderPipeline->getGraphicsPipeline());
 
-    auto globalDescriptorSetHandle = globalData.descriptorSets[frameIndex]->getHandle();
-    vkCmdBindDescriptorSets(commandBuffer.getHandle(),
-        renderPipeline->getGraphicsPipeline().getBindPoint(),
-        renderPipeline->getPipelineLayout().getHandle(),
-        0, 1, &globalDescriptorSetHandle, 0, nullptr);
+    auto extent = renderContext->getSwapChain().getExtent();
+    auto aspectRatio = static_cast<float>(extent.width) / static_cast<float>(extent.height);
+    vkCmdPushConstants(commandBuffer.getHandle(), 
+        renderPipeline->getPipelineLayout().getHandle(), 
+        VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &aspectRatio);
 
-    auto lightDescriptorSetHandle = lightData.descriptorSets[frameIndex]->getHandle();
-    vkCmdBindDescriptorSets(commandBuffer.getHandle(),
-        renderPipeline->getGraphicsPipeline().getBindPoint(),
-        renderPipeline->getPipelineLayout().getHandle(),
-        1, 1, &lightDescriptorSetHandle, 0, nullptr);
+    auto postDescSetHandle = postData.descriptorSets[frameIndex][0].getHandle();
+    vkCmdBindDescriptorSets(commandBuffer.getHandle(), 
+        renderPipeline->getGraphicsPipeline().getBindPoint(), 
+        renderPipeline->getPipelineLayout().getHandle(), 0, 1, &postDescSetHandle, 0, nullptr);
 
-    for (const auto& [mesh, id] : renderMeshes) {
-        auto& renderMesh = resManager->getRenderMesh(id);
-        pushConstants.objId = id;
-
-        const auto& pipelineLayout = renderPipeline->getPipelineLayout();
-        vkCmdPushConstants(commandBuffer.getHandle(), pipelineLayout.getHandle(),
-            pipelineLayout.getPushConstantRanges()[0].stageFlags, 0, sizeof(PushConstantRaster), &pushConstants);
-
-        vkCmdBindVertexBuffers(commandBuffer.getHandle(), 0, 1, &renderMesh.vertexBuffer.buffer, &renderMesh.vertexBuffer.offset);
-
-        vkCmdBindIndexBuffer(commandBuffer.getHandle(), renderMesh.indexBuffer.buffer, renderMesh.indexBuffer.offset, renderMesh.indexType);
-
-
-        commandBuffer.drawIndexed(renderMesh.indexNum, 1, 0, 0, 0);
-    }
+    vkCmdDraw(commandBuffer.getHandle(), 3, 1, 0, 0);
 
     gui->renderDrawData(commandBuffer.getHandle());
 
@@ -307,34 +284,15 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentImage)
     auto extent = renderContext->getSwapChain().getExtent();
 
     const auto model = scene->getModel("nanosuit");
-    model->transComp.translate.x = -20.f;
+    model->transComp.translate.z = -20.f;
     model->transComp.rotate.y = time * 90.0f;
 
-    GlobalData ubo{};
-    ubo.view = view;
-    ubo.proj = glm::perspective(glm::radians(45.0f), (float)extent.width / (float)extent.height, 0.1f, 100.0f);
-    ubo.proj[1][1] *= -1;
-    globalData.uniformBuffers[currentImage][0]->update(&ubo, sizeof(ubo));
-
-    auto& buffer = globalData.uniformBuffers[currentImage][1];
-    ObjectData* objData = reinterpret_cast<ObjectData*>(buffer->map());
     for (const auto& [mesh, id] : renderMeshes) {
-        objData[id].model = mesh->parent->transComp.getTransformMatrix() * mesh->transComp.getTransformMatrix();
+        resManager->getRenderMesh(id).tranformMatrix = 
+            mesh->parent->transComp.getTransformMatrix() * mesh->transComp.getTransformMatrix();
     }
-    buffer->unmap();
 
-    DirLight* dirLight = scene->getDirLight();
-    lightData.uniformBuffers[currentImage][0]->update(dirLight, device->getGPU().pad_uniform_buffer_size(sizeof(DirLight)), 0);
-
-    auto offset = device->getGPU().pad_uniform_buffer_size(sizeof(DirLight));
-    std::vector<PointLight> pointLights;
-    for (const auto& [name, light] : scene->getPointLightMap()) {
-        pointLights.push_back(*light);
-    }
-    lightData.uniformBuffers[currentImage][0]->update(pointLights.data(), device->getGPU().pad_uniform_buffer_size(sizeof(PointLight) * pointLights.size()), offset);
-
-    pushConstants.lightNum = scene->getPointLightMap().size();
-    pushConstants.viewPos = camera->position;
+    graphicBuilder->update(deltaTime, scene.get());
 }
 
 glm::mat4 VulkanApplication::processInput(GLFWwindow* window, glm::mat4 view, FPSCamera& camera, float deltaTime)
