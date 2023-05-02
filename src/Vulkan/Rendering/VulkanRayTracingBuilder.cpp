@@ -444,7 +444,7 @@ void VulkanRayTracingBuilder::cmdCreateTlas(
 	vkCmdBuildAccelerationStructuresKHR(cmdBuf, 1, &buildInfo, &pBuildOffsetInfo);
 }
 
-VkDeviceAddress VulkanRayTracingBuilder::getBlasDeviceAddress(uint32_t blasID)
+VkDeviceAddress VulkanRayTracingBuilder::getBlasDeviceAddress(uint32_t blasID) const
 {
 	assert(size_t(blasID) < blasList.size());
 	VkAccelerationStructureDeviceAddressInfoKHR addressInfo{ VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };

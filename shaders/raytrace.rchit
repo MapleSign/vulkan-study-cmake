@@ -24,6 +24,17 @@ layout(set = 1, binding = eTextures) uniform sampler2D[] textureSampler;
 
 layout(push_constant) uniform _PushConstantRay { PushConstantRay pcRay; };
 
+vec3 interpolate(vec3 a, vec3 b, vec3 c, vec3 barycentrics) {
+    return a * barycentrics.x + b * barycentrics.y + c * barycentrics.z;
+}
+
+mat3 calcTBN(vec3 T, vec3 B, vec3 N) {
+    T = normalize(vec3(gl_ObjectToWorldEXT * vec4(T, 0.0)));
+    B = normalize(vec3(gl_ObjectToWorldEXT * vec4(B, 0.0)));
+    N = normalize(vec3(gl_ObjectToWorldEXT * vec4(N, 0.0)));
+    return mat3(T, B, N);
+}
+
 void main()
 {
     // object data
@@ -52,12 +63,11 @@ void main()
     const vec3 worldPos = vec3(gl_ObjectToWorldEXT * vec4(pos, 1.0));  // Transforming the position to world space
 
     // texture coordinate
-    vec2 texCoord = v0.texCoord * barycentrics.x + v1.texCoord * barycentrics.y + v2.texCoord * barycentrics.z;
-    // vec3 T = normalize(vec3(model * vec4(inTangent, 0.0)));
-    // vec3 B = normalize(vec3(model * vec4(inBitangent, 0.0)));
-    // vec3 N = normalize(vec3(model * vec4(inNormal, 0.0)));
-    // mat3 TBN = mat3(T, B, N);
-    // fragTBN = TBN;
+    const vec2 texCoord = v0.texCoord * barycentrics.x + v1.texCoord * barycentrics.y + v2.texCoord * barycentrics.z;
+    
+    const mat3 TBN = calcTBN(v0.tangent, v0.bitangent, v0.normal) * barycentrics.x + 
+        calcTBN(v1.tangent, v1.bitangent, v1.normal) * barycentrics.y + 
+        calcTBN(v2.tangent, v2.bitangent, v2.normal) * barycentrics.z;
 
     vec3 ambient;
     vec3 diffuse;
@@ -79,15 +89,16 @@ void main()
         specular = mat.specular;
     }
 
-    // if (mat.norm_textureId >= 0) {
-    //     nrm = texture(textureSampler[mat.norm_textureId], texCoord).rgb;
-    //     nrm = normalize(nrm * 2.0 - 1.0);
-    //     nrm = normalize(fragTBN * nrm);
-    // }
-    // else {
-    //     nrm = v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z;
-    // }
-    nrm = v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z;
+    if (mat.norm_textureId >= 0) {
+        nrm = texture(textureSampler[mat.norm_textureId], texCoord).rgb;
+        nrm = normalize(nrm * 2.0 - 1.0);
+        nrm = normalize(TBN * nrm);
+    }
+    else {
+        nrm = v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z;
+        nrm = normalize(vec3(nrm * gl_WorldToObjectEXT));
+    }
+    // nrm = v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z;
 
     // Computing the normal at hit position
     const vec3 worldNrm = normalize(vec3(nrm * gl_WorldToObjectEXT));  // Transforming the normal to world space
@@ -95,14 +106,14 @@ void main()
     // Vector toward the light
     vec3  L;
     float lightIntensity = pcRay.lightIntensity;
-    float lightDistance  = 100000.0;
+    float lightDistance = 100000.0;
     // Point light
     if(pcRay.lightType == 0)
     {
-        vec3 lDir      = pcRay.lightPosition - worldPos;
-        lightDistance  = length(lDir);
+        vec3 lDir = pcRay.lightPosition - worldPos;
+        lightDistance = length(lDir);
         lightIntensity = pcRay.lightIntensity / (lightDistance * lightDistance);
-        L              = normalize(lDir);
+        L = normalize(lDir);
     }
     else  // Directional light
     {
@@ -110,10 +121,10 @@ void main()
     }
 
     float attenuation = 1;
-    diffuse = computeDiffuse(diffuse, ambient, L, worldNrm);
+    diffuse = computeDiffuse(diffuse, ambient * 0.1, L, nrm);
 
     // Tracing shadow ray only if the light is visible from the surface
-    if(dot(worldNrm, L) > 0)
+    if(dot(nrm, L) > 0)
     {
         float tMin   = 0.001;
         float tMax   = lightDistance;
@@ -141,10 +152,12 @@ void main()
         }
         else {
             // Specular
-            specular = computeSpecular(specular, mat.shininess, gl_WorldRayDirectionEXT, L, worldNrm);
+            specular = computeSpecular(specular, mat.shininess, -gl_WorldRayDirectionEXT, L, nrm);
         }
     }
-
+    else {
+        specular = vec3(0);
+    }
 
     prd.hitValue = vec3(lightIntensity * attenuation * (diffuse + specular));
 }

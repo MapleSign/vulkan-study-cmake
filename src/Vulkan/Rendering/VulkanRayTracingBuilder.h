@@ -21,6 +21,7 @@ struct PushConstantRayTracing {
 	glm::vec3 lightPosition;
 	float lightIntensity;
 	int lightType;
+	int frame;
 };
 
 class VulkanRayTracingBuilder
@@ -62,7 +63,7 @@ public:
 		VkBuildAccelerationStructureFlagsKHR flags, 
 		bool update, bool motion);
 
-	VkDeviceAddress getBlasDeviceAddress(uint32_t blasID);
+	VkDeviceAddress getBlasDeviceAddress(uint32_t blasID) const;
 private:
 	const VulkanDevice& device;
 	VulkanResourceManager& resManager;

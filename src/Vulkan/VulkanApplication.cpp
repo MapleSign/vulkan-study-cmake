@@ -247,6 +247,7 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
         graphicBuilder->draw(commandBuffer, clearColor);
     }
     else {
+        pcRay.frame++;
         pcRay.clearColor = clearColor;
         rtBuilder->raytrace(commandBuffer, *graphicBuilder->getGlobalData().descriptorSets[frameIndex], pcRay);
     }
