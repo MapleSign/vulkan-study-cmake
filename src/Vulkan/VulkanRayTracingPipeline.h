@@ -21,6 +21,7 @@ public:
     {
         Raygen = 0,
         Miss,
+        MissShadow,
         ClosestHit,
         
         ShaderGroupCount // always the last one

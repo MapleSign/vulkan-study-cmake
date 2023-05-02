@@ -29,11 +29,15 @@ VulkanApplication::VulkanApplication():
 
     resManager = std::make_unique<VulkanResourceManager>(*device, device->getCommandPool());
 
+    Model* model{ nullptr };
     scene = std::make_unique<Scene>();
-    scene->addModel("nanosuit", "assets/models/nanosuit/nanosuit.obj");
-    auto model = scene->getModel("nanosuit");
-    model->transComp.translate.z = -20.f;
+    model = scene->addModel("nanosuit", "assets/models/nanosuit/nanosuit.obj");
     model->transComp.translate.y = -5.f;
+    model->transComp.translate.z = -20.f;
+    model = scene->addModel("floor", "assets/models/cube/cube.obj");
+    model->transComp.translate = { 0.f, -6.f, -30.f };
+    model->transComp.scale = { 50.0f, 1.f, 50.0f };
+
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
     scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
 
@@ -46,7 +50,7 @@ VulkanApplication::VulkanApplication():
 
             std::vector<RenderTexture> textures;
             for (const auto& texture : mesh.textures) {
-                textures.push_back({ texture.path.c_str(), sampler });
+                textures.push_back({ texture.type, texture.path.c_str(), sampler });
             }
 
             auto id = resManager->requireRenderMesh(mesh.vertices, mesh.indices, mesh.mat, textures);
@@ -145,11 +149,16 @@ void VulkanApplication::buildRayTracing()
     rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::StorageImage, 0, 1);
+
     rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytrace.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR, "main"));
     rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
+
+    rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytraceShadow.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR, "main"));
+    
     rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytrace.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, "main"));
     rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
+    rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
 
     rtBuilder->createRayTracingPipeline(rtShaders, *graphicBuilder->getGlobalData().descSetLayout);
     rtBuilder->createRtShaderBindingTable();

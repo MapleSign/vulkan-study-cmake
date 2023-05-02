@@ -7,6 +7,7 @@
 
 #include "Vertex.h"
 #include "Light.h"
+#include "Texture.h"
 
 #include "VulkanCommon.h"
 #include "VulkanDescriptorSet.h"
@@ -43,11 +44,11 @@ struct SceneData {
 };
 
 struct RenderMaterial {
-    glm::vec3  ambient;
-    glm::vec3  diffuse;
-    glm::vec3  specular;
-    glm::vec3  transmittance;
-    glm::vec3  emission;
+    glm::vec3  ambient{ 1.0f };
+    glm::vec3  diffuse{ 0.8f };
+    glm::vec3  specular{ 0.5f };
+    glm::vec3  transmittance{ 0.0f };
+    glm::vec3  emission{ 0.0f };
     float shininess = 32.0f;
     float ior;       // index of refraction
     float dissolve = 1.0f;  // 1 == opaque; 0 == fully transparent
@@ -58,6 +59,7 @@ struct RenderMaterial {
 
 struct RenderTexture
 {
+    TextureType type;
     const char* filepath;
     VkSampler sampler;
 };

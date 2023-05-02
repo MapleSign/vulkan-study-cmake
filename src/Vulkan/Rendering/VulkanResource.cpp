@@ -123,12 +123,27 @@ RenderMeshID VulkanResourceManager::requireRenderMesh(
     RenderMesh mesh{};
 
     auto texturedMat = mat;
-    requireTexture(textures[0].filepath, textures[0].sampler);
-    texturedMat.diff_textureId = getTextureNum() - 1;
-    requireTexture(textures[1].filepath, textures[1].sampler);
-    texturedMat.spec_textureId = getTextureNum() - 1;
-    requireTexture(textures[2].filepath, textures[2].sampler);
-    texturedMat.norm_textureId = getTextureNum() - 1;
+    for (auto& texture : textures) {
+        if (texture.type == TextureType::DIFFUSE) {
+            requireTexture(texture.filepath, texture.sampler);
+            texturedMat.diff_textureId = getTextureNum() - 1;
+            break;
+        }
+    }
+    for (auto& texture : textures) {
+        if (texture.type == TextureType::SPECULAR) {
+            requireTexture(texture.filepath, texture.sampler);
+            texturedMat.spec_textureId = getTextureNum() - 1;
+            break;
+        }
+    }
+    for (auto& texture : textures) {
+        if (texture.type == TextureType::NORMAL) {
+            requireTexture(texture.filepath, texture.sampler);
+            texturedMat.norm_textureId = getTextureNum() - 1;
+            break;
+        }
+    }
 
     std::vector<int32_t> matIndices(indices.size() / 3, 0);
 

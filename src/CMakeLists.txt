@@ -4,6 +4,7 @@ set(ENGINE_FILES
     Model.h
     Scene.h
     Vertex.h
+    Texture.h
 
     Camera.cpp
     Mesh.cpp

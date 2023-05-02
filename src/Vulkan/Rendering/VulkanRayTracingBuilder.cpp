@@ -61,6 +61,10 @@ void VulkanRayTracingBuilder::createRayTracingPipeline(
 	group.generalShader = VulkanRayTracingPipeline::Miss;
 	rtShaderGroups.push_back(group);
 
+	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+	group.generalShader = VulkanRayTracingPipeline::MissShadow;
+	rtShaderGroups.push_back(group);
+
 	// closest hit shader
 	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
 	group.generalShader = VK_SHADER_UNUSED_KHR;
@@ -83,13 +87,14 @@ void VulkanRayTracingBuilder::createRayTracingPipeline(
 	state.groupInfos = rtShaderGroups;
 	state.stageInfos = stageInfos;
 	state.pipelineLayout = rtPipelineLayout.get();
+	state.maxPipelineRayRecursionDepth = 2;
 	rtPipeline = std::make_unique<VulkanRayTracingPipeline>(device, state);
 }
 
 void VulkanRayTracingBuilder::createRtShaderBindingTable()
 {
 	auto rtProperties = device.getGPU().getRTProperties();
-	uint32_t missCount{ 1 };
+	uint32_t missCount{ 2 };
 	uint32_t hitCount{ 1 };
 	auto handleCount = 1 + missCount + hitCount;
 	uint32_t handleSize = rtProperties.shaderGroupHandleSize;
