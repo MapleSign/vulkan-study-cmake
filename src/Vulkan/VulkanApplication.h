@@ -35,7 +35,7 @@ const std::vector<const char*> deviceExtensions = {
 class VulkanApplication
 {
 public:
-    bool isCursorEnabled = false;
+    bool isCursorEnabled = true;
 	bool framebufferResized = false;
 	bool enableValidationLayers = true;
 
@@ -85,6 +85,7 @@ private:
     std::unique_ptr<GUI> gui;
     bool useRayTracer;
     glm::vec4 clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+    PushConstantRayTracing pcRay{};
 
     std::vector<const char*> getRequiredExtensions();
     static void mouse_callback(GLFWwindow* window, double xpos, double ypos);

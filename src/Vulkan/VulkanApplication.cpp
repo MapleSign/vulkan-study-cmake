@@ -37,18 +37,21 @@ VulkanApplication::VulkanApplication():
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
     scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
 
+    int meshCnt = 0;
     VkSampler sampler = resManager->createSampler();
     for (const auto& [name, model] : scene->getModelMap()) {
         for (auto& mesh : model->getMeshes()) {
+            //if (meshCnt >= 10) break;
+            //meshCnt++;
+
             std::vector<RenderTexture> textures;
             for (const auto& texture : mesh.textures) {
                 textures.push_back({ texture.path.c_str(), sampler });
             }
 
-            renderMeshes.emplace(
-                &mesh,
-                resManager->requireRenderMesh(mesh.vertices, mesh.indices, mesh.mat, textures)
-            );
+            auto id = resManager->requireRenderMesh(mesh.vertices, mesh.indices, mesh.mat, textures);
+            renderMeshes.emplace(&mesh, id);
+            resManager->getRenderMesh(id).tranformMatrix = model->transComp.getTransformMatrix() * mesh.transComp.getTransformMatrix();
         }
     }
 
@@ -125,7 +128,7 @@ void VulkanApplication::buildRayTracing()
     {
         VkAccelerationStructureInstanceKHR rayInst{};
         rayInst.transform = toTransformMatrixKHR(resManager->getRenderMesh(id).tranformMatrix); // Position of the instance
-        rayInst.instanceCustomIndex = 0; // gl_InstanceCustomIndexEXT
+        rayInst.instanceCustomIndex = id; // gl_InstanceCustomIndexEXT
         rayInst.accelerationStructureReference = rtBuilder->getBlasDeviceAddress(i);
         rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
         rayInst.mask = 0xFF; //  Only be hit if rayMask & instance.mask != 0
@@ -163,15 +166,15 @@ void VulkanApplication::mainLoop()
         ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
         ImGui::Checkbox("Ray Tracer mode", &useRayTracer);  // Switch between raster and ray tracing
 
-        /*if (ImGui::CollapsingHeader("Light"))
+        if (ImGui::CollapsingHeader("Light"))
         {
-            ImGui::RadioButton("Point", &helloVk.m_pcRaster.lightType, 0);
+            ImGui::RadioButton("Point", &pcRay.lightType, 0);
             ImGui::SameLine();
-            ImGui::RadioButton("Infinite", &helloVk.m_pcRaster.lightType, 1);
+            ImGui::RadioButton("Infinite", &pcRay.lightType, 1);
 
-            ImGui::SliderFloat3("Position", &helloVk.m_pcRaster.lightPosition.x, -20.f, 20.f);
-            ImGui::SliderFloat("Intensity", &helloVk.m_pcRaster.lightIntensity, 0.f, 150.f);
-        }*/
+            ImGui::SliderFloat3("Position.x", &pcRay.lightPosition.x, -20.f, 20.f);
+            ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
+        }
 
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
@@ -235,7 +238,8 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
         graphicBuilder->draw(commandBuffer, clearColor);
     }
     else {
-        rtBuilder->raytrace(commandBuffer, *graphicBuilder->getGlobalData().descriptorSets[frameIndex], { clearColor });
+        pcRay.clearColor = clearColor;
+        rtBuilder->raytrace(commandBuffer, *graphicBuilder->getGlobalData().descriptorSets[frameIndex], pcRay);
     }
     
     std::vector<VkClearValue> clearValues{ 2 };
@@ -306,7 +310,7 @@ void VulkanApplication::updateTlas()
     {
         VkAccelerationStructureInstanceKHR rayInst{};
         rayInst.transform = toTransformMatrixKHR(resManager->getRenderMesh(id).tranformMatrix); // Position of the instance
-        rayInst.instanceCustomIndex = 0; // gl_InstanceCustomIndexEXT
+        rayInst.instanceCustomIndex = id; // gl_InstanceCustomIndexEXT
         rayInst.accelerationStructureReference = rtBuilder->getBlasDeviceAddress(i);
         rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
         rayInst.mask = 0xFF; //  Only be hit if rayMask & instance.mask != 0

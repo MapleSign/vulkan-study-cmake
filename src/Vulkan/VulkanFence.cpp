@@ -26,11 +26,14 @@ VulkanFence::~VulkanFence() {
 }
 
 void VulkanFence::wait() {
-	vkWaitForFences(device.getHandle(), 1, &fence, VK_TRUE, UINT64_MAX);
+	auto result = vkWaitForFences(device.getHandle(), 1, &fence, VK_TRUE, UINT64_MAX);
+	if (result != VK_SUCCESS) {
+		throw std::runtime_error("failed to wait for fence!");
+	}
 }
 
 void VulkanFence::reset() {
-	vkResetFences(device.getHandle(), 1, &fence);
+	VK_CHECK(vkResetFences(device.getHandle(), 1, &fence));
 }
 
 VkFence VulkanFence::getHandle() const { return fence; }
