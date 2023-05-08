@@ -102,19 +102,45 @@ struct Vertex  // See ObjLoader, copy of VertexObj, could be compressed for devi
 	vec3 bitangent;
 };
 
-struct Material  // See ObjLoader, copy of MaterialObj, could be compressed for device
+struct Material  // GLTF Material
 {
-	vec3  ambient;
-	vec3  diffuse;
-	vec3  specular;
-	vec3  transmittance;
-	vec3  emission;
-	float shininess;
-	float ior;       // index of refraction
-	float dissolve;  // 1 == opaque; 0 == fully transparent
-	int   diff_textureId;
-	int   spec_textureId;
-	int   norm_textureId;
+	// 0
+    vec4 pbrBaseColorFactor;
+    // 4
+    int   pbrBaseColorTexture;
+    float pbrMetallicFactor;
+    float pbrRoughnessFactor;
+    int   pbrMetallicRoughnessTexture;
+    // 8
+    vec4 khrDiffuseFactor;  // KHR_materials_pbrSpecularGlossiness
+    vec3 khrSpecularFactor;
+    int  khrDiffuseTexture;
+    // 16
+    int   shadingModel;  // 0: metallic-roughness, 1: specular-glossiness
+    float khrGlossinessFactor;
+    int   khrSpecularGlossinessTexture;
+    int   emissiveTexture;
+    // 20
+    vec3 emissiveFactor;
+    int  alphaMode;
+    // 24
+    float alphaCutoff;
+    int   doubleSided;
+    int   normalTexture;
+    float normalTextureScale;
+    // 28
+    int occlusionTexture;
+    float occlusionTextureStrength;
+    float transmissionFactor;
+    int   transmissionTexture;
+    // 32
+    float clearcoatFactor;
+    float clearcoatRoughness;
+    int  clearcoatTexture;
+    int  clearcoatRoughnessTexture;
+    //36
+    float ior;
+    vec3 pad;
 };
 
 

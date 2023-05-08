@@ -17,12 +17,12 @@ public:
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
-    RenderMaterial mat;
+    GltfMaterial mat;
 
     TransformComponent transComp{};
 
     Mesh(Model* parent, const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, 
-        std::vector<Texture>& textures, const RenderMaterial& mat);
+        const std::vector<Texture>& textures, const GltfMaterial& mat);
 private:
     void setupMesh();
 };

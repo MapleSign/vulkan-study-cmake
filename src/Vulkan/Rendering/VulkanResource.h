@@ -57,6 +57,46 @@ struct RenderMaterial {
     int   norm_textureId = -1;
 };
 
+struct GltfMaterial {
+    // 0
+    glm::vec4 pbrBaseColorFactor{ 1.0f };
+    // 4
+    int   pbrBaseColorTexture{ -1 };
+    float pbrMetallicFactor{ 1.0f };
+    float pbrRoughnessFactor{ 1.0f };
+    int   pbrMetallicRoughnessTexture{ -1 };
+    // 8
+    glm::vec4 khrDiffuseFactor{ 1.0f };  // KHR_materials_pbrSpecularGlossiness
+    glm::vec3 khrSpecularFactor{ 1.0f };
+    int  khrDiffuseTexture{ -1 };
+    // 16
+    int   shadingModel{ 0 };  // 0: metallic-roughness, 1: specular-glossiness
+    float khrGlossinessFactor{ 1.0f };
+    int   khrSpecularGlossinessTexture{ -1 };
+    int   emissiveTexture{ -1 };
+    // 20
+    glm::vec3 emissiveFactor{ 0.f };
+    int  alphaMode{ 0 };
+    // 24
+    float alphaCutoff{ 0.5f };
+    int   doubleSided{ 0 };
+    int   normalTexture{ -1 };
+    float normalTextureScale{ 1.0f };
+    // 28
+    int occlusionTexture{ -1 };
+    float occlusionTextureStrength{ 1 };
+    float transmissionFactor{ 0.0f };
+    int   transmissionTexture{ -1 };
+    // 32
+    float clearcoatFactor{ 0.f };
+    float clearcoatRoughness{ 0.f };
+    int  clearcoatTexture{ -1 };
+    int  clearcoatRoughnessTexture{ -1 };
+    //36
+    float ior{ 1.5f };
+    glm::vec3 pad;
+};
+
 struct RenderTexture
 {
     TextureType type;
@@ -116,13 +156,16 @@ public:
 	~VulkanResourceManager();
 
     RenderMeshID requireRenderMesh(
-        const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const RenderMaterial& mat, 
+        const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const GltfMaterial& mat, 
         VulkanPipeline* pipeline, const VulkanDescriptorSetLayout& descSetLayout, uint32_t threadCount,
-        const std::map<uint32_t, std::pair<VkDeviceSize, size_t>>& bufferSizeInfos, const BindingMap<RenderTexture>& textureInfosMap);
+        const std::map<uint32_t, std::pair<VkDeviceSize, size_t>>& bufferSizeInfos, 
+        const BindingMap<RenderTexture>& textureInfosMap);
 
     RenderMeshID requireRenderMesh(
-        const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, 
-        const RenderMaterial& mat, const std::vector<RenderTexture> textures);
+        const std::vector<Vertex>& vertices, 
+        const std::vector<uint32_t>& indices, 
+        const GltfMaterial& mat, 
+        const std::vector<RenderTexture> textures);
 
     SceneData requireSceneData(const VulkanDescriptorSetLayout& descSetLayout, uint32_t threadCount,
         const std::map<uint32_t, std::pair<VkDeviceSize, size_t>>& bufferSizeInfos);

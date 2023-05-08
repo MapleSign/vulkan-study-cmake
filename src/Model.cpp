@@ -7,6 +7,14 @@ Model::Model(const char* objFilename)
     loadModel(objFilename);
 }
 
+Model::Model(std::vector<Mesh>&& meshes) :
+    meshes{ std::move(meshes) }
+{
+    for (auto& m : this->meshes) {
+        m.parent = this;
+    }
+}
+
 Model::~Model()
 {
 }
@@ -107,24 +115,34 @@ void Model::processMesh(aiMesh* mesh, const aiScene* scene)
 
     // See if it has material index, 
     // and if true, load the diffuse and the specular texture
-    RenderMaterial mat{};
+    GltfMaterial mat{};
     if (mesh->mMaterialIndex >= 0)
     {
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
+        mat.shadingModel = 1;
         loadMaterialProperties(material, mat);
 
         std::vector<Texture> diffuseMaps = loadMaterialTextures(material,
             aiTextureType_DIFFUSE, TextureType::DIFFUSE);
         textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+        if (diffuseMaps.size() > 0) {
+            mat.khrDiffuseTexture = textures.size() - 1;
+        }
 
         std::vector<Texture> specularMaps = loadMaterialTextures(material,
             aiTextureType_SPECULAR, TextureType::SPECULAR);
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+        if (specularMaps.size() > 0) {
+            mat.khrSpecularGlossinessTexture = textures.size() - 1;
+        }
 
         std::vector<Texture> normalMaps = loadMaterialTextures(material,
             aiTextureType_NORMALS, TextureType::NORMAL);
         textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+        if (normalMaps.size() > 0) {
+            mat.normalTexture = textures.size() - 1;
+        }
     }
 
     meshes.emplace_back(this, vertices, indices, textures, mat);
@@ -146,19 +164,15 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
     return textures;
 }
 
-void Model::loadMaterialProperties(aiMaterial* aiMat, RenderMaterial& mat)
+void Model::loadMaterialProperties(aiMaterial* aiMat, GltfMaterial& mat)
 {
     aiColor3D color{};
-    aiMat->Get(AI_MATKEY_COLOR_AMBIENT, color);
-    mat.ambient = { color.r, color.g, color.b };
     aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, color);
-    mat.diffuse = { color.r, color.g, color.b };
+    mat.khrDiffuseFactor = { color.r, color.g, color.b, 1.f };
     aiMat->Get(AI_MATKEY_COLOR_SPECULAR, color);
-    mat.specular = { color.r, color.g, color.b };
-    aiMat->Get(AI_MATKEY_COLOR_TRANSPARENT, color);
-    mat.transmittance = { color.r, color.g, color.b };
+    mat.khrSpecularFactor = { color.r, color.g, color.b };
     aiMat->Get(AI_MATKEY_COLOR_EMISSIVE, color);
-    mat.emission = { color.r, color.g, color.b };
+    mat.emissiveFactor = { color.r, color.g, color.b };
 
-    aiMat->Get(AI_MATKEY_SHININESS, mat.shininess);
+    aiMat->Get(AI_MATKEY_SHININESS, mat.khrGlossinessFactor);
 }

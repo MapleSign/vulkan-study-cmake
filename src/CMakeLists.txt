@@ -114,10 +114,17 @@ set(COMPONENT_FILES
     ./Component/TransformComponent.cpp
 )
 
+set(GLTF_FILES
+    ./GLTF/GLTFHelper.h
+    
+    ./GLTF/GLTFHelper.cpp
+)
+
 source_group("\\" FILES ${ENGINE_FILES})
 source_group("platform\\" FILES ${PLATFORM_FILES})
 source_group("gui\\" FILES ${GUI_FILES})
 source_group("component\\" FILES ${COMPONENT_FILES})
+source_group("GLTF\\" FILES ${GLTF_FILES})
 source_group("vulkan\\" FILES ${VULKAN_FRAMEWORK_FILES})
 source_group("vulkan\\rendering\\" FILES ${RENDERING_FILES})
 source_group("vulkan\\rendering\\subpasses" FILES ${SUBPASSES_FILES})
@@ -131,6 +138,7 @@ add_executable(vulkan_study
     ${PLATFORM_FILES}
     ${GUI_FILES}
     ${COMPONENT_FILES}
+    ${GLTF_FILES}
 )
 
 # set_property(TARGET vulkan_study PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:vulkan_study>")
@@ -140,8 +148,8 @@ target_include_directories(vulkan_study PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}" 
     "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan"
 )
-target_link_libraries(vulkan_study vma glm imgui stb volk)
+target_link_libraries(vulkan_study PUBLIC vma glm imgui stb volk tinygltf)
 
-target_link_libraries(vulkan_study Vulkan::Vulkan glfw assimp::assimp)
+target_link_libraries(vulkan_study PUBLIC Vulkan::Vulkan glfw assimp::assimp)
 
 add_dependencies(vulkan_study Shaders)

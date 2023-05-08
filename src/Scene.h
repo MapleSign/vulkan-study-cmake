@@ -4,6 +4,8 @@
 #include <memory>
 #include <unordered_map>
 
+#include <tiny_gltf.h>
+
 #include "Camera.h"
 #include "Model.h"
 #include "Light.h"
@@ -14,6 +16,7 @@ public:
 	Scene();
 	~Scene();
 
+	std::vector<Model*> loadGLTFFile(const char* filename);
 	Model* addModel(const char* modelName, const char* objFilename);
 	Model* getModel(const char* modelName);
 	std::unordered_map<std::string, std::unique_ptr<Model>>& getModelMap();

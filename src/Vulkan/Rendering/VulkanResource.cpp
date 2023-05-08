@@ -36,9 +36,10 @@ VulkanResourceManager::~VulkanResourceManager()
 }
 
 RenderMeshID VulkanResourceManager::requireRenderMesh(
-    const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const RenderMaterial& mat, 
+    const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, const GltfMaterial& mat, 
     VulkanPipeline* pipeline, const VulkanDescriptorSetLayout& descSetLayout, uint32_t threadCount,
-    const std::map<uint32_t, std::pair<VkDeviceSize, size_t>>& bufferSizeInfos, const BindingMap<RenderTexture>& textureInfosMap)
+    const std::map<uint32_t, std::pair<VkDeviceSize, size_t>>& bufferSizeInfos, 
+    const BindingMap<RenderTexture>& textureInfosMap)
 {
     RenderMesh mesh{};
     mesh.pipeline = pipeline;
@@ -117,32 +118,33 @@ RenderMeshID VulkanResourceManager::requireRenderMesh(
 }
 
 RenderMeshID VulkanResourceManager::requireRenderMesh(
-    const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices, 
-    const RenderMaterial& mat, const std::vector<RenderTexture> textures)
+    const std::vector<Vertex>& vertices, 
+    const std::vector<uint32_t>& indices, 
+    const GltfMaterial& mat, 
+    const std::vector<RenderTexture> textures)
 {
     RenderMesh mesh{};
 
     auto texturedMat = mat;
-    for (auto& texture : textures) {
-        if (texture.type == TextureType::DIFFUSE) {
-            requireTexture(texture.filepath, texture.sampler);
-            texturedMat.diff_textureId = getTextureNum() - 1;
-            break;
+    auto setTexture = [&](int& textureId)
+    {
+        if (textureId > -1) {
+            auto& tex = textures[textureId];
+            requireTexture(tex.filepath, tex.sampler);
+            textureId = textures.size() - 1;
         }
-    }
-    for (auto& texture : textures) {
-        if (texture.type == TextureType::SPECULAR) {
-            requireTexture(texture.filepath, texture.sampler);
-            texturedMat.spec_textureId = getTextureNum() - 1;
-            break;
-        }
-    }
-    for (auto& texture : textures) {
-        if (texture.type == TextureType::NORMAL) {
-            requireTexture(texture.filepath, texture.sampler);
-            texturedMat.norm_textureId = getTextureNum() - 1;
-            break;
-        }
+    };
+    {
+        setTexture(texturedMat.pbrBaseColorTexture);
+        setTexture(texturedMat.pbrMetallicRoughnessTexture);
+        setTexture(texturedMat.normalTexture);
+        setTexture(texturedMat.occlusionTexture);
+        setTexture(texturedMat.emissiveTexture);
+        setTexture(texturedMat.transmissionTexture);
+        setTexture(texturedMat.khrDiffuseTexture);
+        setTexture(texturedMat.khrSpecularGlossinessTexture);
+        setTexture(texturedMat.clearcoatTexture);
+        setTexture(texturedMat.clearcoatRoughnessTexture);
     }
 
     std::vector<int32_t> matIndices(indices.size() / 3, 0);

@@ -3,13 +3,17 @@ find_package(glfw3 REQUIRED)
 
 add_library(glm INTERFACE)
 add_library(vma INTERFACE)
-
 add_library(stb INTERFACE)
+add_library(tinygltf INTERFACE)
 
-#both vma and glm and header only libs so we only need the include path
+# header only lib
 target_include_directories(vma INTERFACE vma)
 target_include_directories(glm INTERFACE glm)
+target_include_directories(stb INTERFACE stb)
+target_include_directories(tinygltf INTERFACE tinygltf)
+target_sources(tinygltf INTERFACE tinygltf/tiny_gltf.h tinygltf/json.hpp)
 
+# imgui
 add_definitions(-DVK_NO_PROTOTYPES)
 add_library(imgui STATIC)
 
@@ -26,12 +30,11 @@ target_sources(imgui PRIVATE
 
     imgui/backends/imgui_impl_vulkan.cpp
     imgui/backends/imgui_impl_glfw.cpp
-    )
+)
 
 target_link_libraries(imgui PUBLIC Vulkan::Vulkan glfw)
 
-target_include_directories(stb INTERFACE stb)
-
+# volk
 add_library(volk STATIC)
 target_link_libraries(volk PUBLIC Vulkan::Vulkan)
 target_include_directories(volk PUBLIC volk)

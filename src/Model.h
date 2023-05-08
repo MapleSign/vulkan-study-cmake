@@ -15,6 +15,7 @@ class Model
 {
 public:
 	Model(const char* objFilename);
+	Model(std::vector<Mesh>&& meshes);
 	~Model();
 
 	TransformComponent transComp{};
@@ -30,6 +31,6 @@ private:
 	void processNode(aiNode* node, const aiScene* scene);
 	void processMesh(aiMesh* mesh, const aiScene* scene);
 	std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, TextureType typeName);
-	void loadMaterialProperties(aiMaterial* aiMat, RenderMaterial& mat);
+	void loadMaterialProperties(aiMaterial* aiMat, GltfMaterial& mat);
 };
 
