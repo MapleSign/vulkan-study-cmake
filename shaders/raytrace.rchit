@@ -15,7 +15,7 @@ hitAttributeEXT vec2 attribs;
 
 layout(buffer_reference, scalar) buffer Vertices { Vertex v[]; }; // Positions of an object
 layout(buffer_reference, scalar) buffer Indices { ivec3 i[]; }; // Triangle indices
-layout(buffer_reference, scalar) buffer Materials { Material m[]; }; // Array of all materials on an object
+layout(buffer_reference, scalar) buffer Materials { GltfMaterial m[]; }; // Array of all materials on an object
 layout(buffer_reference, scalar) buffer MatIndices { int i[]; }; // Material ID for each triangle
 
 layout(set = 0, binding = eTlas) uniform accelerationStructureEXT topLevelAS;
@@ -35,73 +35,12 @@ mat3 calcTBN(vec3 T, vec3 B, vec3 N) {
     return mat3(T, B, N);
 }
 
+#include "gltf_material.glsl"
+
 void main()
 {
-    // object data
-    ObjDesc objResource = objDesc.i[gl_InstanceCustomIndexEXT];
-    MatIndices matIndices = MatIndices(objResource.materialIndexAddress);
-    Materials materials = Materials(objResource.materialAddress);
-    
-    Indices indices = Indices(objResource.indexAddress);
-    Vertices vertices = Vertices(objResource.vertexAddress);
-
-    int matIndex = matIndices.i[gl_PrimitiveID];
-    Material mat = materials.m[matIndex];
-
-    // Indices of the triangle
-    ivec3 ind = indices.i[gl_PrimitiveID];
-  
-    // Vertex of the triangle
-    Vertex v0 = vertices.v[ind.x];
-    Vertex v1 = vertices.v[ind.y];
-    Vertex v2 = vertices.v[ind.z];
-
-    // centroid
-    const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
-    // Computing the coordinates of the hit position
-    const vec3 pos = v0.pos * barycentrics.x + v1.pos * barycentrics.y + v2.pos * barycentrics.z;
-    const vec3 worldPos = vec3(gl_ObjectToWorldEXT * vec4(pos, 1.0));  // Transforming the position to world space
-
-    // texture coordinate
-    const vec2 texCoord = v0.texCoord * barycentrics.x + v1.texCoord * barycentrics.y + v2.texCoord * barycentrics.z;
-    
-    const mat3 TBN = calcTBN(v0.tangent, v0.bitangent, v0.normal) * barycentrics.x + 
-        calcTBN(v1.tangent, v1.bitangent, v1.normal) * barycentrics.y + 
-        calcTBN(v2.tangent, v2.bitangent, v2.normal) * barycentrics.z;
-
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-    vec3 nrm;
-    if (mat.diff_textureId >= 0) {
-        diffuse = vec3(texture(textureSampler[mat.diff_textureId], texCoord));
-        ambient = diffuse;
-    }
-    else {
-        diffuse = mat.diffuse;
-        ambient = diffuse;
-    }
-
-    if (mat.spec_textureId >= 0) {
-        specular = vec3(texture(textureSampler[mat.spec_textureId], texCoord));
-    }
-    else {
-        specular = mat.specular;
-    }
-
-    if (mat.norm_textureId >= 0) {
-        nrm = texture(textureSampler[mat.norm_textureId], texCoord).rgb;
-        nrm = normalize(nrm * 2.0 - 1.0);
-        nrm = normalize(TBN * nrm);
-    }
-    else {
-        nrm = v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z;
-        nrm = normalize(vec3(nrm * gl_WorldToObjectEXT));
-    }
-    // nrm = v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z;
-
-    // Computing the normal at hit position
-    const vec3 worldNrm = normalize(vec3(nrm * gl_WorldToObjectEXT));  // Transforming the normal to world space
+    State state;
+    getShadeState(state);
 
     // Vector toward the light
     vec3  L;
@@ -110,7 +49,7 @@ void main()
     // Point light
     if(pcRay.lightType == 0)
     {
-        vec3 lDir = pcRay.lightPosition - worldPos;
+        vec3 lDir = pcRay.lightPosition - state.position;
         lightDistance = length(lDir);
         lightIntensity = pcRay.lightIntensity / (lightDistance * lightDistance);
         L = normalize(lDir);
@@ -121,10 +60,11 @@ void main()
     }
 
     float attenuation = 1;
-    diffuse = computeDiffuse(diffuse, ambient * 0.1, L, nrm);
+    vec3 diffuse = computeDiffuse(state.mat.albedo, state.mat.albedo * 0.1, L, state.normal);
+    vec3 specular;
 
     // Tracing shadow ray only if the light is visible from the surface
-    if(dot(nrm, L) > 0)
+    if(dot(state.normal, L) > 0)
     {
         float tMin   = 0.001;
         float tMax   = lightDistance;
@@ -152,7 +92,7 @@ void main()
         }
         else {
             // Specular
-            specular = computeSpecular(specular, mat.shininess, -gl_WorldRayDirectionEXT, L, nrm);
+            // specular = computeSpecular(state.mat.specular, state.mat.glossiness, -gl_WorldRayDirectionEXT, L, nrm);
         }
     }
     else {

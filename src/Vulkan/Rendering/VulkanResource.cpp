@@ -121,7 +121,7 @@ RenderMeshID VulkanResourceManager::requireRenderMesh(
     const std::vector<Vertex>& vertices, 
     const std::vector<uint32_t>& indices, 
     const GltfMaterial& mat, 
-    const std::vector<RenderTexture> textures)
+    const std::vector<RenderTexture>& textures)
 {
     RenderMesh mesh{};
 
@@ -131,7 +131,7 @@ RenderMeshID VulkanResourceManager::requireRenderMesh(
         if (textureId > -1) {
             auto& tex = textures[textureId];
             requireTexture(tex.filepath, tex.sampler);
-            textureId = textures.size() - 1;
+            textureId = textureMap.size() - 1;
         }
     };
     {

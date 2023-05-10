@@ -165,7 +165,7 @@ public:
         const std::vector<Vertex>& vertices, 
         const std::vector<uint32_t>& indices, 
         const GltfMaterial& mat, 
-        const std::vector<RenderTexture> textures);
+        const std::vector<RenderTexture>& textures);
 
     SceneData requireSceneData(const VulkanDescriptorSetLayout& descSetLayout, uint32_t threadCount,
         const std::map<uint32_t, std::pair<VkDeviceSize, size_t>>& bufferSizeInfos);

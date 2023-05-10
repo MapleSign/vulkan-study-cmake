@@ -33,9 +33,15 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 	if (!tContext.LoadASCIIFromFile(&tModel, &error, &warn, filename))
 		assert(!"Error while loading scene");
 
-	std::filesystem::path filepath{ filename };
+	auto slashpos = std::string(filename).find_last_of('/');
+	std::string filepath = std::string(filename).substr(0, slashpos + 1);
 
-	for (auto& tMesh : tModel.meshes) {
+	for (auto& tNode : tModel.nodes) {
+		if (tNode.mesh < 0) {
+			continue;
+		}
+
+		auto& tMesh = tModel.meshes[tNode.mesh];
 		std::vector<Mesh> meshes{};
 		meshes.reserve(tMesh.primitives.size());
 		for (auto& tPrim : tMesh.primitives) {
@@ -124,7 +130,7 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 				if (textureId > -1) {
 					auto& tTex = tModel.textures[textureId];
 					auto& tImage = tModel.images[tTex.source];
-					Texture texture{ TextureType::DIFFUSE, filepath.root_directory().string() + tImage.uri };
+					Texture texture{ TextureType::DIFFUSE, filepath + tImage.uri};
 					textures.push_back(texture);
 					textureId = textures.size() - 1;
 				}
@@ -146,6 +152,21 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 		}
 
 		auto model = new Model(std::move(meshes));
+		if (!tNode.translation.empty())
+			model->transComp.translate = { tNode.translation[0], tNode.translation[1], tNode.translation[2] };
+		if (!tNode.scale.empty())
+			model->transComp.scale = { tNode.scale[0], tNode.scale[1], tNode.scale[2] };
+
+		if (!tNode.rotation.empty()) {
+			glm::vec3 axis{ tNode.rotation[0], tNode.rotation[1], tNode.rotation[2] };
+			model->transComp.rotate = static_cast<float>(glm::degrees(tNode.rotation[3])) *
+				glm::vec3(
+					glm::dot(glm::vec3(1.f, 0.f, 0.f), axis),
+					glm::dot(glm::vec3(0.f, 1.f, 0.f), axis),
+					glm::dot(glm::vec3(0.f, 0.f, 1.f), axis)
+				);
+		}
+
 		modelMap.emplace(tMesh.name, model);
 		models.push_back(model);
 	}

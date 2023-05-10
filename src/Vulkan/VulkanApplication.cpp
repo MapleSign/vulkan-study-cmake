@@ -41,6 +41,7 @@ VulkanApplication::VulkanApplication():
     model = scene->addModel("floor", "assets/models/cube/cube.obj");
     model->transComp.translate = { 0.f, -6.f, -30.f };
     model->transComp.scale = { 50.0f, 1.f, 50.0f };
+    scene->loadGLTFFile("../amd/Caustics/Caustics.gltf");
 
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
     scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });

@@ -102,7 +102,7 @@ struct Vertex  // See ObjLoader, copy of VertexObj, could be compressed for devi
 	vec3 bitangent;
 };
 
-struct Material  // GLTF Material
+struct GltfMaterial  // GLTF Material
 {
 	// 0
     vec4 pbrBaseColorFactor;

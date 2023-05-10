@@ -26,7 +26,7 @@ layout(set = 1, binding = 1) uniform PointLightInfo {
 
 layout(buffer_reference, scalar) buffer Vertices { Vertex v[]; }; // Positions of an object
 layout(buffer_reference, scalar) buffer Indices { ivec3 i[]; }; // Triangle indices
-layout(buffer_reference, scalar) buffer Materials { Material m[]; }; // Array of all materials on an object
+layout(buffer_reference, scalar) buffer Materials { GltfMaterial m[]; }; // Array of all materials on an object
 layout(buffer_reference, scalar) buffer MatIndices { int i[]; }; // Material ID for each triangle
 
 layout(set = 0, binding = eObjDescs, scalar) buffer ObjDescBuffer { ObjDesc i[]; } objDesc;
@@ -40,8 +40,8 @@ layout(location = 3) in mat3 fragTBN;
 
 layout(location = 0) out vec4 outColor;
 
-vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, Material mat);
-vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, Material mat);
+vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, GltfMaterial mat);
+vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, GltfMaterial mat);
 
 void main() {
     ObjDesc objResource = objDesc.i[constants.objId];
@@ -49,10 +49,10 @@ void main() {
     Materials materials = Materials(objResource.materialAddress);
 
     int matIndex = matIndices.i[gl_PrimitiveID];
-    Material mat = materials.m[matIndex];
+    GltfMaterial mat = materials.m[matIndex];
 
     // vec3 norm = normalize(fragNormal);
-    vec3 norm = texture(textureSampler[mat.norm_textureId], fragTexCoord).rgb;
+    vec3 norm = texture(textureSampler[mat.normalTexture], fragTexCoord).rgb;
     norm = normalize(norm * 2.0 - 1.0);
     norm = normalize(fragTBN * norm);
 
@@ -67,7 +67,7 @@ void main() {
     // outColor = vec4(1.0);
 }
 
-vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, Material mat)
+vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, GltfMaterial mat)
 {
     vec3 lightDir = normalize(light.direction);
     vec3 halfwayDir = normalize(lightDir + viewDir);
@@ -77,14 +77,14 @@ vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, Material mat)
 //    vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
     // combine results
-    vec3 ambient = light.ambient * vec3(texture(textureSampler[mat.diff_textureId], fragTexCoord));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.diff_textureId], fragTexCoord));
-    vec3 specular = light.specular * spec * vec3(texture(textureSampler[mat.spec_textureId], fragTexCoord));
+    vec3 ambient = light.ambient * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
+    vec3 diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
+    vec3 specular = light.specular * spec * vec3(texture(textureSampler[mat.khrSpecularGlossinessTexture], fragTexCoord));
     return (ambient + diffuse + specular);
 }
 
 // calculates the color when using a point light.
-vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, Material mat)
+vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, GltfMaterial mat)
 {
     vec3 lightDir = normalize(light.position - fragPos);
     vec3 halfwayDir = normalize(lightDir + viewDir);
@@ -97,9 +97,9 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, M
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    
     // combine results
-    vec3 ambient = light.ambient * vec3(texture(textureSampler[mat.diff_textureId], fragTexCoord));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.diff_textureId], fragTexCoord));
-    vec3 specular = light.specular * spec * vec3(texture(textureSampler[mat.spec_textureId], fragTexCoord));
+    vec3 ambient = light.ambient * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
+    vec3 diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
+    vec3 specular = light.specular * spec * vec3(texture(textureSampler[mat.khrSpecularGlossinessTexture], fragTexCoord));
     
     return attenuation * (ambient + diffuse + specular);
 }

@@ -88,6 +88,7 @@ bool getAccessorData(const tinygltf::Model& tModel, const tinygltf::Accessor& tA
 	auto& tBufferView = tModel.bufferViews[tAcces.bufferView];
 	auto& tBuffer = tModel.buffers[tBufferView.buffer];
 	const uint8_t* data = &tBuffer.data[tBufferView.byteOffset + tAcces.byteOffset];
+	const size_t dataStride = tAcces.ByteStride(tBufferView);
 
 	for (size_t attribIndex = oldAttribVecSize; attribIndex < attribVec.size(); ++attribIndex) {
 		T attrib{};
@@ -119,6 +120,7 @@ bool getAccessorData(const tinygltf::Model& tModel, const tinygltf::Accessor& tA
 		}
 
 		attribVec[attribIndex] = attrib;
+		data += dataStride;
 	}
 
 	return true;
@@ -136,6 +138,7 @@ bool getAccessorDataScalar(const tinygltf::Model& tModel, const tinygltf::Access
 	auto& tBufferView = tModel.bufferViews[tAcces.bufferView];
 	auto& tBuffer = tModel.buffers[tBufferView.buffer];
 	const uint8_t* data = &tBuffer.data[tBufferView.byteOffset + tAcces.byteOffset];
+	const size_t dataStride = tAcces.ByteStride(tBufferView);
 
 	for (size_t attribIndex = oldAttribVecSize; attribIndex < attribVec.size(); ++attribIndex) {
 		T attrib{};
@@ -168,6 +171,7 @@ bool getAccessorDataScalar(const tinygltf::Model& tModel, const tinygltf::Access
 		}
 
 		attribVec[attribIndex] = attrib;
+		data += dataStride;
 	}
 
 	return true;
