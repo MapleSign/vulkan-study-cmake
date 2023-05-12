@@ -23,8 +23,9 @@ void createNormals(const std::vector<uint32_t>& indices, const std::vector<glm::
 	normals.insert(normals.end(), geonormal.begin(), geonormal.end());
 }
 
-void createTangents(const std::vector<uint32_t>& indices, const std::vector<glm::vec3>& positions,
-	const std::vector<glm::vec2> texCoords, std::vector<glm::vec3>& tangents, std::vector<glm::vec3>& bitangents)
+void createTangents(
+	const std::vector<uint32_t>& indices, const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals, 
+	const std::vector<glm::vec2>& texCoords, std::vector<glm::vec3>& tangents, std::vector<glm::vec3>& bitangents)
 {
 	for (size_t i = 0; i < indices.size(); i += 3)
 	{
@@ -65,6 +66,29 @@ void createTangents(const std::vector<uint32_t>& indices, const std::vector<glm:
 		bitangents[i0] += b;
 		bitangents[i1] += b;
 		bitangents[i2] += b;
+	}
+
+	for (size_t i = 0; i < normals.size(); ++i) {
+		auto& n = normals[i];
+		auto& t = tangents[i];
+		auto& b = bitangents[i];
+
+		// Gram-Schmidt orthogonalize
+		glm::vec3 otangent = glm::normalize(t - (glm::dot(n, t) * n));
+
+		// In case the tangent is invalid
+		if (otangent == glm::vec3(0, 0, 0))
+		{
+			if (abs(n.x) > abs(n.y))
+				otangent = glm::vec3(n.z, 0, -n.x) / sqrt(n.x * n.x + n.z * n.z);
+			else
+				otangent = glm::vec3(0, -n.z, n.y) / sqrt(n.y * n.y + n.z * n.z);
+		}
+
+		// Calculate handedness
+		float handedness = (glm::dot(glm::cross(n, t), b) < 0.f) ? 1.f : -1.f;
+		t = otangent;
+		b = glm::vec3(handedness);
 	}
 }
 

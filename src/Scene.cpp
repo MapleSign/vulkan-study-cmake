@@ -101,9 +101,9 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 
 			std::vector<glm::vec4> gltfTangents;
 			if (!getAttribute(tModel, tPrim, gltfTangents, "TANGENT")) {
-				tangents.resize(vertices.size());
-				bitangents.resize(vertices.size());
-				createTangents(indices, positions, texCoords, tangents, bitangents);
+				tangents.resize(vertices.size(), glm::vec3(0.f));
+				bitangents.resize(vertices.size(), glm::vec3(0.f));
+				createTangents(indices, positions, normals, texCoords, tangents, bitangents);
 			}
 			else {
 				for (size_t i = 0; i < vertices.size(); ++i) {

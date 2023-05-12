@@ -8,6 +8,7 @@
 
 #include "raycommon.glsl"
 #include "wavefront.glsl"
+#include "random.glsl"
 
 layout(location = 0) rayPayloadInEXT hitPayload prd;
 layout(location = 1) rayPayloadEXT bool isShadowed;
@@ -47,7 +48,7 @@ void main()
     float lightIntensity = pcRay.lightIntensity;
     float lightDistance = 100000.0;
     // Point light
-    if(pcRay.lightType == 0)
+    if (pcRay.lightType == 0)
     {
         vec3 lDir = pcRay.lightPosition - state.position;
         lightDistance = length(lDir);
@@ -59,45 +60,38 @@ void main()
         L = normalize(pcRay.lightPosition);
     }
 
-    float attenuation = 1;
-    vec3 diffuse = computeDiffuse(state.mat.albedo, state.mat.albedo * 0.1, L, state.normal);
-    vec3 specular;
+    vec3 rayOrigin = state.position;
+    vec3 rayDirection = samplingHemisphere(prd.seed, state.tangent, state.bitangent, state.normal);
 
-    // Tracing shadow ray only if the light is visible from the surface
-    if(dot(state.normal, L) > 0)
+    const float p = 1 / M_PI;
+
+    // Compute the BRDF for this ray (assuming Lambertian reflection)
+    float cos_theta = dot(rayDirection, state.normal);
+    vec3 BRDF = state.mat.albedo / M_PI;
+
+    if (prd.depth < 15)
     {
-        float tMin   = 0.001;
-        float tMax   = lightDistance;
-        vec3  origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
-        vec3  rayDir = L;
-        uint  flags =
-            gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT;
-        isShadowed = true;
-        traceRayEXT(topLevelAS,  // acceleration structure
-                flags,       // rayFlags
-                0xFF,        // cullMask
-                0,           // sbtRecordOffset
-                0,           // sbtRecordStride
-                1,           // missIndex
-                origin,      // ray origin
-                tMin,        // ray min range
-                rayDir,      // ray direction
-                tMax,        // ray max range
-                1            // payload (location = 1)
+        prd.depth++;
+        float tMin  = 0.001;
+        float tMax  = 10000.0;
+        uint  flags = gl_RayFlagsOpaqueEXT;
+        traceRayEXT(topLevelAS,    // acceleration structure
+                    flags,         // rayFlags
+                    0xFF,          // cullMask
+                    0,             // sbtRecordOffset
+                    0,             // sbtRecordStride
+                    0,             // missIndex
+                    rayOrigin,     // ray origin
+                    tMin,          // ray min range
+                    rayDirection,  // ray direction
+                    tMax,          // ray max range
+                    0              // payload (location = 0)
         );
-
-        if(isShadowed) {
-            attenuation = 0.3;
-            specular = vec3(0);
-        }
-        else {
-            // Specular
-            // specular = computeSpecular(state.mat.specular, state.mat.glossiness, -gl_WorldRayDirectionEXT, L, nrm);
-        }
     }
-    else {
-        specular = vec3(0);
-    }
+    vec3 incoming = prd.hitValue;
 
-    prd.hitValue = vec3(lightIntensity * attenuation * (diffuse + specular));
+    // Apply the Rendering Equation here.
+    prd.hitValue = state.mat.emission + (BRDF * incoming * cos_theta / p);
+    // prd.hitValue = (state.normal + vec3(1)) * 0.5;
+    // prd.hitValue = state.mat.albedo;
 }

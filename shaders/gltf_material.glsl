@@ -183,20 +183,22 @@ void getShadeState(inout State state) {
     const vec3 pos = v0.pos * barycentrics.x + v1.pos * barycentrics.y + v2.pos * barycentrics.z;
     const vec3 worldPos = vec3(gl_ObjectToWorldEXT * vec4(pos, 1.0));  // Transforming the position to world space
     // Normal
-    const vec3 nrm = v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z;
+    const vec3 nrm = normalize(v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z);
     const vec3 worldNrm = normalize(vec3(nrm * gl_WorldToObjectEXT));
     // texture coordinate
     const vec2 texCoord = v0.texCoord * barycentrics.x + v1.texCoord * barycentrics.y + v2.texCoord * barycentrics.z;
-    const vec3 tangent = v0.tangent * barycentrics.x + v1.tangent * barycentrics.y + v2.tangent * barycentrics.z;
-    const vec3 worldTanget = normalize(vec3(tangent * gl_WorldToObjectEXT));
+    const vec3 tangent = normalize(v0.tangent * barycentrics.x + v1.tangent * barycentrics.y + v2.tangent * barycentrics.z);
+    vec3 worldTangent = normalize(vec3(tangent * gl_WorldToObjectEXT));
+    // worldTangent = normalize(worldTangent - dot(worldTangent, worldNrm) * worldNrm);
     const vec3 bitangent = v0.bitangent * barycentrics.x + v1.bitangent * barycentrics.y + v2.bitangent * barycentrics.z;
-    const vec3 worldBitanget = normalize(vec3(bitangent * gl_WorldToObjectEXT));
+    vec3 worldBitangent = cross(worldNrm, worldTangent) * bitangent.r;
+    // worldBitangent = bitangent;
 
     state.position = worldPos;
     state.normal = worldNrm;
     state.texCoord = texCoord;
-    state.tangent = worldTanget;
-    state.bitangent = worldBitanget;
+    state.tangent = worldTangent;
+    state.bitangent = worldBitangent;
 
     getMaterialsAndTextures(state, materials.m[state.matId]);
 }

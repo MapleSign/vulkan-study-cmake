@@ -10,10 +10,23 @@ layout(location = 0) rayPayloadInEXT hitPayload prd;
 
 layout(push_constant) uniform _PushConstantRay
 {
-  PushConstantRay pcRay;
+    PushConstantRay pcRay;
 };
 
 void main()
 {
-    prd.hitValue = pcRay.clearColor.xyz * 0.8;
+    if(prd.depth == 0)
+        prd.hitValue = pcRay.clearColor.xyz * 0.8;
+    else {
+        prd.hitValue = vec3(0.01);
+        if (pcRay.lightType == 1) {
+            vec3 L = normalize(pcRay.lightPosition);
+            float cosine = dot(-gl_WorldRayDirectionEXT, L);
+            if (cosine > 0)
+            {
+                prd.hitValue = vec3(cosine * pcRay.lightIntensity);
+            }
+        }
+    }
+    prd.depth = 100;              // Ending trace
 }

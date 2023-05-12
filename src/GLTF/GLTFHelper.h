@@ -194,7 +194,8 @@ bool getAttribute(const tinygltf::Model& tModel, const tinygltf::Primitive& tPri
 
 void createNormals(const std::vector<uint32_t>& indices, const std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals);
 
-void createTangents(const std::vector<uint32_t>& indices, const std::vector<glm::vec3>& positions,
-	const std::vector<glm::vec2> texCoords, std::vector<glm::vec3>& tangents, std::vector<glm::vec3>& bitangents);
+void createTangents(
+	const std::vector<uint32_t>& indices, const std::vector<glm::vec3>& positions, const std::vector<glm::vec3>& normals,
+	const std::vector<glm::vec2>& texCoords, std::vector<glm::vec3>& tangents, std::vector<glm::vec3>& bitangents);
 
 void importGLTFMaterial(GltfMaterial& mat, const tinygltf::Material& tMat);

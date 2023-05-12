@@ -1,5 +1,7 @@
 struct hitPayload
 {
+    uint seed;
+    int depth;
     vec3 hitValue;
 };
 
@@ -21,7 +23,7 @@ struct Material
 
 struct State {
     float eta;
-    
+
     vec3 position;
     vec3 normal;
     vec3 tangent;
