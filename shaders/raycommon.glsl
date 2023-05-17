@@ -1,8 +1,21 @@
+#define INFINITY 1e32
+
+struct Ray
+{
+    vec3 origin;
+    vec3 direction;
+};
+
 struct hitPayload
 {
-    uint seed;
-    int depth;
-    vec3 hitValue;
+    uint   seed;
+    float  hitT;
+    int    primitiveID;
+    int    instanceID;
+    int    instanceCustomIndex;
+    vec2   baryCoord;
+    mat4x3 objectToWorld;
+    mat4x3 worldToObject;
 };
 
 struct Material

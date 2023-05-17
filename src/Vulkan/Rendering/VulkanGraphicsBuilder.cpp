@@ -30,8 +30,8 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     auto fragShader = resManager.createShaderModule("shaders/spv/shader.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
     fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
 
-    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(), VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(), VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
     fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 0);
     fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 1);

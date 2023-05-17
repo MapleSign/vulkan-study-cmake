@@ -159,18 +159,18 @@ void getMaterialsAndTextures(inout State state, inout GltfMaterial material)
     state.mat.clearcoatRoughness = max(state.mat.clearcoatRoughness, 0.001);
 }
 
-void getShadeState(inout State state) {
-    ObjDesc objResource = objDesc.i[gl_InstanceCustomIndexEXT];
+void getShadeState(inout State state, hitPayload prd) {
+    ObjDesc objResource = objDesc.i[prd.instanceCustomIndex];
     MatIndices matIndices = MatIndices(objResource.materialIndexAddress);
     Materials materials = Materials(objResource.materialAddress);
     
     Indices indices = Indices(objResource.indexAddress);
     Vertices vertices = Vertices(objResource.vertexAddress);
 
-    state.matId = matIndices.i[gl_PrimitiveID];
+    state.matId = matIndices.i[prd.primitiveID];
 
     // Indices of the triangle
-    ivec3 ind = indices.i[gl_PrimitiveID];
+    ivec3 ind = indices.i[prd.primitiveID];
   
     // Vertex of the triangle
     Vertex v0 = vertices.v[ind.x];
@@ -178,17 +178,17 @@ void getShadeState(inout State state) {
     Vertex v2 = vertices.v[ind.z];
 
     // centroid
-    const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+    const vec3 barycentrics = vec3(1.0 - prd.baryCoord.x - prd.baryCoord.y, prd.baryCoord.x, prd.baryCoord.y);
     // Computing the coordinates of the hit position
     const vec3 pos = v0.pos * barycentrics.x + v1.pos * barycentrics.y + v2.pos * barycentrics.z;
-    const vec3 worldPos = vec3(gl_ObjectToWorldEXT * vec4(pos, 1.0));  // Transforming the position to world space
+    const vec3 worldPos = vec3(prd.objectToWorld * vec4(pos, 1.0));  // Transforming the position to world space
     // Normal
     const vec3 nrm = normalize(v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z);
-    const vec3 worldNrm = normalize(vec3(nrm * gl_WorldToObjectEXT));
+    const vec3 worldNrm = normalize(vec3(nrm * prd.worldToObject));
     // texture coordinate
     const vec2 texCoord = v0.texCoord * barycentrics.x + v1.texCoord * barycentrics.y + v2.texCoord * barycentrics.z;
     const vec3 tangent = normalize(v0.tangent * barycentrics.x + v1.tangent * barycentrics.y + v2.tangent * barycentrics.z);
-    vec3 worldTangent = normalize(vec3(tangent * gl_WorldToObjectEXT));
+    vec3 worldTangent = normalize(vec3(tangent * prd.worldToObject));
     // worldTangent = normalize(worldTangent - dot(worldTangent, worldNrm) * worldNrm);
     const vec3 bitangent = v0.bitangent * barycentrics.x + v1.bitangent * barycentrics.y + v2.bitangent * barycentrics.z;
     vec3 worldBitangent = cross(worldNrm, worldTangent) * bitangent.r;

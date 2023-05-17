@@ -190,7 +190,10 @@ void VulkanApplication::mainLoop()
             ImGui::SameLine();
             ImGui::RadioButton("Infinite", &pcRay.lightType, 1);
 
-            ImGui::SliderFloat3("Position.x", &pcRay.lightPosition.x, -20.f, 20.f);
+            if (pcRay.lightType == 0)
+                ImGui::SliderFloat3("Position", &pcRay.lightPosition.x, -20.f, 20.f);
+            else if (pcRay.lightType == 1)
+                ImGui::SliderFloat3("Direction", &pcRay.lightPosition.x, -1.f, 1.f);
             ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
         }
 
