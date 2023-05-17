@@ -1,4 +1,5 @@
 #include <cmath>
+#include <iostream>
 
 #include "Camera.h"
 
@@ -63,6 +64,8 @@ void FPSCamera::move(CameraDirection direction, float deltaTime)
 	case CameraDirection::HEADUP: position += up * (speed * deltaTime); break;
 	case CameraDirection::DOWN: position -= up * (speed * deltaTime); break;
 	}
+
+	// std::cerr << "location: " << position.x << " " << position.y << " " << position.z << std::endl;
 }
 
 void FPSCamera::rotate(float dyaw, float dpitch)
@@ -81,4 +84,6 @@ void FPSCamera::rotate(float dyaw, float dpitch)
 	newFront.y = sin(glm::radians(pitch));
 	newFront.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
 	front = glm::normalize(newFront);
+
+	// std::cerr << "rotation: " << yaw << " " << pitch << " " << roll << std::endl;
 }

@@ -35,6 +35,10 @@ VulkanApplication::VulkanApplication():
 
     Model* model{ nullptr };
     scene = std::make_unique<Scene>();
+    scene->getActiveCamera()->position = { -0.293706, 3.73677, 1.37059 };
+    scene->getActiveCamera()->yaw = -112;
+    scene->getActiveCamera()->pitch = -3.70001;
+    reinterpret_cast<FPSCamera*>(scene->getActiveCamera())->rotate(0.f, 0.f);
     model = scene->addModel("nanosuit", "assets/models/nanosuit/nanosuit.obj");
     model->transComp.translate.y = -5.f;
     model->transComp.translate.z = -20.f;

@@ -2,3 +2,4 @@
 /bin
 *.spv
 imgui.ini
+/.vscode

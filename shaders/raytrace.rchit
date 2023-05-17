@@ -88,10 +88,15 @@ void main()
                     0              // payload (location = 0)
         );
     }
+    else {
+        prd.hitValue = vec3(pcRay.lightIntensity * 0.001);
+    }
     vec3 incoming = prd.hitValue;
 
     // Apply the Rendering Equation here.
     prd.hitValue = state.mat.emission + (BRDF * incoming * cos_theta / p);
     // prd.hitValue = (state.normal + vec3(1)) * 0.5;
+    // prd.hitValue = state.normal;
     // prd.hitValue = state.mat.albedo;
+    // prd.hitValue = vec3(state.texCoord, 0);
 }
