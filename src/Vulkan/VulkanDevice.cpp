@@ -27,12 +27,18 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
     deviceFeatures.features.geometryShader = VK_TRUE;
     deviceFeatures.features.shaderInt64 = VK_TRUE;
 
+    VkPhysicalDeviceShaderClockFeaturesKHR clockFreature{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR };
+    clockFreature.shaderDeviceClock = VK_TRUE;
+    clockFreature.shaderSubgroupClock = VK_TRUE;
+
+    deviceFeatures.pNext = &clockFreature;
+
     VkPhysicalDeviceVulkan12Features features12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     features12.bufferDeviceAddress = VK_TRUE;
     features12.runtimeDescriptorArray = VK_TRUE;
     features12.descriptorIndexing = VK_TRUE;
 
-    deviceFeatures.pNext = &features12;
+    clockFreature.pNext = &features12;
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
     rtPipelineFeatures.rayTracingPipeline = VK_TRUE;

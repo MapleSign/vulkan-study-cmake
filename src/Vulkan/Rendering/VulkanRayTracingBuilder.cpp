@@ -158,6 +158,7 @@ void VulkanRayTracingBuilder::createRtShaderBindingTable()
 
 void VulkanRayTracingBuilder::raytrace(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const PushConstantRayTracing& pcRay)
 {
+	
 	std::vector<VkDescriptorSet> descSets{ rtDescriptorSet->getHandle(), globalSet.getHandle() };
 	vkCmdBindPipeline(cmdBuf.getHandle(), rtPipeline->getBindPoint(), rtPipeline->getHandle());
 	vkCmdBindDescriptorSets(cmdBuf.getHandle(), rtPipeline->getBindPoint(), rtPipelineLayout->getHandle(), 0,

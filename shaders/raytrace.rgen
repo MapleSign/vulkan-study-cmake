@@ -5,6 +5,7 @@
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_buffer_reference2 : require
+#extension GL_ARB_shader_clock : enable
 
 #include "random.glsl"
 #include "raycommon.glsl"
@@ -34,7 +35,7 @@ void main()
     ivec2 imageSize = ivec2(gl_LaunchSizeEXT.xy);
     ivec2 imageCoord = ivec2(gl_LaunchIDEXT.xy);
     // Initialize the random number
-    uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, pcRay.frame);
+    uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, int(clockARB()));
     prd.seed = seed;
 
     const int NBSAMPLES = 5;
@@ -44,5 +45,27 @@ void main()
     }
 
     hitValue = hitValue / NBSAMPLES;
-    imageStore(image, imageCoord, vec4(hitValue.xyz, 1.0));
+    //imageStore(image, imageCoord, vec4(hitValue.xyz, 1.0));
+    // Do accumulation over time
+
+
+    if(pcRay.frame > 0)
+    {
+        float a         = 1.0f / float(pcRay.frame + 1);
+        vec3  old_color = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
+        if(isnan(hitValue.r)||isnan(hitValue.g)||isnan(hitValue.b))
+        {
+            return;
+        }
+        else 
+        {
+            imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color, hitValue, a), 1.f));
+        }
+        
+    }
+    else
+    {
+        // First frame, replace the value in the buffer
+        imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(hitValue, 1.f));
+    }
 }

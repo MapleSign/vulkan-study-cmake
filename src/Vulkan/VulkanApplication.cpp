@@ -120,6 +120,9 @@ VulkanApplication::~VulkanApplication()
 
 void VulkanApplication::buildRayTracing()
 {
+
+
+
     rtBuilder = std::make_unique<VulkanRayTracingBuilder>(*device, *resManager, *graphicBuilder->getOffscreenColor());
 
     // BLAS - Storing each primitive in a geometry
@@ -179,25 +182,30 @@ void VulkanApplication::mainLoop()
     while (!glfwWindowShouldClose(window->getHandle()))
     {
         glfwPollEvents();
-
+        bool changed = false;
         gui->newFrame();
         ImGui::Begin("Debug");
-        ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
-        ImGui::Checkbox("Ray Tracer mode", &useRayTracer);  // Switch between raster and ray tracing
+        changed |= ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
+        changed |= ImGui::Checkbox("Ray Tracer mode", &useRayTracer);  // Switch between raster and ray tracing
 
         if (ImGui::CollapsingHeader("Light"))
         {
-            ImGui::RadioButton("Point", &pcRay.lightType, 0);
+            changed |= ImGui::RadioButton("Point", &pcRay.lightType, 0);
             ImGui::SameLine();
-            ImGui::RadioButton("Infinite", &pcRay.lightType, 1);
+            changed |= ImGui::RadioButton("Infinite", &pcRay.lightType, 1);
 
             if (pcRay.lightType == 0)
-                ImGui::SliderFloat3("Position", &pcRay.lightPosition.x, -20.f, 20.f);
+                changed |= ImGui::SliderFloat3("Position", &pcRay.lightPosition.x, -20.f, 20.f);
             else if (pcRay.lightType == 1)
-                ImGui::SliderFloat3("Direction", &pcRay.lightPosition.x, -1.f, 1.f);
-            ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
+                changed |= ImGui::SliderFloat3("Direction", &pcRay.lightPosition.x, -1.f, 1.f);
+            changed |= ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
         }
+        changed |= ImGui::SliderInt("Max Frames", &maxFrames, 1, 10000);
 
+
+        if (changed) {
+            resetFrameCount();
+        }
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
 
@@ -251,6 +259,28 @@ void VulkanApplication::drawFrame()
     renderContext->endFrame();
 }
 
+void VulkanApplication::resetFrameCount()
+{
+    pcRay.frame = -1;
+}
+
+
+
+void VulkanApplication::updateFrameCount()
+{
+    static glm::mat4 refCamMatrix;
+    // TODO: need fov?
+    const glm::mat4& m = scene.get()->getActiveCamera()->calcLookAt();
+
+    if (memcmp(&refCamMatrix, &m, sizeof(glm::mat4)) != 0)
+    {
+        resetFrameCount();
+        refCamMatrix = m;
+    }
+
+    pcRay.frame++;
+}
+
 void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const VulkanRenderTarget &renderTarget,
                    const VulkanFramebuffer &framebuffer, uint32_t frameIndex)
 {
@@ -260,9 +290,11 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
         graphicBuilder->draw(commandBuffer, clearColor);
     }
     else {
-        pcRay.frame++;
-        pcRay.clearColor = clearColor;
-        rtBuilder->raytrace(commandBuffer, *graphicBuilder->getGlobalData().descriptorSets[frameIndex], pcRay);
+        if (pcRay.frame < maxFrames) {
+            updateFrameCount();
+            pcRay.clearColor = clearColor;
+            rtBuilder->raytrace(commandBuffer, *graphicBuilder->getGlobalData().descriptorSets[frameIndex], pcRay);
+        }
     }
     
     std::vector<VkClearValue> clearValues{ 2 };
