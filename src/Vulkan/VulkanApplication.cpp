@@ -35,9 +35,9 @@ VulkanApplication::VulkanApplication():
 
     Model* model{ nullptr };
     scene = std::make_unique<Scene>();
-    scene->getActiveCamera()->position = { -0.293706, 3.73677, 1.37059 };
-    scene->getActiveCamera()->yaw = -112;
-    scene->getActiveCamera()->pitch = -3.70001;
+    scene->getActiveCamera()->position = { 2.522, 0.90, 0.029 };
+    scene->getActiveCamera()->yaw = -182;
+    scene->getActiveCamera()->pitch = 0.79;
     reinterpret_cast<FPSCamera*>(scene->getActiveCamera())->rotate(0.f, 0.f);
     model = scene->addModel("nanosuit", "assets/models/nanosuit/nanosuit.obj");
     model->transComp.translate.y = -5.f;
@@ -46,6 +46,7 @@ VulkanApplication::VulkanApplication():
     model->transComp.translate = { 0.f, -6.f, -30.f };
     model->transComp.scale = { 50.0f, 1.f, 50.0f };
     scene->loadGLTFFile("../amd/Caustics/Caustics.gltf");
+    //scene->loadGLTFFile("C:/Users/yufei/3dModel/Deferred/Deferred.gltf");
 
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
     scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
