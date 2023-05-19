@@ -45,8 +45,9 @@ VulkanApplication::VulkanApplication():
     model = scene->addModel("floor", "assets/models/cube/cube.obj");
     model->transComp.translate = { 0.f, -6.f, -30.f };
     model->transComp.scale = { 50.0f, 1.f, 50.0f };
-    scene->loadGLTFFile("../amd/Caustics/Caustics.gltf");
-    //scene->loadGLTFFile("C:/Users/yufei/3dModel/Deferred/Deferred.gltf");
+    //scene->loadGLTFFile("../amd/Caustics/Caustics.gltf");
+    //scene->loadGLTFFile("../glTF-Sample-Models/2.0/AlphaBlendModeTest/glTF/AlphaBlendModeTest.gltf");
+    scene->loadGLTFFile("../glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf");
 
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
     scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
@@ -143,11 +144,18 @@ void VulkanApplication::buildRayTracing()
     uint32_t i = 0;
     for (const auto& [p_mesh, id] : renderMeshes)
     {
+        VkGeometryInstanceFlagsKHR flags{};
+        if (p_mesh->mat.alphaMode == 0 || (p_mesh->mat.pbrBaseColorFactor.w == 1.0f && p_mesh->mat.pbrBaseColorTexture == -1))
+            flags |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+        // Need to skip the cull flag in traceray_rtx for double sided materials
+        if (p_mesh->mat.doubleSided == 1)
+            flags |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+
         VkAccelerationStructureInstanceKHR rayInst{};
         rayInst.transform = toTransformMatrixKHR(resManager->getRenderMesh(id).tranformMatrix); // Position of the instance
         rayInst.instanceCustomIndex = id; // gl_InstanceCustomIndexEXT
         rayInst.accelerationStructureReference = rtBuilder->getBlasDeviceAddress(i);
-        rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        rayInst.flags = flags;
         rayInst.mask = 0xFF; //  Only be hit if rayMask & instance.mask != 0
         rayInst.instanceShaderBindingTableRecordOffset = 0; // We will use the same hit group for all objects
         tlas.emplace_back(rayInst);
@@ -164,14 +172,15 @@ void VulkanApplication::buildRayTracing()
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::StorageImage, 0, 1);
 
     rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytrace.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR, "main"));
-    rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
-    rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
 
     rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytraceShadow.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR, "main"));
     
     rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytrace.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, "main"));
+
+    rtShaders.emplace_back(resManager->createShaderModule("shaders/spv/raytrace.rahit.spv", VK_SHADER_STAGE_ANY_HIT_BIT_KHR, "main"));
     rtShaders.back().addShaderResourcePushConstant(0, sizeof(PushConstantRayTracing));
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
+    rtShaders.back().addShaderResourceUniform(ShaderResourceType::StorageImage, 0, 1);
 
     rtBuilder->createRayTracingPipeline(rtShaders, *graphicBuilder->getGlobalData().descSetLayout);
     rtBuilder->createRtShaderBindingTable();
@@ -363,11 +372,18 @@ void VulkanApplication::updateTlas()
     uint32_t i = 0;
     for (const auto& [p_mesh, id] : renderMeshes)
     {
+        VkGeometryInstanceFlagsKHR flags{};
+        if (p_mesh->mat.alphaMode == 0 || (p_mesh->mat.pbrBaseColorFactor.w == 1.0f && p_mesh->mat.pbrBaseColorTexture == -1))
+            flags |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+        // Need to skip the cull flag in traceray_rtx for double sided materials
+        if (p_mesh->mat.doubleSided == 1)
+            flags |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+
         VkAccelerationStructureInstanceKHR rayInst{};
         rayInst.transform = toTransformMatrixKHR(resManager->getRenderMesh(id).tranformMatrix); // Position of the instance
         rayInst.instanceCustomIndex = id; // gl_InstanceCustomIndexEXT
         rayInst.accelerationStructureReference = rtBuilder->getBlasDeviceAddress(i);
-        rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        rayInst.flags = flags;
         rayInst.mask = 0xFF; //  Only be hit if rayMask & instance.mask != 0
         rayInst.instanceShaderBindingTableRecordOffset = 0; // We will use the same hit group for all objects
         tlas.emplace_back(rayInst);

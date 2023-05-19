@@ -69,6 +69,7 @@ void VulkanRayTracingBuilder::createRayTracingPipeline(
 	group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
 	group.generalShader = VK_SHADER_UNUSED_KHR;
 	group.closestHitShader = VulkanRayTracingPipeline::ClosestHit;
+	group.anyHitShader = VulkanRayTracingPipeline::AnyHit;
 	rtShaderGroups.push_back(group);
 
 	std::vector<VkPipelineShaderStageCreateInfo> stageInfos;

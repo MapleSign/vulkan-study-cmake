@@ -1,5 +1,6 @@
 #include "Scene.h"
 
+#include <cmath>
 #include <string>
 #include <filesystem>
 
@@ -110,7 +111,8 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 					auto& gt = gltfTangents[i];
 					auto& n = normals[i];
 					glm::vec3 t = gt;
-					glm::vec3 b = glm::normalize(glm::cross(n, t)) * gt.w;
+					//glm::vec3 b = glm::normalize(glm::cross(n, t)) * gt.w;
+					glm::vec3 b = glm::vec3(gt.w);
 					tangents.push_back(t);
 					bitangents.push_back(b);
 				}
@@ -159,12 +161,20 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 
 		if (!tNode.rotation.empty()) {
 			glm::vec3 axis{ tNode.rotation[0], tNode.rotation[1], tNode.rotation[2] };
-			model->transComp.rotate = static_cast<float>(glm::degrees(tNode.rotation[3])) *
+			axis = glm::normalize(axis);
+			float angle = tNode.rotation[3];
+
+			float heading = atan2(axis.y * sin(angle) - axis.x * axis.z * (1 - cos(angle)), 1 - (axis.y * axis.y + axis.z * axis.z) * (1 - cos(angle)));
+			float attitude = asin(axis.x * axis.y * (1 - cos(angle)) + axis.z * sin(angle));
+			float bank = atan2(axis.x * sin(angle) - axis.y * axis.z * (1 - cos(angle)), 1 - (axis.x * axis.x + axis.z * axis.z) * (1 - cos(angle)));
+
+			/*model->transComp.rotate = static_cast<float>(glm::degrees(tNode.rotation[3])) *
 				glm::vec3(
 					glm::dot(glm::vec3(1.f, 0.f, 0.f), axis),
 					glm::dot(glm::vec3(0.f, 1.f, 0.f), axis),
 					glm::dot(glm::vec3(0.f, 0.f, 1.f), axis)
-				);
+				);*/
+			model->transComp.rotate = { heading, attitude, bank };
 		}
 
 		modelMap.emplace(tMesh.name, model);

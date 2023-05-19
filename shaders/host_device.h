@@ -102,6 +102,10 @@ struct Vertex  // See ObjLoader, copy of VertexObj, could be compressed for devi
 	vec3 bitangent;
 };
 
+#define ALPHA_OPAQUE 0
+#define ALPHA_MASK 1
+#define ALPHA_BLEND 2
+
 struct GltfMaterial  // GLTF Material
 {
 	// 0

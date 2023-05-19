@@ -23,6 +23,7 @@ public:
         Miss,
         MissShadow,
         ClosestHit,
+        AnyHit,
         
         ShaderGroupCount // always the last one
     };

@@ -37,6 +37,7 @@ set(GLSL_SOURCE_FILES
     "${PROJECT_SOURCE_DIR}/shaders/raytrace.rmiss"
     "${PROJECT_SOURCE_DIR}/shaders/raytrace.rchit"
     "${PROJECT_SOURCE_DIR}/shaders/raytraceShadow.rmiss"
+    "${PROJECT_SOURCE_DIR}/shaders/raytrace.rahit"
 )
 
 ## iterate each shader

@@ -9,7 +9,7 @@ vec3 pathtrace(Ray r)
     for (int depth = 0; depth < maxDepth; ++depth) {
         prd.hitT = INFINITY;
 
-        uint  rayFlags = gl_RayFlagsOpaqueEXT;
+        uint  rayFlags = gl_RayFlagsCullBackFacingTrianglesEXT;
         float tMin     = 0.001;
         float tMax     = 10000.0;
 
@@ -84,7 +84,7 @@ vec3 pathtrace(Ray r)
                         0,            // sbtRecordStride
                         1,            // missIndex
                         state.position,     // ray origin
-                        tMin,          // ray min range
+                        0.0,          // ray min range
                         -L,            // ray direction
                         tMax,         // ray max range
                         1             // payload layout(location = 1)

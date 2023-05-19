@@ -24,14 +24,17 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
 
     auto vertShader = resManager.createShaderModule("shaders/spv/shader.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
     vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
-    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1, 
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
     vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
 
     auto fragShader = resManager.createShaderModule("shaders/spv/shader.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
     fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
 
-    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(), VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1, 
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(), 
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
 
     fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 0);
     fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 1);
