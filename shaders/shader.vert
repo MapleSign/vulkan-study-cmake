@@ -40,8 +40,8 @@ void main() {
     fragPos = (model * vec4(inPosition, 1.0)).rgb;
 
     vec3 T = normalize(vec3(model * vec4(inTangent, 0.0)));
-    vec3 B = normalize(vec3(model * vec4(inBitangent, 0.0)));
     vec3 N = normalize(vec3(model * vec4(inNormal, 0.0)));
+    vec3 B = normalize(cross(N, T) * inBitangent);
     mat3 TBN = mat3(T, B, N);
     fragTBN = TBN;
 }

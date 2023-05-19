@@ -41,6 +41,7 @@ vec3 pathtrace(Ray r)
         /* Hit */
         State state;
         getShadeState(state, prd);
+        // return state.normal;
 
         // Vector toward the light
         vec3  L;

@@ -48,6 +48,7 @@ VulkanApplication::VulkanApplication():
     //scene->loadGLTFFile("../amd/Caustics/Caustics.gltf");
     //scene->loadGLTFFile("../glTF-Sample-Models/2.0/AlphaBlendModeTest/glTF/AlphaBlendModeTest.gltf");
     scene->loadGLTFFile("../glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf");
+    //scene->loadGLTFFile("../glTF-Sample-Models/2.0/NormalTangentMirrorTest/glTF/NormalTangentMirrorTest.gltf");
 
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
     scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
