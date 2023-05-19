@@ -64,6 +64,9 @@ void main() {
     }
 
     outColor = vec4(result, 1.0);
+    // outColor = vec4((norm + vec3(1)) * 0.5, 1.0);
+    // outColor = vec4(norm, 1.0);
+    // outColor = vec4(fragTexCoord, 0, 1);
     // outColor = vec4(1.0);
 }
 
@@ -77,9 +80,19 @@ vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, GltfMaterial mat)
 //    vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
     // combine results
-    vec3 ambient = light.ambient * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
-    vec3 specular = light.specular * spec * vec3(texture(textureSampler[mat.khrSpecularGlossinessTexture], fragTexCoord));
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    if (mat.shadingModel == 1) {
+        ambient = light.ambient * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
+        diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
+        specular = light.specular * spec * vec3(texture(textureSampler[mat.khrSpecularGlossinessTexture], fragTexCoord));
+    }
+    else {
+        ambient = light.ambient * vec3(texture(textureSampler[mat.pbrBaseColorTexture], fragTexCoord));
+        diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.pbrBaseColorTexture], fragTexCoord));
+        specular = vec3(0);
+    }
     return (ambient + diffuse + specular);
 }
 
@@ -97,9 +110,19 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, G
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    
     // combine results
-    vec3 ambient = light.ambient * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
-    vec3 specular = light.specular * spec * vec3(texture(textureSampler[mat.khrSpecularGlossinessTexture], fragTexCoord));
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    if (mat.shadingModel == 1) {
+        ambient = light.ambient * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
+        diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
+        specular = light.specular * spec * vec3(texture(textureSampler[mat.khrSpecularGlossinessTexture], fragTexCoord));
+    }
+    else {
+        ambient = light.ambient * vec3(texture(textureSampler[mat.pbrBaseColorTexture], fragTexCoord));
+        diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.pbrBaseColorTexture], fragTexCoord));
+        specular = vec3(0);
+    }
     
     return attenuation * (ambient + diffuse + specular);
 }
