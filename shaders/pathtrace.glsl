@@ -41,6 +41,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         /* Hit */
         State state;
         getShadeState(state, prd);
+        state.ffnormal = dot(state.normal, r.direction) <= 0.0 ? state.normal : -state.normal;
         // return state.normal;
 
         // Vector toward the light
@@ -52,19 +53,19 @@ vec3 pathtrace(Ray r,int maxDepth)
             vec3 lDir = pcRay.lightPosition - state.position;
             lightDistance = length(lDir);
             lightIntensity = pcRay.lightIntensity / (lightDistance * lightDistance);
-            L = normalize(lDir);
+            L = normalize(-lDir);
         }
         else { // Directional light
             L = normalize(pcRay.lightPosition);
         }
 
         vec3 newRayOrigin = state.position;
-        vec3 newRayDirection = samplingHemisphere(prd.seed, state.tangent, state.bitangent, state.normal);
+        vec3 newRayDirection = samplingHemisphere(prd.seed, state.tangent, state.bitangent, state.ffnormal);
 
         const float p = 1 / M_PI;
 
         // Compute the BRDF for this ray (assuming Lambertian reflection)
-        float cos_theta = dot(newRayDirection, state.normal);
+        float cos_theta = dot(newRayDirection, state.ffnormal);
         vec3 BRDF = state.mat.albedo / M_PI;
 
         hitValue += state.mat.emission * weight;
@@ -73,8 +74,8 @@ vec3 pathtrace(Ray r,int maxDepth)
         r.direction = newRayDirection;
 
         // Direct light
-        if (dot(state.normal, L) < 0) {
-            isShadowed = true; // Asume hit, will be set to false if hit nothing (miss shader)
+        if (dot(state.ffnormal, L) < 0) {
+            shadow_prd.isShadowed = true; // Asume hit, will be set to false if hit nothing (miss shader)
             uint rayFlags = 
                 gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT | gl_RayFlagsCullBackFacingTrianglesEXT;
 
@@ -91,7 +92,7 @@ vec3 pathtrace(Ray r,int maxDepth)
                         1             // payload layout(location = 1)
             );
 
-            if (!isShadowed) {
+            if (!shadow_prd.isShadowed) {
                 hitValue += lightIntensity * weight;
             }
         }

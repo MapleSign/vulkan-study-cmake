@@ -14,7 +14,7 @@
 
 hitAttributeEXT vec2 bary;
 
-layout(location = 0) rayPayloadInEXT hitPayload prd;
+layout(location = 0) rayPayloadInEXT HitPayload prd;
 
 layout(set = 1, binding = eGlobals) uniform _GlobalUniforms { GlobalData uni; };
 layout(set = 1, binding = eObjDescs, scalar) buffer ObjDescBuffer { ObjDesc i[]; } objDesc;

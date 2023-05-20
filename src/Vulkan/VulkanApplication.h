@@ -89,8 +89,8 @@ private:
 
     std::unique_ptr<GUI> gui;
     bool useRayTracer;
-    glm::vec4 clearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-    PushConstantRayTracing pcRay{ {},{-0.029,-1.00,-0.058},{6.123},1,-1 ,3,5};
+    glm::vec4 clearColor{ 0.5f, 0.8f, 0.9f, 1.0f };
+    PushConstantRayTracing pcRay{ {}, {-0.029, -1.00, -0.058}, {3.f}, 1, -1, 3, 1 };
 
     std::vector<const char*> getRequiredExtensions();
     static void mouse_callback(GLFWwindow* window, double xpos, double ypos);

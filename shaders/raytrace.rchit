@@ -4,7 +4,7 @@
 
 #include "raycommon.glsl"
 
-layout(location = 0) rayPayloadInEXT hitPayload prd;
+layout(location = 0) rayPayloadInEXT HitPayload prd;
 hitAttributeEXT vec2 attribs;
 
 vec3 interpolate(vec3 a, vec3 b, vec3 c, vec3 barycentrics) {

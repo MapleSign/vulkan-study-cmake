@@ -159,7 +159,7 @@ void getMaterialsAndTextures(inout State state, inout GltfMaterial material)
     state.mat.clearcoatRoughness = max(state.mat.clearcoatRoughness, 0.001);
 }
 
-void getShadeState(inout State state, hitPayload prd) {
+void getShadeState(inout State state, HitPayload prd) {
     ObjDesc objResource = objDesc.i[prd.instanceCustomIndex];
     MatIndices matIndices = MatIndices(objResource.materialIndexAddress);
     Materials materials = Materials(objResource.materialAddress);

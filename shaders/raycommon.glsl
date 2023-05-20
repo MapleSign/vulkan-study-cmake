@@ -6,7 +6,7 @@ struct Ray
     vec3 direction;
 };
 
-struct hitPayload
+struct HitPayload
 {
     uint   seed;
     float  hitT;
@@ -16,6 +16,12 @@ struct hitPayload
     vec2   baryCoord;
     mat4x3 objectToWorld;
     mat4x3 worldToObject;
+};
+
+struct ShadowHitPayload
+{
+    uint seed;
+    bool isShadowed;
 };
 
 struct Material

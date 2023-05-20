@@ -11,8 +11,8 @@
 #include "raycommon.glsl"
 #include "host_device.h"
 
-layout(location = 0) rayPayloadEXT hitPayload prd;
-layout(location = 1) rayPayloadEXT bool isShadowed;
+layout(location = 0) rayPayloadEXT HitPayload prd;
+layout(location = 1) rayPayloadEXT ShadowHitPayload shadow_prd;
 
 layout(set = 1, binding = eGlobals) uniform _GlobalUniforms { GlobalData uni; };
 layout(set = 1, binding = eObjDescs, scalar) buffer ObjDescBuffer { ObjDesc i[]; } objDesc;
