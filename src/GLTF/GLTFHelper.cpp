@@ -88,7 +88,7 @@ void createTangents(
 		// Calculate handedness
 		float handedness = (glm::dot(glm::cross(n, t), b) < 0.f) ? 1.f : -1.f;
 		t = otangent;
-		b = glm::vec3(handedness);
+		b = glm::normalize(glm::cross(n, t) * handedness);
 	}
 }
 

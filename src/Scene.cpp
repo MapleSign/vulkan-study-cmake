@@ -111,8 +111,7 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 					auto& gt = gltfTangents[i];
 					auto& n = normals[i];
 					glm::vec3 t = gt;
-					//glm::vec3 b = glm::normalize(glm::cross(n, t)) * gt.w;
-					glm::vec3 b = glm::vec3(gt.w);
+					glm::vec3 b = glm::normalize(glm::cross(n, t)) * gt.w;
 					tangents.push_back(t);
 					bitangents.push_back(b);
 				}

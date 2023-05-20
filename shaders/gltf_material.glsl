@@ -187,12 +187,11 @@ void getShadeState(inout State state, hitPayload prd) {
     const vec3 worldNrm = normalize(vec3(nrm * prd.worldToObject));
     // texture coordinate
     const vec2 texCoord = v0.texCoord * barycentrics.x + v1.texCoord * barycentrics.y + v2.texCoord * barycentrics.z;
+    // Tangent & Bitangent
     const vec3 tangent = normalize(v0.tangent * barycentrics.x + v1.tangent * barycentrics.y + v2.tangent * barycentrics.z);
     vec3 worldTangent = normalize(vec3(tangent * prd.worldToObject));
-    // worldTangent = normalize(worldTangent - dot(worldTangent, worldNrm) * worldNrm);
-    const vec3 bitangent = v0.bitangent * barycentrics.x + v1.bitangent * barycentrics.y + v2.bitangent * barycentrics.z;
-    vec3 worldBitangent = cross(worldNrm, worldTangent) * bitangent.r;
-    // worldBitangent = bitangent;
+    const vec3 bitangent = normalize(v0.bitangent * barycentrics.x + v1.bitangent * barycentrics.y + v2.bitangent * barycentrics.z);
+    vec3 worldBitangent = normalize(vec3(bitangent * prd.worldToObject));
 
     state.position = worldPos;
     state.normal = worldNrm;
