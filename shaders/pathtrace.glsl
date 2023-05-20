@@ -1,8 +1,8 @@
 #include "gltf_material.glsl"
 
-vec3 pathtrace(Ray r)
+vec3 pathtrace(Ray r,int maxDepth)
 {
-    int maxDepth = 3;
+    //int maxDepth = 10;
     vec3 hitValue = vec3(0);
     vec3 weight = vec3(1);
 
@@ -100,7 +100,7 @@ vec3 pathtrace(Ray r)
     return hitValue;
 }
 
-vec3 samplePixel(ivec2 imageCoord, ivec2 imageSize)
+vec3 samplePixel(ivec2 imageCoord, ivec2 imageSize,int maxDepth)
 {
     float r1 = rnd(prd.seed);
     float r2 = rnd(prd.seed);
@@ -117,7 +117,7 @@ vec3 samplePixel(ivec2 imageCoord, ivec2 imageSize)
     vec4 direction = uni.viewInverse * vec4(normalize(target.xyz), 0);
 
     Ray r = Ray(origin.xyz, direction.xyz);
-    vec3 radiance = pathtrace(r);
+    vec3 radiance = pathtrace(r,maxDepth);
 
     return radiance;
 }

@@ -22,6 +22,8 @@ struct PushConstantRayTracing {
 	float lightIntensity;
 	int lightType;
 	int frame;
+	int maxDepth;
+	int sampleNumbers;
 };
 
 class VulkanRayTracingBuilder

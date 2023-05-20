@@ -46,6 +46,7 @@ VulkanApplication::VulkanApplication():
     model->transComp.translate = { 0.f, -6.f, -30.f };
     model->transComp.scale = { 50.0f, 1.f, 50.0f };
     scene->loadGLTFFile("../amd/Caustics/Caustics.gltf");
+
     //scene->loadGLTFFile("../glTF-Sample-Models/2.0/AlphaBlendModeTest/glTF/AlphaBlendModeTest.gltf");
     //scene->loadGLTFFile("../glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf");
     //scene->loadGLTFFile("../glTF-Sample-Models/2.0/NormalTangentMirrorTest/glTF/NormalTangentMirrorTest.gltf");
@@ -208,6 +209,8 @@ void VulkanApplication::mainLoop()
             changed |= ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
         }
         changed |= ImGui::SliderInt("Max Frames", &maxFrames, 1, 10000);
+        changed |= ImGui::SliderInt("Max Depth", &pcRay.maxDepth, 1, 10);
+        changed |= ImGui::SliderInt("Sample Numbers", &pcRay.sampleNumbers, 1, 12);
 
 
         if (changed) {
