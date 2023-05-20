@@ -208,10 +208,12 @@ void VulkanApplication::mainLoop()
                 changed |= ImGui::SliderFloat3("Direction", &pcRay.lightPosition.x, -1.f, 1.f);
             changed |= ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
         }
-        changed |= ImGui::SliderInt("Max Frames", &maxFrames, 1, 10000);
-        changed |= ImGui::SliderInt("Max Depth", &pcRay.maxDepth, 1, 10);
-        changed |= ImGui::SliderInt("Sample Numbers", &pcRay.sampleNumbers, 1, 12);
-
+        if (ImGui::CollapsingHeader("Ray Tracing"))
+        {
+            changed |= ImGui::SliderInt("Max Iteration", &maxFrames, 1, 10000);
+            changed |= ImGui::SliderInt("Max Ray Depth", &pcRay.maxDepth, 1, 10);
+            changed |= ImGui::SliderInt("Samples Per Frame", &pcRay.sampleNumbers, 1, 12);
+        }
 
         if (changed) {
             resetFrameCount();
