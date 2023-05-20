@@ -122,9 +122,6 @@ VulkanApplication::~VulkanApplication()
 
 void VulkanApplication::buildRayTracing()
 {
-
-
-
     rtBuilder = std::make_unique<VulkanRayTracingBuilder>(*device, *resManager, *graphicBuilder->getOffscreenColor());
 
     // BLAS - Storing each primitive in a geometry

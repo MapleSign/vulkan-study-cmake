@@ -41,24 +41,26 @@ void main()
     const int NBSAMPLES = 5;
     vec3 hitValue = vec3(0);
     for (int smpl = 0; smpl < NBSAMPLES; smpl++) {
-        hitValue += samplerPixel(imageCoord, imageSize);
+        vec3 new_sample = samplePixel(imageCoord, imageSize);
+        if( isnan(new_sample.r) || isnan(new_sample.g) || isnan(new_sample.b) )
+            hitValue += vec3(0);
+        else
+            hitValue += new_sample;
     }
 
     hitValue = hitValue / NBSAMPLES;
     //imageStore(image, imageCoord, vec4(hitValue.xyz, 1.0));
+
     // Do accumulation over time
-
-
     if(pcRay.frame > 0)
     {
-        float a         = 1.0f / float(pcRay.frame + 1);
-        vec3  old_color = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
-        if(isnan(hitValue.r)||isnan(hitValue.g)||isnan(hitValue.b))
-        {
+        float a = 1.0f / float(pcRay.frame + 1);
+        vec3 old_color = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
+        if( isnan(hitValue.r) || isnan(hitValue.g) || isnan(hitValue.b) ) {
+            imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color, vec3(1.0, 0, 0), a), 1.f));
             return;
         }
-        else 
-        {
+        else {
             imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(mix(old_color, hitValue, a), 1.f));
         }
         

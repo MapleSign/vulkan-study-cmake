@@ -36,11 +36,10 @@ void main()
     uint matId = matIndices.i[gl_PrimitiveID];
     GltfMaterial mat = materials.m[matId];
 
-    // (Not needed, check flags in accelstrct.cpp)
+    // (Not needed, check flags in func "buildRayTracing")
     // back face culling
-    // if(mat.doubleSided == 0 && (gl_HitKindEXT == gl_HitKindBackFacingTriangleEXT))
-    // {
-    //   ignoreIntersectionEXT;  // Terminating (jump statement)
+    // if(mat.doubleSided == 0 && (gl_HitKindEXT == gl_HitKindBackFacingTriangleEXT)) {
+    //     ignoreIntersectionEXT;  // Terminating (jump statement)
     // }
     //
     // early out if there is no opacity function
@@ -59,18 +58,15 @@ void main()
         uvec3 tri = indices.i[gl_PrimitiveID];
 
         // All vertex attributes of the triangle.
-        Vertex attr0 = vertices.v[tri.x];
-        Vertex attr1 = vertices.v[tri.y];
-        Vertex attr2 = vertices.v[tri.z];
+        Vertex v0 = vertices.v[tri.x];
+        Vertex v1 = vertices.v[tri.y];
+        Vertex v2 = vertices.v[tri.z];
 
         // Get the texture coordinate
         const vec3 barycentrics = vec3(1.0 - bary.x - bary.y, bary.x, bary.y);
-        const vec2 uv0 = attr0.texCoord;
-        const vec2 uv1 = attr1.texCoord;
-        const vec2 uv2 = attr2.texCoord;
-        vec2 texCoord0 = uv0 * barycentrics.x + uv1 * barycentrics.y + uv2 * barycentrics.z;
+        vec2 texCoord = v0.texCoord * barycentrics.x + v1.texCoord * barycentrics.y + v2.texCoord * barycentrics.z;
 
-        baseColorAlpha *= texture(textureSampler[mat.pbrBaseColorTexture], texCoord0).a;
+        baseColorAlpha *= texture(textureSampler[mat.pbrBaseColorTexture], texCoord).a;
     }
 
     float opacity;

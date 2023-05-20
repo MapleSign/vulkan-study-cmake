@@ -10,8 +10,8 @@ vec3 pathtrace(Ray r)
         prd.hitT = INFINITY;
 
         uint  rayFlags = gl_RayFlagsCullBackFacingTrianglesEXT;
-        float tMin     = 0.001;
-        float tMax     = 10000.0;
+        float tMin     = 0.0;
+        float tMax     = INFINITY;
 
         traceRayEXT(topLevelAS, // acceleration structure
             rayFlags,       // rayFlags
@@ -19,9 +19,9 @@ vec3 pathtrace(Ray r)
             0,              // sbtRecordOffset
             0,              // sbtRecordStride
             0,              // missIndex
-            r.origin,     // ray origin
+            r.origin,       // ray origin
             tMin,           // ray min range
-            r.direction,  // ray direction
+            r.direction,    // ray direction
             tMax,           // ray max range
             0               // payload (location = 0)
         );
@@ -87,7 +87,7 @@ vec3 pathtrace(Ray r)
                         state.position,     // ray origin
                         0.0,          // ray min range
                         -L,            // ray direction
-                        tMax,         // ray max range
+                        lightDistance,         // ray max range
                         1             // payload layout(location = 1)
             );
 
@@ -100,7 +100,7 @@ vec3 pathtrace(Ray r)
     return hitValue;
 }
 
-vec3 samplerPixel(ivec2 imageCoord, ivec2 imageSize)
+vec3 samplePixel(ivec2 imageCoord, ivec2 imageSize)
 {
     float r1 = rnd(prd.seed);
     float r2 = rnd(prd.seed);
