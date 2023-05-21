@@ -304,8 +304,9 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
         graphicBuilder->draw(commandBuffer, clearColor);
     }
     else {
+        updateFrameCount();
         if (pcRay.frame < maxFrames) {
-            updateFrameCount();
+            
             pcRay.clearColor = clearColor;
             rtBuilder->raytrace(commandBuffer, *graphicBuilder->getGlobalData().descriptorSets[frameIndex], pcRay);
         }
