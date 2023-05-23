@@ -6,6 +6,13 @@ struct Ray
     vec3 direction;
 };
 
+struct BsdfSampleRec
+{
+    vec3 L;
+    vec3 f;
+    float pdf;
+};
+
 struct HitPayload
 {
     uint   seed;

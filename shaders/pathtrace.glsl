@@ -1,10 +1,12 @@
 #include "gltf_material.glsl"
+#include "pbr.glsl"
 
 vec3 pathtrace(Ray r,int maxDepth)
 {
     //int maxDepth = 10;
     vec3 hitValue = vec3(0);
     vec3 weight = vec3(1);
+    vec3 absorption = vec3(0.0);
 
     for (int depth = 0; depth < maxDepth; ++depth) {
         prd.hitT = INFINITY;
@@ -31,7 +33,7 @@ vec3 pathtrace(Ray r,int maxDepth)
             if(depth == 0)
                 hitValue = pcRay.clearColor.xyz * 0.8;
             else {
-                vec3 env = vec3(0.01);
+                vec3 env = pcRay.clearColor.xyz * pcRay.lightIntensity * 0.1;
                 hitValue += env * weight;
             }
 
@@ -42,12 +44,16 @@ vec3 pathtrace(Ray r,int maxDepth)
         State state;
         getShadeState(state, prd);
         state.ffnormal = dot(state.normal, r.direction) <= 0.0 ? state.normal : -state.normal;
+        createCoordinateSystem(state.ffnormal, state.tangent, state.bitangent);
         // return state.normal;
+        // return vec3(state.mat.roughness);
+        // return state.mat.f0;
 
         // Vector toward the light
         vec3  L;
         float lightIntensity = pcRay.lightIntensity;
         float lightDistance = 100000.0;
+        float lightPdf = 1;
         // Point light
         if (pcRay.lightType == 0) {
             vec3 lDir = pcRay.lightPosition - state.position;
@@ -59,19 +65,31 @@ vec3 pathtrace(Ray r,int maxDepth)
             L = normalize(pcRay.lightPosition);
         }
 
-        vec3 newRayOrigin = state.position;
-        vec3 newRayDirection = samplingHemisphere(prd.seed, state.tangent, state.bitangent, state.ffnormal);
-
-        const float p = 1 / M_PI;
-
-        // Compute the BRDF for this ray (assuming Lambertian reflection)
-        float cos_theta = dot(newRayDirection, state.ffnormal);
-        vec3 BRDF = state.mat.albedo / M_PI;
-
+        // Reset absorption when ray is going out of surface
+        if(dot(state.normal, state.ffnormal) > 0.0) {
+            absorption = vec3(0.0);
+        }
+        
+        // Emission
         hitValue += state.mat.emission * weight;
-        weight *= BRDF * cos_theta / p;
-        r.origin = newRayOrigin;
-        r.direction = newRayDirection;
+        
+        // Add absoption (transmission / volume)
+        // weight *= exp(-absorption * prd.hitT);
+
+        vec3 Li = vec3(0);
+        if (dot(state.ffnormal, L) < 0) {
+            BsdfSampleRec directBsdf;
+            directBsdf.f = PbrEval(state, -r.direction, state.ffnormal, -L, directBsdf.pdf);
+            float misWeight = max(0, powerHeuristic(lightPdf, directBsdf.pdf)); // multi importance sampling weight
+            Li = misWeight * directBsdf.f * abs(dot(-L, state.ffnormal)) * lightIntensity * weight / lightPdf;
+        }
+
+        BsdfSampleRec bsdf;
+        bsdf.f = PbrSample(state, -r.direction, state.ffnormal, bsdf.L, bsdf.pdf, prd.seed);
+        // bsdf.f = vec3(0);
+        // return bsdf.L;
+
+        weight *= bsdf.f * abs(dot(state.ffnormal, bsdf.L)) / bsdf.pdf;
 
         // Direct light
         if (dot(state.ffnormal, L) < 0) {
@@ -93,9 +111,12 @@ vec3 pathtrace(Ray r,int maxDepth)
             );
 
             if (!shadow_prd.isShadowed) {
-                hitValue += lightIntensity * weight;
+                hitValue += Li;
             }
         }
+        
+        r.origin = state.position;
+        r.direction = bsdf.L;
     }
 
     return hitValue;
