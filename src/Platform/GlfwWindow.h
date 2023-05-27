@@ -9,7 +9,7 @@
 class GlfwWindow
 {
 public:
-	GlfwWindow(VulkanApplication& app, uint32_t width = 800, uint32_t height = 600);
+	GlfwWindow(VulkanApplication& app, uint32_t width = 1024, uint32_t height = 768);
 
 	~GlfwWindow();
 

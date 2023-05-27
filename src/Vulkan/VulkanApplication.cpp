@@ -31,6 +31,32 @@ VulkanApplication::VulkanApplication():
 
     device = std::make_unique<VulkanDevice>(instance->getSuitableGPU(surface, deviceExtensions), surface, deviceExtensions, validationLayers);
 
+
+    renderContext = std::make_unique<VulkanRenderContext>(*device, surface, window->getExtent(), threadCount);
+
+    gui = std::make_unique<GUI>(*instance, *window, *device, renderContext->getRenderPass());
+
+
+
+
+   
+
+}
+
+
+
+
+void VulkanApplication::loadScene(const char* filename)
+{
+    device->waitIdle();
+
+    resManager.reset();
+    scene.reset();
+    graphicBuilder.reset();
+    rtBuilder.reset();
+    renderPipeline.reset();
+    renderMeshes.clear();
+
     resManager = std::make_unique<VulkanResourceManager>(*device, device->getCommandPool());
 
     Model* model{ nullptr };
@@ -45,7 +71,8 @@ VulkanApplication::VulkanApplication():
     model = scene->addModel("floor", "assets/models/cube/cube.obj");
     model->transComp.translate = { 0.f, -6.f, -30.f };
     model->transComp.scale = { 50.0f, 1.f, 50.0f };
-    scene->loadGLTFFile("../amd/Caustics/Caustics.gltf");
+    scene->loadGLTFFile(filename);
+    //scene->loadGLTFFile("../amd/Caustics/Caustics.gltf");
     //scene->loadGLTFFile("../amd/Shadow/Shadow.gltf");
 
     //scene->loadGLTFFile("../glTF-Sample-Models/2.0/AlphaBlendModeTest/glTF/AlphaBlendModeTest.gltf");
@@ -77,9 +104,9 @@ VulkanApplication::VulkanApplication():
         }
     }
 
+
     graphicBuilder = std::make_unique<VulkanGraphicsBuilder>(*device, *resManager, window->getExtent());
 
-    renderContext = std::make_unique<VulkanRenderContext>(*device, surface, window->getExtent(), threadCount);
 
     auto vertShader = resManager->createShaderModule("shaders/spv/passthrough.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
 
@@ -96,15 +123,17 @@ VulkanApplication::VulkanApplication():
     renderPipeline->getPipelineState().depthStencilState.depth_write_enable = VK_FALSE;
     renderPipeline->recreatePipeline(renderContext->getSwapChain().getExtent(), renderContext->getRenderPass());
 
+
     postData = resManager->requireSceneData(*renderPipeline->getDescriptorSetLayouts()[0], threadCount, {});
     for (auto& descSet : postData.descriptorSets) {
         descSet->addWrite(0, VkDescriptorImageInfo{ sampler, graphicBuilder->getOffscreenColor()->getHandle(), VK_IMAGE_LAYOUT_GENERAL });
     }
     postData.update();
 
-    buildRayTracing();
 
-    gui = std::make_unique<GUI>(*instance, *window, *device, renderContext->getRenderPass());
+
+
+    buildRayTracing();
 }
 
 VulkanApplication::~VulkanApplication()
@@ -125,7 +154,6 @@ VulkanApplication::~VulkanApplication()
     instance.reset();
     window.reset();
 }
-
 void VulkanApplication::buildRayTracing()
 {
     rtBuilder = std::make_unique<VulkanRayTracingBuilder>(*device, *resManager, *graphicBuilder->getOffscreenColor());
@@ -192,10 +220,24 @@ void VulkanApplication::buildRayTracing()
 
 void VulkanApplication::mainLoop()
 {
+    const int sceneSum = 5;
+    const char* sceneNames[] = { "Caustics","Deferred","GI","PBR","Shadow" };
+    const char* sceneFilePath[] = {
+        "../amd/Caustics/Caustics.gltf",
+        "../amd/Deferred/Deferred.gltf",
+        "../amd/GI/GI.gltf",
+        "../amd/PBR/PBR.gltf",
+        "../amd/Shadow/Shadow.gltf"
+    };
+    static int sceneItem = 4;
+
+    loadScene(sceneFilePath[sceneItem]);
+   
     while (!glfwWindowShouldClose(window->getHandle()))
     {
         glfwPollEvents();
         bool changed = false;
+        bool sceneChanged = false;
         gui->newFrame();
         ImGui::Begin("Debug");
         changed |= ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
@@ -213,11 +255,18 @@ void VulkanApplication::mainLoop()
                 changed |= ImGui::SliderFloat3("Direction", &pcRay.lightPosition.x, -1.f, 1.f);
             changed |= ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
         }
-        if (ImGui::CollapsingHeader("Ray Tracing"))
+        if (ImGui::CollapsingHeader("Ray Tracing"), ImGuiTreeNodeFlags_DefaultOpen)
         {
             changed |= ImGui::SliderInt("Max Iteration", &maxFrames, 1, 10000);
             changed |= ImGui::SliderInt("Max Ray Depth", &pcRay.maxDepth, 1, 10);
             changed |= ImGui::SliderInt("Samples Per Frame", &pcRay.sampleNumbers, 1, 12);
+        }
+        if (ImGui::CollapsingHeader("Scenes"), ImGuiTreeNodeFlags_DefaultOpen)
+        {
+   
+            sceneChanged = ImGui::Combo("Scene", &sceneItem, sceneNames, sceneSum);
+            changed |= sceneChanged;
+
         }
 
         if (changed) {
@@ -227,6 +276,11 @@ void VulkanApplication::mainLoop()
         ImGui::End();
 
         drawFrame();
+
+        if (sceneChanged) {
+            loadScene(sceneFilePath[sceneItem]);
+            continue;
+        }
     }
 
     device->waitIdle();
