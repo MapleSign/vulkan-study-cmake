@@ -12,7 +12,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         prd.hitT = INFINITY;
 
         uint  rayFlags = gl_RayFlagsCullBackFacingTrianglesEXT;
-        float tMin     = 0.0;
+        float tMin     = 0.01;
         float tMax     = INFINITY;
 
         traceRayEXT(topLevelAS, // acceleration structure
@@ -45,9 +45,12 @@ vec3 pathtrace(Ray r,int maxDepth)
         getShadeState(state, prd);
         state.ffnormal = dot(state.normal, r.direction) <= 0.0 ? state.normal : -state.normal;
         createCoordinateSystem(state.ffnormal, state.tangent, state.bitangent);
+        state.eta = dot(state.normal, state.ffnormal) > 0.0 ? (1.0 / state.mat.ior) : state.mat.ior;
         // return state.normal;
         // return vec3(state.mat.roughness);
+        // return vec3(state.mat.metallic);
         // return state.mat.f0;
+        // return vec3(state.mat.transmission);
 
         // Vector toward the light
         vec3  L;
@@ -87,7 +90,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         BsdfSampleRec bsdf;
         bsdf.f = PbrSample(state, -r.direction, state.ffnormal, bsdf.L, bsdf.pdf, prd.seed);
         // bsdf.f = vec3(0);
-        // return bsdf.L;
+        // return bsdf.L * 0.5 + 0.5;
 
         weight *= bsdf.f * abs(dot(state.ffnormal, bsdf.L)) / bsdf.pdf;
 

@@ -4,6 +4,8 @@
 #include <string>
 #include <filesystem>
 
+#include <glm/gtx/quaternion.hpp>
+
 #include "GLTF/GLTFHelper.h"
 
 Scene::Scene() :
@@ -159,13 +161,8 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 			model->transComp.scale = { tNode.scale[0], tNode.scale[1], tNode.scale[2] };
 
 		if (!tNode.rotation.empty()) {
-			glm::vec3 axis{ tNode.rotation[0], tNode.rotation[1], tNode.rotation[2] };
-			axis = glm::normalize(axis);
-			float angle = tNode.rotation[3];
-
-			float heading = atan2(axis.y * sin(angle) - axis.x * axis.z * (1 - cos(angle)), 1 - (axis.y * axis.y + axis.z * axis.z) * (1 - cos(angle)));
-			float attitude = asin(axis.x * axis.y * (1 - cos(angle)) + axis.z * sin(angle));
-			float bank = atan2(axis.x * sin(angle) - axis.y * axis.z * (1 - cos(angle)), 1 - (axis.x * axis.x + axis.z * axis.z) * (1 - cos(angle)));
+			glm::quat rotation{ float(tNode.rotation[3]), float(tNode.rotation[0]), float(tNode.rotation[1]), float(tNode.rotation[2]) };
+			model->transComp.rotate = glm::degrees(glm::eulerAngles(rotation));
 
 			/*model->transComp.rotate = static_cast<float>(glm::degrees(tNode.rotation[3])) *
 				glm::vec3(
@@ -173,10 +170,19 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 					glm::dot(glm::vec3(0.f, 1.f, 0.f), axis),
 					glm::dot(glm::vec3(0.f, 0.f, 1.f), axis)
 				);*/
-			model->transComp.rotate = { heading, attitude, bank };
 		}
 
-		modelMap.emplace(tMesh.name, model);
+		if (modelMap.find(tNode.name) == modelMap.end())
+			modelMap.emplace(tNode.name, model);
+		else {
+			for (int i = 1;; ++i) {
+				std::string name = tNode.name + "_" + std::to_string(i);
+				if (modelMap.find(name) == modelMap.end()) {
+					modelMap.emplace(name, model);
+					break;
+				}
+			}
+		}
 		models.push_back(model);
 	}
 

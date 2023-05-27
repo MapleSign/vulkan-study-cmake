@@ -52,6 +52,8 @@ VulkanApplication::VulkanApplication():
     //scene->loadGLTFFile("../glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf");
     //scene->loadGLTFFile("../glTF-Sample-Models/2.0/NormalTangentMirrorTest/glTF/NormalTangentMirrorTest.gltf");
     //scene->loadGLTFFile("../glTF-Sample-Models/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf");
+    //scene->loadGLTFFile("../glTF-Sample-Models/2.0/TransmissionTest/glTF/TransmissionTest.gltf");
+    // 
     //scene->loadGLTFFile("../glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
 
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });

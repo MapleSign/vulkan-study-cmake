@@ -44,7 +44,7 @@ vec3 GgxSample(float alpha, float r1, float r2) {
     return SphericalDirection(sinTheta, cosTheta, phi);
 }
 
-vec3 GgxEval(vec3 f0, float alpha, float roughness, vec3 V, vec3 N, vec3 L, vec3 H, inout float pdf) {
+vec3 GgxEvalReflect(vec3 f0, float alpha, float roughness, vec3 V, vec3 N, vec3 L, vec3 H, inout float pdf) {
     float NdotH = clamp(dot(N, H), 0, 1);
     float LdotH = clamp(dot(L, H), 0, 1);
     float D = GgxD(alpha, NdotH);
@@ -63,6 +63,29 @@ vec3 GgxEval(vec3 f0, float alpha, float roughness, vec3 V, vec3 N, vec3 L, vec3
     return D * F * G / (4 * NdotL * NdotV);
 }
 
+vec3 GgxEvalRefract(vec3 f0, float alpha, float roughness, float eta, vec3 V, vec3 N, vec3 L, vec3 H, inout float pdf) {
+    float NdotH = clamp(dot(N, H), 0, 1);
+    float LdotH = clamp(dot(L, H), 0, 1);
+    float D = GgxD(alpha, NdotH);
+
+    pdf = D * NdotH / (4 * LdotH);
+
+    float NdotL = clamp(dot(N, L), 0, 1);
+    float NdotV = clamp(dot(N, V), 0, 1);
+    float k = alpha / 2;
+    float G1_L = NdotL / (NdotL * (1 - k) + k);
+    float G1_V = NdotV / (NdotV * (1 - k) + k);
+    float G = G1_L * G1_V;
+    
+    float VdotH = clamp(dot(V, H), 0, 1);
+    float sqrtDenom = VdotH + eta * LdotH;
+    float factor = 1 / eta;
+    vec3 F = f0 + (vec3(1) - f0) * pow(1 - abs(VdotH), 5);
+    return (vec3(1.f) - F) *
+                abs(D * G * eta * eta * LdotH * VdotH * factor * factor /
+                        (NdotL * NdotV * sqrtDenom * sqrtDenom));
+}
+
 // refer to pbrt & "Real Shading in Unreal Engine 4"
 vec3 PbrSample(inout State state, vec3 V, vec3 N, inout vec3 L, inout float pdf, inout uint seed) {
     vec3 brdf = vec3(0);
@@ -72,26 +95,42 @@ vec3 PbrSample(inout State state, vec3 V, vec3 N, inout vec3 L, inout float pdf,
 
     float diffuseRatio = (1.0 - state.mat.metallic);
     float specularRatio = 1 - diffuseRatio;
-    // light is diffuse reflect
-    if (rnd(seed) < diffuseRatio) {
-        // Lambertien reflect
-        L = CosineSampleHemisphere(r1, r2); // sample diffuse light direction
-        L = state.tangent * L.x + state.bitangent * L.y + N * L.z; // map to world normal
+    float transmissionWeight = state.mat.transmission; // only dielectric will transmission
 
-        brdf = state.mat.albedo / M_PI * (1.0 - state.mat.metallic);
-        pdf = dot(L, N) / M_PI;
+    float roughness = state.mat.roughness;
+    float alpha = roughness * roughness;
+    float eta = state.eta;
+    vec3 H = GgxSample(alpha, r1, r2); // sample wh
+    H = state.tangent * H.x + state.bitangent * H.y + N * H.z; // map to world normal
+    if (dot(H, N) < 0)
+        H = -H;
+
+    // light is diffuse reflect or refract -- pure refract or total internal reflect
+    if (rnd(seed) < diffuseRatio) {
+        if (rnd(seed) < transmissionWeight) { // refract
+            float VdotH = dot(V, H);
+            float discriminat = 1.0 - eta * eta * (1.0 - VdotH * VdotH);  // total internal reflection
+            if (discriminat > 0) { // refract
+                L = normalize(refract(-V, H, eta));
+            }
+            else { // total internal reflect
+                L = normalize(reflect(-V, H));
+            }
+            brdf = state.mat.albedo;
+            pdf = abs(dot(N, L));
+        }
+        else { // Lambertien reflect
+            L = CosineSampleHemisphere(r1, r2); // sample diffuse light direction
+            L = state.tangent * L.x + state.bitangent * L.y + N * L.z; // map to world normal
+
+            brdf = state.mat.albedo / M_PI * (1.0 - state.mat.metallic);
+            pdf = dot(L, N) / M_PI;
+        }
     }
     else { // light is specular reflect
         // Cook-Torrance microfacet specular
-        float roughness = state.mat.roughness;
-        float alpha = roughness * roughness;
-        vec3 H = GgxSample(alpha, r1, r2); // sample wh
-        H = state.tangent * H.x + state.bitangent * H.y + N * H.z; // map to world normal
-        if (dot(H, N) < 0)
-            H = -H;
-        L = reflect(-V, H);
-
-        brdf = GgxEval(state.mat.f0, alpha, roughness, V, N, L, H, pdf);
+        L = normalize(reflect(-V, H));
+        brdf = GgxEvalReflect(state.mat.f0, alpha, roughness, V, N, L, H, pdf);
         // pdf *= specularRatio;
     }
 
@@ -105,18 +144,27 @@ vec3 PbrEval(inout State state, vec3 V, vec3 N, vec3 L, inout float pdf) {
     
     float diffuseRatio = (1.0 - state.mat.metallic);
     float specularRatio = 1 - diffuseRatio;
+    float transmissionWeight = (1.0 - state.mat.metallic) * state.mat.transmission; // only dielectric will transmission
 
+    vec3 bsdf = vec3(0);
+    float bsdfPdf = 1;
     vec3 brdf = vec3(0);
+    float brdfPdf = 0;
+
     pdf = 0;
 
-    brdf += state.mat.albedo / M_PI * (1.0 - state.mat.metallic);
-    pdf += dot(L, N) / M_PI;
+    if (transmissionWeight < 1) {
+        brdf += state.mat.albedo / M_PI * (1.0 - state.mat.metallic);
+        brdfPdf += dot(L, N) / M_PI;
 
-    float roughness = state.mat.roughness;
-    float alpha = roughness * roughness;
-    float specPdf;
-    brdf += GgxEval(state.mat.f0, alpha, roughness, V, N, L, H, specPdf);
-    pdf += specPdf;
+        float roughness = state.mat.roughness;
+        float alpha = roughness * roughness;
+        float specPdf;
+        brdf += GgxEvalReflect(state.mat.f0, alpha, roughness, V, N, L, H, specPdf);
+        brdfPdf += specPdf;
+    }
 
-    return brdf;
+    pdf = mix(brdfPdf, bsdfPdf, transmissionWeight);
+
+    return mix(brdf, bsdf, transmissionWeight);
 }
