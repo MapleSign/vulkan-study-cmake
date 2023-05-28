@@ -290,7 +290,7 @@ void VulkanApplication::drawFrame()
     auto syncIndex = renderContext->getSyncIndex();
 
     updateUniformBuffer(syncIndex);
-    updateTlas();
+    //updateTlas();
 
     frame.getCommandBuffer().reset(0);
     recordCommand(frame.getCommandBuffer(), frame.getRenderTarget(), frame.getFramebuffer(), syncIndex);
