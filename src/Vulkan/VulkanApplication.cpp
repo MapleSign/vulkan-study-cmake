@@ -31,20 +31,10 @@ VulkanApplication::VulkanApplication():
 
     device = std::make_unique<VulkanDevice>(instance->getSuitableGPU(surface, deviceExtensions), surface, deviceExtensions, validationLayers);
 
-
     renderContext = std::make_unique<VulkanRenderContext>(*device, surface, window->getExtent(), threadCount);
 
     gui = std::make_unique<GUI>(*instance, *window, *device, renderContext->getRenderPass());
-
-
-
-
-   
-
 }
-
-
-
 
 void VulkanApplication::loadScene(const char* filename)
 {
@@ -104,9 +94,7 @@ void VulkanApplication::loadScene(const char* filename)
         }
     }
 
-
     graphicBuilder = std::make_unique<VulkanGraphicsBuilder>(*device, *resManager, window->getExtent());
-
 
     auto vertShader = resManager->createShaderModule("shaders/spv/passthrough.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
 
@@ -123,15 +111,11 @@ void VulkanApplication::loadScene(const char* filename)
     renderPipeline->getPipelineState().depthStencilState.depth_write_enable = VK_FALSE;
     renderPipeline->recreatePipeline(renderContext->getSwapChain().getExtent(), renderContext->getRenderPass());
 
-
     postData = resManager->requireSceneData(*renderPipeline->getDescriptorSetLayouts()[0], threadCount, {});
     for (auto& descSet : postData.descriptorSets) {
         descSet->addWrite(0, VkDescriptorImageInfo{ sampler, graphicBuilder->getOffscreenColor()->getHandle(), VK_IMAGE_LAYOUT_GENERAL });
     }
     postData.update();
-
-
-
 
     buildRayTracing();
 }
@@ -335,8 +319,6 @@ void VulkanApplication::resetFrameCount()
     pcRay.frame = -1;
 }
 
-
-
 void VulkanApplication::updateFrameCount()
 {
     static glm::mat4 refCamMatrix;
@@ -353,7 +335,7 @@ void VulkanApplication::updateFrameCount()
 }
 
 void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const VulkanRenderTarget &renderTarget,
-                   const VulkanFramebuffer &framebuffer, uint32_t frameIndex)
+    const VulkanFramebuffer &framebuffer, uint32_t frameIndex)
 {
     commandBuffer.begin(0);
 
@@ -363,7 +345,6 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
     else {
         updateFrameCount();
         if (pcRay.frame < maxFrames) {
-            
             pcRay.clearColor = clearColor;
             rtBuilder->raytrace(commandBuffer, *graphicBuilder->getGlobalData().descriptorSets[frameIndex], pcRay);
         }
