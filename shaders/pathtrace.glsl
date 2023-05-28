@@ -61,7 +61,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         if (pcRay.lightType == 0) {
             vec3 lDir = pcRay.lightPosition - state.position;
             lightDistance = length(lDir);
-            lightIntensity = pcRay.lightIntensity / (lightDistance * lightDistance);
+            lightIntensity = pcRay.lightIntensity / (lightDistance * lightDistance * 0.2);
             L = normalize(-lDir);
         }
         else { // Directional light

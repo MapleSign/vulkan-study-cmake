@@ -145,8 +145,9 @@ struct GltfMaterial  // GLTF Material
     int  clearcoatTexture;
     int  clearcoatRoughnessTexture;
     //36
+    int clearcoatNormalTexture;
     float ior;
-    vec3 pad;
+    vec2 pad;
 };
 
 

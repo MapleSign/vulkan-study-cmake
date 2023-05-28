@@ -93,8 +93,9 @@ struct GltfMaterial {
     int  clearcoatTexture{ -1 };
     int  clearcoatRoughnessTexture{ -1 };
     //36
+    int clearcoatNormalTexture{ -1 };
     float ior{ 1.5f };
-    glm::vec3 pad;
+    glm::vec2 pad;
 };
 
 struct RenderTexture

@@ -145,6 +145,7 @@ RenderMeshID VulkanResourceManager::requireRenderMesh(
         setTexture(texturedMat.khrSpecularGlossinessTexture);
         setTexture(texturedMat.clearcoatTexture);
         setTexture(texturedMat.clearcoatRoughnessTexture);
+        setTexture(texturedMat.clearcoatNormalTexture);
     }
 
     std::vector<int32_t> matIndices(indices.size() / 3, 0);

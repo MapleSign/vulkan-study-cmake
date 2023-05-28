@@ -135,6 +135,7 @@ void importGLTFMaterial(GltfMaterial& mat, const tinygltf::Material& tMat) {
 		getTexId(ext, "clearcoatTexture", mat.clearcoatTexture);
 		getFloat(ext, "clearcoatRoughnessFactor", mat.clearcoatRoughness);
 		getTexId(ext, "clearcoatRoughnessTexture", mat.clearcoatRoughnessTexture);
+		getTexId(ext, "clearcoatNormalTexture", mat.clearcoatNormalTexture);
 	}
 
 	// KHR_materials_transmission

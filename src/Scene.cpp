@@ -149,6 +149,7 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 				setTexture(mat.khrSpecularGlossinessTexture);
 				setTexture(mat.clearcoatTexture);
 				setTexture(mat.clearcoatRoughnessTexture);
+				setTexture(mat.clearcoatNormalTexture);
 			}
 
 			meshes.emplace_back(nullptr, vertices, indices, textures, mat);
