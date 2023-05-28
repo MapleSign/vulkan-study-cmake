@@ -91,6 +91,24 @@ VulkanGraphicsBuilder::~VulkanGraphicsBuilder()
     renderTarget.reset();
 }
 
+void VulkanGraphicsBuilder::recreateGraphicsBuilder(const VkExtent2D extent)
+{
+    this->extent = extent;
+
+    //change offscreenColor size
+    VulkanImage offscreenColorImage{
+        device, convert2Dto3D(extent),
+        VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
+    };
+    device.getCommandPool().transitionImageLayout(offscreenColorImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, device.getGraphicsQueue());;
+    renderTarget = VulkanRenderTarget::DEFAULT_CREATE_FUNC(std::move(offscreenColorImage));
+
+    offscreenColor = &renderTarget->getViews()[0];
+    offscreenDepth = &renderTarget->getViews()[1];
+
+}
+
 void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
 {
     uint32_t currentImage = 0;

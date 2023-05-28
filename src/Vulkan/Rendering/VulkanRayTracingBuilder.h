@@ -32,6 +32,8 @@ public:
 	VulkanRayTracingBuilder(const VulkanDevice& device, VulkanResourceManager& resManager, const VulkanImageView& offscreenColor);
 	~VulkanRayTracingBuilder();
 
+	void recreateRayTracingBuilder(const VulkanImageView& offscreenColor);
+
 	void createRayTracingPipeline(const std::vector<VulkanShaderModule>& rtShaders, const VulkanDescriptorSetLayout& globalDescSetLayout);
 	void createRtShaderBindingTable();
 

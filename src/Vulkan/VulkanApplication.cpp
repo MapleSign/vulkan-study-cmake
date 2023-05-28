@@ -110,6 +110,8 @@ void VulkanApplication::loadScene(const char* filename)
     buildRayTracing();
 }
 
+
+
 VulkanApplication::~VulkanApplication()
 {
     resManager.reset();
@@ -506,12 +508,23 @@ void VulkanApplication::handleSurfaceChange()
 
     device->waitIdle();
 
+    graphicBuilder->recreateGraphicsBuilder(extent);
+
+    rtBuilder->recreateRayTracingBuilder(*(graphicBuilder->getOffscreenColor()));
+
     renderContext->recreateSwapChain(extent);
 
     renderPipeline->recreatePipeline(extent, renderContext->getRenderPass());
 
     for (auto& [mesh, id] : renderMeshes)
         resManager->getRenderMesh(id).pipeline = &renderPipeline->getGraphicsPipeline();
+
+    VkSampler sampler = resManager->createSampler();
+    postData = resManager->requireSceneData(*renderPipeline->getDescriptorSetLayouts()[0], threadCount, {});
+    for (auto& descSet : postData.descriptorSets) {
+        descSet->addWrite(0, VkDescriptorImageInfo{ sampler, graphicBuilder->getOffscreenColor()->getHandle(), VK_IMAGE_LAYOUT_GENERAL });
+    }
+    postData.update();
 }
 
 std::vector<const char *> VulkanApplication::getRequiredExtensions()

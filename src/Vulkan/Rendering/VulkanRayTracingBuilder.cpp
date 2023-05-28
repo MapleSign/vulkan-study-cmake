@@ -17,6 +17,21 @@ VulkanRayTracingBuilder::~VulkanRayTracingBuilder()
 	rtDescriptorSetLayouts.clear();
 }
 
+void VulkanRayTracingBuilder::recreateRayTracingBuilder(const VulkanImageView& offscreenColor)
+{
+	this->offscreenColor = &offscreenColor;
+
+	VkWriteDescriptorSetAccelerationStructureKHR descASInfo{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
+	descASInfo.accelerationStructureCount = 1;
+	descASInfo.pAccelerationStructures = &tlas.handle;
+	VkDescriptorImageInfo imageInfo{ {},this->offscreenColor->getHandle(), VK_IMAGE_LAYOUT_GENERAL };
+
+	rtDescriptorSet = &resManager.requireDescriptorSet(*rtDescriptorSetLayouts[0], {}, {});
+	rtDescriptorSet->addWrite(0, &descASInfo);
+	rtDescriptorSet->addWrite(1, imageInfo);
+	rtDescriptorSet->update();
+}
+
 void VulkanRayTracingBuilder::createRayTracingPipeline(
 	const std::vector<VulkanShaderModule>& rtShaders, const VulkanDescriptorSetLayout& globalDescSetLayout)
 {

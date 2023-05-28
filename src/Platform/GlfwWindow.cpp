@@ -4,7 +4,7 @@ GlfwWindow::GlfwWindow(VulkanApplication &app, uint32_t width, uint32_t height) 
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	window = glfwCreateWindow(width, height, "Vulkan", nullptr, nullptr);
 	glfwSetWindowUserPointer(window, &app);

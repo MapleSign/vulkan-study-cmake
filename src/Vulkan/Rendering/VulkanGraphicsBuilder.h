@@ -21,6 +21,8 @@ public:
     VulkanGraphicsBuilder(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent);
     ~VulkanGraphicsBuilder();
 
+    void recreateGraphicsBuilder(const VkExtent2D extent);
+
     void update(float deltaTime, const Scene* scene);
     void draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearColor);
 

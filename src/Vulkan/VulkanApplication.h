@@ -46,6 +46,8 @@ public:
 
     void loadScene(const char* filename);
 
+
+
     void buildRayTracing();
 
     void mainLoop();
