@@ -525,6 +525,8 @@ void VulkanApplication::handleSurfaceChange()
         descSet->addWrite(0, VkDescriptorImageInfo{ sampler, graphicBuilder->getOffscreenColor()->getHandle(), VK_IMAGE_LAYOUT_GENERAL });
     }
     postData.update();
+
+    resetFrameCount();
 }
 
 std::vector<const char *> VulkanApplication::getRequiredExtensions()
