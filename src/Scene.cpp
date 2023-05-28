@@ -162,7 +162,8 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 
 		if (!tNode.rotation.empty()) {
 			glm::quat rotation{ float(tNode.rotation[3]), float(tNode.rotation[0]), float(tNode.rotation[1]), float(tNode.rotation[2]) };
-			model->transComp.rotate = glm::degrees(glm::eulerAngles(rotation));
+			model->transComp.rotate = glm::vec4(glm::axis(rotation), 0.0f);
+			model->transComp.rotate.w = glm::degrees(glm::angle(rotation));
 
 			/*model->transComp.rotate = static_cast<float>(glm::degrees(tNode.rotation[3])) *
 				glm::vec3(

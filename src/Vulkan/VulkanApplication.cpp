@@ -59,19 +59,9 @@ void VulkanApplication::loadScene(const char* filename)
     model->transComp.translate.y = -5.f;
     model->transComp.translate.z = -20.f;
     model = scene->addModel("floor", "assets/models/cube/cube.obj");
-    model->transComp.translate = { 0.f, -6.f, -30.f };
+    model->transComp.translate = { 0.f, -10.f, -30.f };
     model->transComp.scale = { 50.0f, 1.f, 50.0f };
     scene->loadGLTFFile(filename);
-    //scene->loadGLTFFile("../amd/Caustics/Caustics.gltf");
-    //scene->loadGLTFFile("../amd/Shadow/Shadow.gltf");
-
-    //scene->loadGLTFFile("../glTF-Sample-Models/2.0/AlphaBlendModeTest/glTF/AlphaBlendModeTest.gltf");
-    //scene->loadGLTFFile("../glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf");
-    //scene->loadGLTFFile("../glTF-Sample-Models/2.0/NormalTangentMirrorTest/glTF/NormalTangentMirrorTest.gltf");
-    //scene->loadGLTFFile("../glTF-Sample-Models/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf");
-    //scene->loadGLTFFile("../glTF-Sample-Models/2.0/TransmissionTest/glTF/TransmissionTest.gltf");
-    // 
-    //scene->loadGLTFFile("../glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf");
 
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
     scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
@@ -204,16 +194,25 @@ void VulkanApplication::buildRayTracing()
 
 void VulkanApplication::mainLoop()
 {
-    const int sceneSum = 5;
-    const char* sceneNames[] = { "Caustics","Deferred","GI","PBR","Shadow" };
+    const int sceneSum = 6;
+    const char* sceneNames[] = { "Caustics", "Deferred", "GI", "PBR", "Shadow", "Clearcoat"};
     const char* sceneFilePath[] = {
         "../amd/Caustics/Caustics.gltf",
         "../amd/Deferred/Deferred.gltf",
         "../amd/GI/GI.gltf",
         "../amd/PBR/PBR.gltf",
-        "../amd/Shadow/Shadow.gltf"
+        "../amd/Shadow/Shadow.gltf", 
+
+        "../glTF-Sample-Models/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf"
+        //"../glTF-Sample-Models/2.0/AlphaBlendModeTest/glTF/AlphaBlendModeTest.gltf", 
+        //"../glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf", 
+        //"../glTF-Sample-Models/2.0/NormalTangentMirrorTest/glTF/NormalTangentMirrorTest.gltf", 
+        //"../glTF-Sample-Models/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", 
+        //"../glTF-Sample-Models/2.0/TransmissionTest/glTF/TransmissionTest.gltf", 
+    
+        //"../glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"
     };
-    static int sceneItem = 4;
+    static int sceneItem = 3;
 
     loadScene(sceneFilePath[sceneItem]);
    
@@ -247,10 +246,8 @@ void VulkanApplication::mainLoop()
         }
         if (ImGui::CollapsingHeader("Scenes"), ImGuiTreeNodeFlags_DefaultOpen)
         {
-   
             sceneChanged = ImGui::Combo("Scene", &sceneItem, sceneNames, sceneSum);
             changed |= sceneChanged;
-
         }
 
         if (changed) {
@@ -399,7 +396,7 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentImage)
 
     const auto model = scene->getModel("nanosuit");
     model->transComp.translate.z = -20.f;
-    model->transComp.rotate.y = time * 90.0f;
+    model->transComp.rotate = { 0.0f, 1.0f, 0.0f, time * 90.0f };
 
     for (const auto& [mesh, id] : renderMeshes) {
         resManager->getRenderMesh(id).tranformMatrix = 
