@@ -12,7 +12,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         prd.hitT = INFINITY;
 
         uint  rayFlags = gl_RayFlagsCullBackFacingTrianglesEXT;
-        float tMin     = 0.01;
+        float tMin     = 0.0001;
         float tMax     = INFINITY;
 
         traceRayEXT(topLevelAS, // acceleration structure

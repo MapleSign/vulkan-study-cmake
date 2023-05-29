@@ -54,6 +54,7 @@ void VulkanApplication::loadScene(const char* filename)
     scene->getActiveCamera()->position = { 2.522, 0.90, 0.029 };
     scene->getActiveCamera()->yaw = -182;
     scene->getActiveCamera()->pitch = 0.79;
+    reinterpret_cast<FPSCamera*>(scene->getActiveCamera())->rotate(0, 0);
     scene->loadGLTFFile(filename);
 
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
