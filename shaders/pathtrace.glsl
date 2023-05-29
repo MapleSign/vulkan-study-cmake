@@ -34,6 +34,10 @@ vec3 pathtrace(Ray r,int maxDepth)
                 hitValue = pcRay.clearColor.xyz * 0.8;
             else {
                 vec3 env = pcRay.clearColor.xyz * pcRay.lightIntensity * 0.1;
+                if (any(isnan(weight)))
+                    weight = vec3(0);
+                    // hitValue = vec3(1,0,0);
+                    // else
                 hitValue += env * weight;
             }
 
@@ -51,6 +55,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         // return vec3(state.mat.metallic);
         // return state.mat.f0;
         // return vec3(state.mat.transmission);
+        // return state.mat.emission;
 
         // Vector toward the light
         vec3  L;
@@ -92,6 +97,8 @@ vec3 pathtrace(Ray r,int maxDepth)
         // bsdf.f = vec3(0);
         // return bsdf.L * 0.5 + 0.5;
 
+        if (any(isnan(bsdf.f)))
+            bsdf.f = vec3(0);
         weight *= bsdf.f * abs(dot(state.ffnormal, bsdf.L)) / bsdf.pdf;
 
         // Direct light
@@ -107,7 +114,7 @@ vec3 pathtrace(Ray r,int maxDepth)
                         0,            // sbtRecordStride
                         1,            // missIndex
                         state.position,     // ray origin
-                        0.0,          // ray min range
+                        0.01,          // ray min range
                         -L,            // ray direction
                         lightDistance,         // ray max range
                         1             // payload layout(location = 1)
@@ -142,7 +149,7 @@ vec3 samplePixel(ivec2 imageCoord, ivec2 imageSize,int maxDepth)
     vec4 direction = uni.viewInverse * vec4(normalize(target.xyz), 0);
 
     Ray r = Ray(origin.xyz, direction.xyz);
-    vec3 radiance = pathtrace(r,maxDepth);
+    vec3 radiance = pathtrace(r, maxDepth);
 
     return radiance;
 }

@@ -98,7 +98,7 @@ vec3 PbrSample(inout State state, vec3 V, vec3 N, inout vec3 L, inout float pdf,
     float transmissionWeight = state.mat.transmission; // only dielectric will transmission
 
     float roughness = state.mat.roughness;
-    float alpha = roughness * roughness;
+    float alpha = max(roughness * roughness, 0.001);
     float eta = state.eta;
     vec3 H;
 
@@ -106,8 +106,10 @@ vec3 PbrSample(inout State state, vec3 V, vec3 N, inout vec3 L, inout float pdf,
         float dielectricSpecular = (state.mat.ior - 1) / (state.mat.ior + 1);
         dielectricSpecular *= dielectricSpecular;
         vec3 clearcoat_f0 = vec3(dielectricSpecular);
+
         roughness = state.mat.clearcoatRoughness;
-        alpha = roughness * roughness;
+        alpha = max(roughness * roughness, 0.001);
+
         H = GgxSample(alpha, r1, r2); // sample wh
         H = state.tangent * H.x + state.bitangent * H.y + N * H.z; // map to world normal
         if (dot(H, N) < 0)
@@ -147,7 +149,7 @@ vec3 PbrSample(inout State state, vec3 V, vec3 N, inout vec3 L, inout float pdf,
         else { // light is specular reflect
             // Cook-Torrance microfacet specular
             L = normalize(reflect(-V, H));
-            brdf = GgxEvalReflect(state.mat.f0, alpha, roughness, V, N, L, H, pdf);
+            brdf = GgxEvalReflect(state.mat.albedo, alpha, roughness, V, N, L, H, pdf);
             // pdf *= specularRatio;
         }
     }
@@ -176,17 +178,19 @@ vec3 PbrEval(inout State state, vec3 V, vec3 N, vec3 L, inout float pdf) {
         brdfPdf += dot(L, N) / M_PI;
 
         float roughness = state.mat.roughness;
-        float alpha = roughness * roughness;
+        float alpha = max(roughness * roughness, 0.001);
         float specPdf;
-        brdf += GgxEvalReflect(state.mat.f0, alpha, roughness, V, N, L, H, specPdf);
+        brdf += GgxEvalReflect(state.mat.albedo, alpha, roughness, V, N, L, H, specPdf);
         brdfPdf += specPdf;
 
         if (state.mat.clearcoat > 0) {
             float dielectricSpecular = (state.mat.ior - 1) / (state.mat.ior + 1);
             dielectricSpecular *= dielectricSpecular;
             vec3 clearcoat_f0 = vec3(dielectricSpecular);
+
             float clearcoatRoughness = state.mat.clearcoatRoughness;
-            float clearcoatAlpha = clearcoatRoughness * clearcoatRoughness;
+            float clearcoatAlpha = max(clearcoatRoughness * clearcoatRoughness, 0.001);
+
             float clearcoatPdf;
             brdf += GgxEvalReflect(clearcoat_f0, clearcoatAlpha, clearcoatRoughness, V, N, L, H, clearcoatPdf);
             brdfPdf += clearcoatPdf;

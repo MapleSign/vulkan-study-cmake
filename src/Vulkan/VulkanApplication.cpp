@@ -17,8 +17,8 @@
 #include "VulkanCommon.h"
 #include "VulkanApplication.h"
 
-VulkanApplication::VulkanApplication():
-    threadCount{1}
+VulkanApplication::VulkanApplication() :
+    threadCount{ 1 }
 {
     volkInitialize();
 
@@ -54,25 +54,14 @@ void VulkanApplication::loadScene(const char* filename)
     scene->getActiveCamera()->position = { 2.522, 0.90, 0.029 };
     scene->getActiveCamera()->yaw = -182;
     scene->getActiveCamera()->pitch = 0.79;
-    reinterpret_cast<FPSCamera*>(scene->getActiveCamera())->rotate(0.f, 0.f);
-    model = scene->addModel("nanosuit", "assets/models/nanosuit/nanosuit.obj");
-    model->transComp.translate.y = -5.f;
-    model->transComp.translate.z = -20.f;
-    model = scene->addModel("floor", "assets/models/cube/cube.obj");
-    model->transComp.translate = { 0.f, -10.f, -30.f };
-    model->transComp.scale = { 50.0f, 1.f, 50.0f };
     scene->loadGLTFFile(filename);
 
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
     scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
 
-    int meshCnt = 0;
     VkSampler sampler = resManager->createSampler();
     for (const auto& [name, model] : scene->getModelMap()) {
         for (auto& mesh : model->getMeshes()) {
-            //if (meshCnt >= 10) break;
-            //meshCnt++;
-
             std::vector<RenderTexture> textures;
             for (const auto& texture : mesh.textures) {
                 textures.push_back({ texture.type, texture.path.c_str(), sampler });
@@ -110,8 +99,6 @@ void VulkanApplication::loadScene(const char* filename)
     buildRayTracing();
 }
 
-
-
 VulkanApplication::~VulkanApplication()
 {
     resManager.reset();
@@ -130,6 +117,7 @@ VulkanApplication::~VulkanApplication()
     instance.reset();
     window.reset();
 }
+
 void VulkanApplication::buildRayTracing()
 {
     rtBuilder = std::make_unique<VulkanRayTracingBuilder>(*device, *resManager, *graphicBuilder->getOffscreenColor());
@@ -196,25 +184,16 @@ void VulkanApplication::buildRayTracing()
 
 void VulkanApplication::mainLoop()
 {
-    const int sceneSum = 6;
-    const char* sceneNames[] = { "Caustics", "Deferred", "GI", "PBR", "Shadow", "Clearcoat"};
+    const int sceneSum = 5;
+    const char* sceneNames[] = { "Caustics", "Deferred", "GI", "PBR", "Shadow"};
     const char* sceneFilePath[] = {
         "../amd/Caustics/Caustics.gltf",
         "../amd/Deferred/Deferred.gltf",
         "../amd/GI/GI.gltf",
         "../amd/PBR/PBR.gltf",
-        "../amd/Shadow/Shadow.gltf", 
-
-        "../glTF-Sample-Models/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf"
-        //"../glTF-Sample-Models/2.0/AlphaBlendModeTest/glTF/AlphaBlendModeTest.gltf", 
-        //"../glTF-Sample-Models/2.0/NormalTangentTest/glTF/NormalTangentTest.gltf", 
-        //"../glTF-Sample-Models/2.0/NormalTangentMirrorTest/glTF/NormalTangentMirrorTest.gltf", 
-        //"../glTF-Sample-Models/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", 
-        //"../glTF-Sample-Models/2.0/TransmissionTest/glTF/TransmissionTest.gltf", 
-    
-        //"../glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf"
+        "../amd/Shadow/Shadow.gltf"
     };
-    static int sceneItem = 3;
+    static int sceneItem = 0;
 
     loadScene(sceneFilePath[sceneItem]);
    
@@ -256,6 +235,7 @@ void VulkanApplication::mainLoop()
             resetFrameCount();
         }
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::Text("Frame index %d", pcRay.frame);
         ImGui::End();
 
         drawFrame();
@@ -395,10 +375,6 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentImage)
     view = processInput(window->getHandle(), view, *camera, deltaTime);
 
     auto extent = renderContext->getSwapChain().getExtent();
-
-    const auto model = scene->getModel("nanosuit");
-    model->transComp.translate.z = -20.f;
-    model->transComp.rotate = { 0.0f, 1.0f, 0.0f, time * 90.0f };
 
     for (const auto& [mesh, id] : renderMeshes) {
         resManager->getRenderMesh(id).tranformMatrix = 
