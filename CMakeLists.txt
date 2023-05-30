@@ -8,7 +8,6 @@ project ("vulkan_study_cmake")
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(Vulkan REQUIRED)
-find_package(glfw3 REQUIRED)
 
 add_subdirectory(third_party)
 

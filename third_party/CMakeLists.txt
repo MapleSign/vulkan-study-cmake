@@ -1,5 +1,12 @@
 find_package(Vulkan REQUIRED)
-find_package(glfw3 REQUIRED)
+
+option(GLFW_BUILD_DOCS OFF)
+option(GLFW_BUILD_TESTS OFF)
+option(GLFW_BUILD_EXAMPLES OFF)
+option(GLFW_BUILD_TESTS OFF)
+option(GLFW_INSTALL OFF)
+option(BUILD_SHARED_LIBS ON)
+add_subdirectory(glfw)
 
 add_library(glm INTERFACE)
 add_library(vma INTERFACE)
