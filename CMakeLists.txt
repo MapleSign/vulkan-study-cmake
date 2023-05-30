@@ -9,7 +9,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
-find_package(assimp REQUIRED)
 
 add_subdirectory(third_party)
 

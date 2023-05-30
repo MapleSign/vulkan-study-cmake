@@ -150,6 +150,6 @@ target_include_directories(vulkan_study PUBLIC
 )
 target_link_libraries(vulkan_study PUBLIC vma glm imgui stb volk tinygltf)
 
-target_link_libraries(vulkan_study PUBLIC Vulkan::Vulkan glfw assimp::assimp)
+target_link_libraries(vulkan_study PUBLIC Vulkan::Vulkan glfw)
 
 add_dependencies(vulkan_study Shaders)

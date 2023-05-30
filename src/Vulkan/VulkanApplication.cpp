@@ -188,13 +188,13 @@ void VulkanApplication::mainLoop()
     const int sceneSum = 5;
     const char* sceneNames[] = { "Caustics", "Deferred", "GI", "PBR", "Shadow"};
     const char* sceneFilePath[] = {
-        "../amd/Caustics/Caustics.gltf",
-        "../amd/Deferred/Deferred.gltf",
-        "../amd/GI/GI.gltf",
-        "../amd/PBR/PBR.gltf",
-        "../amd/Shadow/Shadow.gltf"
+        "assets/Caustics/Caustics.gltf",
+        "assets/Deferred/Deferred.gltf",
+        "assets/GI/GI.gltf",
+        "assets/PBR/PBR.gltf",
+        "assets/Shadow/Shadow.gltf"
     };
-    static int sceneItem = 0;
+    static int sceneItem = 2;
 
     loadScene(sceneFilePath[sceneItem]);
    
