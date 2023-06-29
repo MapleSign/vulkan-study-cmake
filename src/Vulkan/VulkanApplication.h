@@ -24,13 +24,16 @@ const std::vector<const char*> validationLayers = {
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME, 
-    VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, 
-    VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, 
-    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
     VK_KHR_SPIRV_1_4_EXTENSION_NAME,
     VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
     VK_KHR_SHADER_CLOCK_EXTENSION_NAME
+};
+
+const std::vector<const char*> rtExtensions = {
+    VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+    VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
 };
 
 class VulkanApplication
@@ -39,6 +42,7 @@ public:
     bool isCursorEnabled = true;
 	bool framebufferResized = false;
 	bool enableValidationLayers = true;
+    bool rtSupport = true;
 
     VulkanApplication();
 
@@ -92,7 +96,7 @@ private:
     std::unordered_map<const Mesh*, RenderMeshID> renderMeshes;
 
     std::unique_ptr<GUI> gui;
-    bool useRayTracer;
+    bool useRayTracer = false;
     glm::vec4 clearColor{ 0.5f, 0.8f, 0.9f, 1.0f };
     PushConstantRayTracing pcRay{ {}, {-0.029, -1.00, -0.058}, {3.f}, 1, -1, 5, 1 };
 

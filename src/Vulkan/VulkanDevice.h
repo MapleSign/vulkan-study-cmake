@@ -19,7 +19,7 @@ class VulkanCommandPool;
 class VulkanDevice {
 public:
     VulkanDevice(const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface,
-        const std::vector<const char*>& deviceExtentions, const std::vector<const char*>& requiredLayers);
+        const std::vector<const char*>& requiredExtentions, const std::vector<const char*>& requiredLayers);
 
     ~VulkanDevice();
 

@@ -4,7 +4,7 @@
 #include "VulkanCommandPool.h"
 
 VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurfaceKHR surface, 
-    const std::vector<const char *> &deviceExtentions, const std::vector<const char *> &requiredLayers) :
+    const std::vector<const char *> &requiredExtentions, const std::vector<const char *> &requiredLayers) :
     physicalDevice{physicalDevice}
 {
     QueueFamilyIndices indices = physicalDevice.findQueueFamilies(surface);
@@ -40,15 +40,17 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
 
     clockFreature.pNext = &features12;
 
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
-    rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
+    if (std::find(requiredExtentions.begin(), requiredExtentions.end(), VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) != requiredExtentions.end()) {
+        VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
+        rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
 
-    features12.pNext = &rtPipelineFeatures;
+        features12.pNext = &rtPipelineFeatures;
 
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
-    asFeatures.accelerationStructure = VK_TRUE;
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+        asFeatures.accelerationStructure = VK_TRUE;
 
-    rtPipelineFeatures.pNext = &asFeatures;
+        rtPipelineFeatures.pNext = &asFeatures;
+    }
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -59,8 +61,8 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
     //createInfo.pEnabledFeatures = &deviceFeatures;
     createInfo.pNext = &deviceFeatures;
 
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtentions.size());
-    createInfo.ppEnabledExtensionNames = deviceExtentions.data();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtentions.size());
+    createInfo.ppEnabledExtensionNames = requiredExtentions.data();
 
     if (!requiredLayers.empty()) {
         createInfo.enabledLayerCount = static_cast<uint32_t>(requiredLayers.size());

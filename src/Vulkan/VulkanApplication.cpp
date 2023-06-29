@@ -29,7 +29,20 @@ VulkanApplication::VulkanApplication() :
 
     surface = window->createSurface(instance->getHandle());
 
-    device = std::make_unique<VulkanDevice>(instance->getSuitableGPU(surface, deviceExtensions), surface, deviceExtensions, validationLayers);
+    VulkanPhysicalDevice* gpu;
+    auto requiredExtensions = deviceExtensions;
+    requiredExtensions.insert(requiredExtensions.end(), rtExtensions.begin(), rtExtensions.end());
+    try {
+        // check if there is a GPU supporting all extensions
+        gpu = &instance->getSuitableGPU(surface, requiredExtensions);
+    }
+    catch (const std::exception&) {
+        // if not remove RT and try again
+        rtSupport = false;
+        requiredExtensions = deviceExtensions;
+        gpu = &instance->getSuitableGPU(surface, requiredExtensions);
+    }
+    device = std::make_unique<VulkanDevice>(*gpu, surface, requiredExtensions, validationLayers);
 
     renderContext = std::make_unique<VulkanRenderContext>(*device, surface, window->getExtent(), threadCount);
 
@@ -97,7 +110,8 @@ void VulkanApplication::loadScene(const char* filename)
     }
     postData.update();
 
-    buildRayTracing();
+    if (rtSupport)
+        buildRayTracing();
 }
 
 VulkanApplication::~VulkanApplication()
@@ -188,11 +202,11 @@ void VulkanApplication::mainLoop()
     const int sceneSum = 5;
     const char* sceneNames[] = { "Caustics", "Deferred", "GI", "PBR", "Shadow"};
     const char* sceneFilePath[] = {
-        "assets/Caustics/Caustics.gltf",
-        "assets/Deferred/Deferred.gltf",
-        "assets/GI/GI.gltf",
-        "assets/PBR/PBR.gltf",
-        "assets/Shadow/Shadow.gltf"
+        "../amd/Caustics/Caustics.gltf",
+        "../amd/Deferred/Deferred.gltf",
+        "../amd/GI/GI.gltf",
+        "../amd/PBR/PBR.gltf",
+        "../amd/Shadow/Shadow.gltf"
     };
     static int sceneItem = 2;
 
@@ -206,7 +220,8 @@ void VulkanApplication::mainLoop()
         gui->newFrame();
         ImGui::Begin("Debug");
         changed |= ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
-        changed |= ImGui::Checkbox("Ray Tracer mode", &useRayTracer);  // Switch between raster and ray tracing
+        if (rtSupport)
+            changed |= ImGui::Checkbox("Ray Tracer mode", &useRayTracer);  // Switch between raster and ray tracing
 
         if (ImGui::CollapsingHeader("Light"))
         {
@@ -220,11 +235,14 @@ void VulkanApplication::mainLoop()
                 changed |= ImGui::SliderFloat3("Direction", &pcRay.lightPosition.x, -1.f, 1.f);
             changed |= ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
         }
-        if (ImGui::CollapsingHeader("Ray Tracing"), ImGuiTreeNodeFlags_DefaultOpen)
+        if (rtSupport)
         {
-            changed |= ImGui::SliderInt("Max Iteration", &maxFrames, 1, 10000);
-            changed |= ImGui::SliderInt("Max Ray Depth", &pcRay.maxDepth, 1, 10);
-            changed |= ImGui::SliderInt("Samples Per Frame", &pcRay.sampleNumbers, 1, 12);
+            if (ImGui::CollapsingHeader("Ray Tracing"), ImGuiTreeNodeFlags_DefaultOpen)
+            {
+                changed |= ImGui::SliderInt("Max Iteration", &maxFrames, 1, 10000);
+                changed |= ImGui::SliderInt("Max Ray Depth", &pcRay.maxDepth, 1, 10);
+                changed |= ImGui::SliderInt("Samples Per Frame", &pcRay.sampleNumbers, 1, 12);
+            }
         }
         if (ImGui::CollapsingHeader("Scenes"), ImGuiTreeNodeFlags_DefaultOpen)
         {
