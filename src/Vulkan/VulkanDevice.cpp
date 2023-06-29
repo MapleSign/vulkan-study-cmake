@@ -40,7 +40,7 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
 
     clockFreature.pNext = &features12;
 
-    if (std::find(requiredExtentions.begin(), requiredExtentions.end(), VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) != requiredExtentions.end()) {
+    if (std::find_if(requiredExtentions.begin(), requiredExtentions.end(), [](const char* ext) {return strcmp(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, ext); }) != requiredExtentions.end()) {
         VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
         rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
 
