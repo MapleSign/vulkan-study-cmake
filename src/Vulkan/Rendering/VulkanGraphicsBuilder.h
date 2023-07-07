@@ -23,7 +23,7 @@ public:
 
     void recreateGraphicsBuilder(const VkExtent2D extent);
 
-    void update(float deltaTime, const Scene* scene);
+    void update(float deltaTime, const Scene* scene, const glm::mat4& view);
     void draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearColor);
 
     constexpr const VulkanImageView* getOffscreenColor() const { return offscreenColor; }

@@ -109,13 +109,13 @@ void VulkanGraphicsBuilder::recreateGraphicsBuilder(const VkExtent2D extent)
 
 }
 
-void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
+void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene, const glm::mat4& view)
 {
     uint32_t currentImage = 0;
     const auto& camera = scene->getActiveCamera();
 
     GlobalData ubo{};
-    ubo.view = camera->calcLookAt();
+    ubo.view = view;
     ubo.proj = glm::perspective(glm::radians(45.0f), (float)extent.width / (float)extent.height, 0.1f, 100.0f);
     ubo.proj[1][1] *= -1;
     ubo.viewInverse = glm::inverse(ubo.view);

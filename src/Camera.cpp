@@ -87,3 +87,22 @@ void FPSCamera::rotate(float dyaw, float dpitch)
 
 	// std::cerr << "rotation: " << yaw << " " << pitch << " " << roll << std::endl;
 }
+
+VRCamera::VRCamera(float eyeDistant, glm::vec3 position, glm::vec3 up, float yaw, float pitch) :
+	FPSCamera(position, up, yaw, pitch), eyeDistant{ eyeDistant }
+{
+}
+
+glm::mat4 VRCamera::calcLookAtLeft() const
+{
+	glm::vec3 left = glm::cross(up, front);
+	glm::vec3 position_l = position + left * eyeDistant / 2.f;
+	return glm::lookAt(position_l, position_l + front, up);
+}
+
+glm::mat4 VRCamera::calcLookAtRight() const
+{
+	glm::vec3 left = glm::cross(up, front);
+	glm::vec3 position_r = position - left * eyeDistant / 2.f;
+	return glm::lookAt(position_r, position_r + front, up);
+}

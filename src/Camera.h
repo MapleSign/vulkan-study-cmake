@@ -58,3 +58,14 @@ public:
 	void move(CameraDirection direction, float deltaTime) override;
 	void rotate(float dyaw, float dpitch);
 };
+
+class VRCamera : public FPSCamera {
+public:
+	float eyeDistant;
+
+	VRCamera(float eyeDistant = 0.5f, glm::vec3 position = CameraConstVariable::POSITION, glm::vec3 up = CameraConstVariable::UP,
+		float yaw = CameraConstVariable::YAW, float pitch = CameraConstVariable::PITCH);
+
+	glm::mat4 calcLookAtLeft() const;
+	glm::mat4 calcLookAtRight() const;
+};

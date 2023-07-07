@@ -21,7 +21,9 @@ struct VulkanPipelineState {
     const VulkanPipelineLayout* pipelineLayout;
     const VulkanRenderPass* renderPass;
     uint32_t subpass{ 0 };
+
     VkExtent2D extent;
+    VkOffset2D offset{ 0, 0 };
 
     std::vector<VkPipelineShaderStageCreateInfo> stageInfos;
 

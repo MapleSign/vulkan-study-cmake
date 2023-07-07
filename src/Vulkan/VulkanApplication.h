@@ -83,16 +83,19 @@ private:
 
     std::unique_ptr<VulkanResourceManager> resManager;
     std::unique_ptr<VulkanRayTracingBuilder> rtBuilder;
-    std::unique_ptr<VulkanGraphicsBuilder> graphicBuilder;
+    std::unique_ptr<VulkanGraphicsBuilder> graphicBuilderL;
+    std::unique_ptr<VulkanGraphicsBuilder> graphicBuilderR;
 
     uint32_t threadCount;
 	std::unique_ptr<VulkanRenderContext> renderContext;
 
-    std::unique_ptr<VulkanRenderPipeline> renderPipeline;
+    std::unique_ptr<VulkanRenderPipeline> renderPipelineL;
+    std::unique_ptr<VulkanRenderPipeline> renderPipelineR;
 
     std::unique_ptr<Scene> scene;
     
-    SceneData postData;
+    SceneData postDataL;
+    SceneData postDataR;
     std::unordered_map<const Mesh*, RenderMeshID> renderMeshes;
 
     std::unique_ptr<GUI> gui;

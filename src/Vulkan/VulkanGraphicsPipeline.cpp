@@ -29,15 +29,15 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const VulkanDevice &device, const
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
+    viewport.x = pipelineState.offset.x;
+    viewport.y = pipelineState.offset.y;
     viewport.width = (float)pipelineState.extent.width;
     viewport.height = (float)pipelineState.extent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor{};
-    scissor.offset = { 0, 0 };
+    scissor.offset = pipelineState.offset;
     scissor.extent = pipelineState.extent;
 
     VkPipelineViewportStateCreateInfo viewportState{};

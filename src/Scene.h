@@ -23,6 +23,7 @@ public:
 
 	BaseCamera* addBaseCamera(const char* cameraName);
 	FPSCamera* addFPSCamera(const char* cameraName);
+	VRCamera* addVRCamera(const char* cameraName);
 	BaseCamera* getCamera(const char* cameraName);
 	const BaseCamera* getCamera(const char* cameraName) const;
 	BaseCamera* getActiveCamera();

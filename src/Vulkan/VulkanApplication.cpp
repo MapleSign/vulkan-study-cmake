@@ -22,14 +22,14 @@ VulkanApplication::VulkanApplication() :
 {
     volkInitialize();
 
-    window = std::make_unique<GlfwWindow>(*this);
+    window = std::make_unique<GlfwWindow>(*this, 1024, 512);
     glfwSetCursorPosCallback(window->getHandle(), mouse_callback);
 
     instance = std::make_unique<VulkanInstance>(getRequiredExtensions(), validationLayers);
 
     surface = window->createSurface(instance->getHandle());
 
-    VulkanPhysicalDevice* gpu;
+    VulkanPhysicalDevice* gpu = nullptr;
     auto requiredExtensions = deviceExtensions;
     requiredExtensions.insert(requiredExtensions.end(), rtExtensions.begin(), rtExtensions.end());
     try {
@@ -55,23 +55,27 @@ void VulkanApplication::loadScene(const char* filename)
 
     resManager.reset();
     scene.reset();
-    graphicBuilder.reset();
+    graphicBuilderL.reset();
+    graphicBuilderR.reset();
     rtBuilder.reset();
-    renderPipeline.reset();
+    renderPipelineL.reset();
+    renderPipelineR.reset();
     renderMeshes.clear();
 
     resManager = std::make_unique<VulkanResourceManager>(*device, device->getCommandPool());
 
     Model* model{ nullptr };
     scene = std::make_unique<Scene>();
-    scene->getActiveCamera()->position = { 2.522, 0.90, 0.029 };
-    scene->getActiveCamera()->yaw = -182;
-    scene->getActiveCamera()->pitch = 0.79;
-    reinterpret_cast<FPSCamera*>(scene->getActiveCamera())->rotate(0, 0);
+    auto vrCamera = scene->addVRCamera("vr");
+    vrCamera->position = { 2.522, 0.90, 0.029 };
+    vrCamera->yaw = -182;
+    vrCamera->pitch = 0.79;
+    vrCamera->rotate(0, 0);
+    scene->setCamera("vr");
     scene->loadGLTFFile(filename);
 
-    scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
-    scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
+    //scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
+    //scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
 
     VkSampler sampler = resManager->createSampler();
     for (const auto& [name, model] : scene->getModelMap()) {
@@ -86,29 +90,57 @@ void VulkanApplication::loadScene(const char* filename)
             resManager->getRenderMesh(id).tranformMatrix = model->transComp.getTransformMatrix() * mesh.transComp.getTransformMatrix();
         }
     }
+    
+    auto windowExtent = window->getExtent();
+    VkExtent2D halfExtent = { windowExtent.width / 2, windowExtent.height };
+    graphicBuilderL = std::make_unique<VulkanGraphicsBuilder>(*device, *resManager, halfExtent);
+    graphicBuilderR = std::make_unique<VulkanGraphicsBuilder>(*device, *resManager, halfExtent);
 
-    graphicBuilder = std::make_unique<VulkanGraphicsBuilder>(*device, *resManager, window->getExtent());
+    {
+        auto vertShader = resManager->createShaderModule("shaders/spv/passthrough.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
 
-    auto vertShader = resManager->createShaderModule("shaders/spv/passthrough.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
+        auto fragShader = resManager->createShaderModule("shaders/spv/post.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+        fragShader.addShaderResourcePushConstant(0, sizeof(float));
+        fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 0);
 
-    auto fragShader = resManager->createShaderModule("shaders/spv/post.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
-    fragShader.addShaderResourcePushConstant(0, sizeof(float));
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 0);
+        renderPipelineL = std::make_unique<VulkanRenderPipeline>(*device, *resManager, std::move(vertShader), std::move(fragShader));
+        renderPipelineL->prepare();
+        renderPipelineL->getPipelineState().vertexAttributeDescriptions.clear();
+        renderPipelineL->getPipelineState().vertexBindingDescriptions.clear();
+        renderPipelineL->getPipelineState().cullMode = VK_CULL_MODE_NONE;
+        renderPipelineL->getPipelineState().depthStencilState.depth_test_enable = VK_FALSE;
+        renderPipelineL->getPipelineState().depthStencilState.depth_write_enable = VK_FALSE;
+        renderPipelineL->recreatePipeline(halfExtent, renderContext->getRenderPass());
 
-    renderPipeline = std::make_unique<VulkanRenderPipeline>(*device, *resManager, std::move(vertShader), std::move(fragShader));
-    renderPipeline->prepare();
-    renderPipeline->getPipelineState().vertexAttributeDescriptions.clear();
-    renderPipeline->getPipelineState().vertexBindingDescriptions.clear();
-    renderPipeline->getPipelineState().cullMode = VK_CULL_MODE_NONE;
-    renderPipeline->getPipelineState().depthStencilState.depth_test_enable = VK_FALSE;
-    renderPipeline->getPipelineState().depthStencilState.depth_write_enable = VK_FALSE;
-    renderPipeline->recreatePipeline(renderContext->getSwapChain().getExtent(), renderContext->getRenderPass());
-
-    postData = resManager->requireSceneData(*renderPipeline->getDescriptorSetLayouts()[0], threadCount, {});
-    for (auto& descSet : postData.descriptorSets) {
-        descSet->addWrite(0, VkDescriptorImageInfo{ sampler, graphicBuilder->getOffscreenColor()->getHandle(), VK_IMAGE_LAYOUT_GENERAL });
+        postDataL = resManager->requireSceneData(*renderPipelineL->getDescriptorSetLayouts()[0], threadCount, {});
+        for (auto& descSet : postDataL.descriptorSets) {
+            descSet->addWrite(0, VkDescriptorImageInfo{ sampler, graphicBuilderL->getOffscreenColor()->getHandle(), VK_IMAGE_LAYOUT_GENERAL });
+        }
+        postDataL.update();
     }
-    postData.update();
+    {
+        auto vertShader = resManager->createShaderModule("shaders/spv/passthrough.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
+
+        auto fragShader = resManager->createShaderModule("shaders/spv/post.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+        fragShader.addShaderResourcePushConstant(0, sizeof(float));
+        fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 0);
+
+        renderPipelineR = std::make_unique<VulkanRenderPipeline>(*device, *resManager, std::move(vertShader), std::move(fragShader));
+        renderPipelineR->prepare();
+        renderPipelineR->getPipelineState().offset = { int(halfExtent.width), 0 };
+        renderPipelineR->getPipelineState().vertexAttributeDescriptions.clear();
+        renderPipelineR->getPipelineState().vertexBindingDescriptions.clear();
+        renderPipelineR->getPipelineState().cullMode = VK_CULL_MODE_NONE;
+        renderPipelineR->getPipelineState().depthStencilState.depth_test_enable = VK_FALSE;
+        renderPipelineR->getPipelineState().depthStencilState.depth_write_enable = VK_FALSE;
+        renderPipelineR->recreatePipeline(halfExtent, renderContext->getRenderPass());
+
+        postDataR = resManager->requireSceneData(*renderPipelineR->getDescriptorSetLayouts()[0], threadCount, {});
+        for (auto& descSet : postDataR.descriptorSets) {
+            descSet->addWrite(0, VkDescriptorImageInfo{ sampler, graphicBuilderR->getOffscreenColor()->getHandle(), VK_IMAGE_LAYOUT_GENERAL });
+        }
+        postDataR.update();
+    }
 
     if (rtSupport)
         buildRayTracing();
@@ -120,10 +152,12 @@ VulkanApplication::~VulkanApplication()
 
     gui.reset();
 
-    renderPipeline.reset();
+    renderPipelineL.reset();
+    renderPipelineR.reset();
     renderContext.reset();
 
-    graphicBuilder.reset();
+    graphicBuilderL.reset();
+    graphicBuilderR.reset();
     rtBuilder.reset();
 
     device.reset();
@@ -135,7 +169,7 @@ VulkanApplication::~VulkanApplication()
 
 void VulkanApplication::buildRayTracing()
 {
-    rtBuilder = std::make_unique<VulkanRayTracingBuilder>(*device, *resManager, *graphicBuilder->getOffscreenColor());
+    rtBuilder = std::make_unique<VulkanRayTracingBuilder>(*device, *resManager, *graphicBuilderL->getOffscreenColor());
 
     // BLAS - Storing each primitive in a geometry
     std::vector<BlasInput> allBlas;
@@ -193,7 +227,7 @@ void VulkanApplication::buildRayTracing()
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::StorageImage, 0, 1);
 
-    rtBuilder->createRayTracingPipeline(rtShaders, *graphicBuilder->getGlobalData().descSetLayout);
+    rtBuilder->createRayTracingPipeline(rtShaders, *graphicBuilderL->getGlobalData().descSetLayout);
     rtBuilder->createRtShaderBindingTable();
 }
 
@@ -338,13 +372,14 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
     commandBuffer.begin(0);
 
     if (!useRayTracer) {
-        graphicBuilder->draw(commandBuffer, clearColor);
+        graphicBuilderL->draw(commandBuffer, clearColor);
+        graphicBuilderR->draw(commandBuffer, clearColor);
     }
     else {
         updateFrameCount();
         if (pcRay.frame < maxFrames) {
             pcRay.clearColor = clearColor;
-            rtBuilder->raytrace(commandBuffer, *graphicBuilder->getGlobalData().descriptorSets[frameIndex], pcRay);
+            rtBuilder->raytrace(commandBuffer, *graphicBuilderL->getGlobalData().descriptorSets[frameIndex], pcRay);
         }
     }
     
@@ -354,22 +389,40 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
     clearValues[1].depthStencil = { 1.0f, 0 };
     commandBuffer.beginRenderPass(renderTarget, renderContext->getRenderPass(), framebuffer, clearValues, VK_SUBPASS_CONTENTS_INLINE);
     
-    commandBuffer.bindPipeline(renderPipeline->getGraphicsPipeline());
+    {
+        commandBuffer.bindPipeline(renderPipelineL->getGraphicsPipeline());
 
-    auto extent = renderContext->getSwapChain().getExtent();
-    auto aspectRatio = static_cast<float>(extent.width) / static_cast<float>(extent.height);
-    vkCmdPushConstants(commandBuffer.getHandle(), 
-        renderPipeline->getPipelineLayout().getHandle(), 
-        VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &aspectRatio);
+        auto extent = renderPipelineL->getPipelineState().extent;
+        auto aspectRatio = static_cast<float>(extent.width) / static_cast<float>(extent.height);
+        vkCmdPushConstants(commandBuffer.getHandle(),
+            renderPipelineL->getPipelineLayout().getHandle(),
+            VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &aspectRatio);
 
-    auto postDescSetHandle = postData.descriptorSets[frameIndex][0].getHandle();
-    vkCmdBindDescriptorSets(commandBuffer.getHandle(), 
-        renderPipeline->getGraphicsPipeline().getBindPoint(), 
-        renderPipeline->getPipelineLayout().getHandle(), 0, 1, &postDescSetHandle, 0, nullptr);
+        auto postDescSetHandle = postDataL.descriptorSets[frameIndex][0].getHandle();
+        vkCmdBindDescriptorSets(commandBuffer.getHandle(),
+            renderPipelineL->getGraphicsPipeline().getBindPoint(),
+            renderPipelineL->getPipelineLayout().getHandle(), 0, 1, &postDescSetHandle, 0, nullptr);
 
-    vkCmdDraw(commandBuffer.getHandle(), 3, 1, 0, 0);
+        vkCmdDraw(commandBuffer.getHandle(), 3, 1, 0, 0);
 
-    gui->renderDrawData(commandBuffer.getHandle());
+        gui->renderDrawData(commandBuffer.getHandle());
+    }
+    {
+        commandBuffer.bindPipeline(renderPipelineR->getGraphicsPipeline());
+
+        auto extent = renderPipelineR->getPipelineState().extent;
+        auto aspectRatio = static_cast<float>(extent.width) / static_cast<float>(extent.height);
+        vkCmdPushConstants(commandBuffer.getHandle(),
+            renderPipelineR->getPipelineLayout().getHandle(),
+            VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &aspectRatio);
+
+        auto postDescSetHandle = postDataR.descriptorSets[frameIndex][0].getHandle();
+        vkCmdBindDescriptorSets(commandBuffer.getHandle(),
+            renderPipelineR->getGraphicsPipeline().getBindPoint(),
+            renderPipelineR->getPipelineLayout().getHandle(), 0, 1, &postDescSetHandle, 0, nullptr);
+
+        vkCmdDraw(commandBuffer.getHandle(), 3, 1, 0, 0);
+    }
 
     commandBuffer.endRenderPass();
 
@@ -400,7 +453,8 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentImage)
             mesh->parent->transComp.getTransformMatrix() * mesh->transComp.getTransformMatrix();
     }
 
-    graphicBuilder->update(deltaTime, scene.get());
+    graphicBuilderL->update(deltaTime, scene.get(), reinterpret_cast<VRCamera*>(scene->getActiveCamera())->calcLookAtLeft());
+    graphicBuilderR->update(deltaTime, scene.get(), reinterpret_cast<VRCamera*>(scene->getActiveCamera())->calcLookAtRight());
 }
 
 void VulkanApplication::updateTlas()
@@ -503,23 +557,24 @@ void VulkanApplication::handleSurfaceChange()
 
     device->waitIdle();
 
-    graphicBuilder->recreateGraphicsBuilder(extent);
+    graphicBuilderL->recreateGraphicsBuilder(extent);
 
-    rtBuilder->recreateRayTracingBuilder(*(graphicBuilder->getOffscreenColor()));
+    if (rtSupport)
+        rtBuilder->recreateRayTracingBuilder(*(graphicBuilderL->getOffscreenColor()));
 
     renderContext->recreateSwapChain(extent);
 
-    renderPipeline->recreatePipeline(extent, renderContext->getRenderPass());
+    renderPipelineL->recreatePipeline(extent, renderContext->getRenderPass());
 
     for (auto& [mesh, id] : renderMeshes)
-        resManager->getRenderMesh(id).pipeline = &renderPipeline->getGraphicsPipeline();
+        resManager->getRenderMesh(id).pipeline = &renderPipelineL->getGraphicsPipeline();
 
     VkSampler sampler = resManager->createSampler();
-    postData = resManager->requireSceneData(*renderPipeline->getDescriptorSetLayouts()[0], threadCount, {});
-    for (auto& descSet : postData.descriptorSets) {
-        descSet->addWrite(0, VkDescriptorImageInfo{ sampler, graphicBuilder->getOffscreenColor()->getHandle(), VK_IMAGE_LAYOUT_GENERAL });
+    postDataL = resManager->requireSceneData(*renderPipelineL->getDescriptorSetLayouts()[0], threadCount, {});
+    for (auto& descSet : postDataL.descriptorSets) {
+        descSet->addWrite(0, VkDescriptorImageInfo{ sampler, graphicBuilderL->getOffscreenColor()->getHandle(), VK_IMAGE_LAYOUT_GENERAL });
     }
-    postData.update();
+    postDataL.update();
 
     resetFrameCount();
 }

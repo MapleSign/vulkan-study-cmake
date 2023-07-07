@@ -223,6 +223,13 @@ FPSCamera* Scene::addFPSCamera(const char* cameraName)
 	return camera;
 }
 
+VRCamera* Scene::addVRCamera(const char* cameraName)
+{
+	auto camera = new VRCamera();
+	cameraMap.emplace(cameraName, camera);
+	return camera;
+}
+
 BaseCamera* Scene::getCamera(const char* cameraName)
 {
 	return cameraMap[cameraName].get();
