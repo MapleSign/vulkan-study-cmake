@@ -30,6 +30,7 @@ public:
     constexpr const VulkanImageView* getOffscreenDepth() const { return offscreenDepth; }
 
     constexpr const SceneData& getGlobalData() const { return globalData; }
+    constexpr const GlobalData& getOriginalGlobalData() const { return originalGlobalData; }
     constexpr const SceneData& getLightData() const { return lightData; }
 
 private:
@@ -46,6 +47,7 @@ private:
 
     std::unique_ptr<VulkanRenderPipeline> renderPipeline;
     SceneData globalData;
+    GlobalData originalGlobalData;
     SceneData lightData;
 
     PushConstantRaster pushConstants{};

@@ -17,6 +17,7 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
 
     auto attatchments = renderTarget->getAttatchments();
     attatchments.front().finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+    attatchments.back().finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
     renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos);
 
@@ -114,12 +115,14 @@ void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene, const gl
     uint32_t currentImage = 0;
     const auto& camera = scene->getActiveCamera();
 
-    GlobalData ubo{};
-    ubo.view = view;
-    ubo.proj = glm::perspective(glm::radians(45.0f), (float)extent.width / (float)extent.height, 0.1f, 100.0f);
-    ubo.proj[1][1] *= -1;
-    ubo.viewInverse = glm::inverse(ubo.view);
-    ubo.projInverse = glm::inverse(ubo.proj);
+    originalGlobalData.view = view;
+    originalGlobalData.proj = glm::perspective(glm::radians(45.0f), (float)extent.width / (float)extent.height, 0.1f, 100.0f);
+    originalGlobalData.proj[1][1] *= -1;
+    originalGlobalData.viewInverse = glm::inverse(originalGlobalData.view);
+    originalGlobalData.projInverse = glm::inverse(originalGlobalData.proj);
+    
+    GlobalData ubo;
+    ubo = originalGlobalData;
 
     globalData.uniformBuffers[currentImage][0]->update(&ubo, sizeof(ubo));
 
