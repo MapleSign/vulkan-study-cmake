@@ -103,7 +103,7 @@ void VulkanRayTracingBuilder::createRayTracingPipeline(
 	state.groupInfos = rtShaderGroups;
 	state.stageInfos = stageInfos;
 	state.pipelineLayout = rtPipelineLayout.get();
-	state.maxPipelineRayRecursionDepth = 31;
+	state.maxPipelineRayRecursionDepth = 1;
 	rtPipeline = std::make_unique<VulkanRayTracingPipeline>(device, state);
 }
 

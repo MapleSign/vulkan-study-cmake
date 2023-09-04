@@ -103,5 +103,7 @@ private:
     std::vector<const char*> getRequiredExtensions();
     static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
+    static void drop_callback(GLFWwindow* window, int count, const char** path);
+
     int maxFrames{ 10000 };
 };

@@ -24,6 +24,7 @@ VulkanApplication::VulkanApplication() :
 
     window = std::make_unique<GlfwWindow>(*this);
     glfwSetCursorPosCallback(window->getHandle(), mouse_callback);
+    glfwSetDropCallback(window->getHandle(), drop_callback);
 
     instance = std::make_unique<VulkanInstance>(getRequiredExtensions(), validationLayers);
 
@@ -206,7 +207,7 @@ void VulkanApplication::mainLoop()
         "../amd/Deferred/Deferred.gltf",
         "../amd/GI/GI.gltf",
         "../amd/PBR/PBR.gltf",
-        "../amd/Shadow/Shadow.gltf"
+        "../amd/Shadow/Shadow.gltf",
     };
     static int sceneItem = 2;
 
@@ -546,16 +547,68 @@ void VulkanApplication::mouse_callback(GLFWwindow* window, double xpos, double y
     static double lastX = 400.0f, lastY = 300.0f;
     static double yaw = 0.0f, pitch = 0.0f;
 
-    if (!app->isCursorEnabled) {
+    
+
+    if (!app->isCursorEnabled|| ImGui::GetIO().WantCaptureMouse==false) {
+        int leftButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+        int rightButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
+        int midButtonState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE);
+
         double xoffset = xpos - lastX;
         double yoffset = lastY - ypos;
 
         auto camera = reinterpret_cast<FPSCamera*>(app->scene->getActiveCamera());
         xoffset *= camera->sensitivity;
         yoffset *= camera->sensitivity;
-        camera->rotate((float)xoffset, (float)yoffset);
+
+        const double moveSensitivity = 0.1;
+
+        if (leftButtonState)
+        {
+            camera->rotate((float)xoffset, (float)yoffset);
+        }
+        else if (rightButtonState)
+        {
+            float offset = sqrt(xoffset * xoffset + yoffset * yoffset)* moveSensitivity;
+            if (xoffset + yoffset > 0)
+            {
+                camera->move(CameraDirection::FORWARD, offset);
+            }
+            else
+            {
+                camera->move(CameraDirection::BACK, offset);
+            }
+        }
+        else if (midButtonState)
+        {
+            camera->move(CameraDirection::RIGHT, xoffset* moveSensitivity);
+            camera->move(CameraDirection::HEADUP, yoffset* moveSensitivity);
+        }
     }
 
     lastX = xpos;
     lastY = ypos;
+}
+
+void VulkanApplication::drop_callback(GLFWwindow* window, int count, const char** path)
+{
+    auto app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
+    for (int i = 0; i < count; i++)
+    {
+        std::cout << path[i] << std::endl;
+        std::string pathNew(path[i]);
+        for (int j = 0; j < strlen(path[i]); j++)
+        {
+            if (path[i][j] == '\\')
+            {
+                pathNew[j] = '/';
+            }
+        }
+        std::cout << pathNew << std::endl;
+        app->loadScene(pathNew.c_str());
+    }
+    //if (count == 1)
+    //{
+    //    app->loadScene(path[0]);
+    //}
 }

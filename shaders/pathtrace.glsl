@@ -12,7 +12,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         prd.hitT = INFINITY;
 
         uint  rayFlags = gl_RayFlagsCullBackFacingTrianglesEXT;
-        float tMin     = 0.0001;
+        float tMin     = 0.01;
         float tMax     = INFINITY;
 
         traceRayEXT(topLevelAS, // acceleration structure
@@ -35,10 +35,13 @@ vec3 pathtrace(Ray r,int maxDepth)
             else {
                 vec3 env = pcRay.clearColor.xyz * pcRay.lightIntensity * 0.1;
                 if (any(isnan(weight)))
-                    weight = vec3(0);
-                    // hitValue = vec3(1,0,0);
-                    // else
-                hitValue += env * weight;
+                {
+                    //weight = vec3(0);
+                    hitValue = vec3(1,0,0);
+                    return hitValue;
+                }
+                else
+                    hitValue += env * weight;
             }
 
             return hitValue;
