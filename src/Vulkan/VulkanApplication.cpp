@@ -25,6 +25,7 @@ VulkanApplication::VulkanApplication() :
     window = std::make_unique<GlfwWindow>(*this);
     glfwSetCursorPosCallback(window->getHandle(), mouse_callback);
     glfwSetDropCallback(window->getHandle(), drop_callback);
+    glfwSetScrollCallback(window->getHandle(), scroll_callback);
 
     instance = std::make_unique<VulkanInstance>(getRequiredExtensions(), validationLayers);
 
@@ -573,22 +574,35 @@ void VulkanApplication::mouse_callback(GLFWwindow* window, double xpos, double y
             float offset = sqrt(xoffset * xoffset + yoffset * yoffset)* moveSensitivity;
             if (xoffset + yoffset > 0)
             {
-                camera->move(CameraDirection::FORWARD, offset);
+                camera->BaseCamera::move(CameraDirection::FORWARD, offset);
             }
             else
             {
-                camera->move(CameraDirection::BACK, offset);
+                camera->BaseCamera::move(CameraDirection::BACK, offset);
             }
         }
         else if (midButtonState)
         {
-            camera->move(CameraDirection::RIGHT, xoffset* moveSensitivity);
-            camera->move(CameraDirection::HEADUP, yoffset* moveSensitivity);
+            camera->BaseCamera::move(CameraDirection::RIGHT, xoffset* moveSensitivity);
+            camera->BaseCamera::move(CameraDirection::HEADUP, yoffset* moveSensitivity);
         }
     }
 
     lastX = xpos;
     lastY = ypos;
+}
+
+void VulkanApplication::scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    const float SCROLL_SENSITIVITY = 0.3;
+    auto app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
+    auto camera = reinterpret_cast<FPSCamera*>(app->scene->getActiveCamera());
+
+    if (ImGui::GetIO().WantCaptureMouse == false)
+    {
+        camera->BaseCamera::move(CameraDirection::FORWARD, yoffset* SCROLL_SENSITIVITY);
+    }
+
 }
 
 void VulkanApplication::drop_callback(GLFWwindow* window, int count, const char** path)

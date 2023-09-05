@@ -18,7 +18,10 @@ BaseCamera::BaseCamera(glm::vec3 position, glm::vec3 up, float yaw, float pitch,
 	position{position}, up{up}, yaw{yaw}, pitch{pitch}, roll{roll},
 	front{ CameraConstVariable::FRONT }, speed{ CameraConstVariable::SPEED }, sensitivity{ CameraConstVariable::SENSITIVITY }, zoom{ CameraConstVariable::ZOOM }
 {
+	right = glm::normalize(glm::cross(front, up));
+
 }
+
 
 void BaseCamera::setOtherArgument(float speed, float sensitivity, float zoom)
 {
@@ -35,6 +38,8 @@ void BaseCamera::move(CameraDirection direction, float deltaTime)
 	case CameraDirection::BACK: position -= front * (speed * deltaTime); break;
 	case CameraDirection::LEFT: position -= glm::normalize(glm::cross(front, up)) * (speed * deltaTime); break;
 	case CameraDirection::RIGHT: position += glm::normalize(glm::cross(front, up)) * (speed * deltaTime); break;
+	case CameraDirection::HEADUP: position += glm::normalize(glm::cross(right,front )) * (speed * deltaTime); break;
+	case CameraDirection::DOWN: position -= glm::normalize(glm::cross(right,front )) * (speed * deltaTime); break;
 	}
 }
 
@@ -84,6 +89,7 @@ void FPSCamera::rotate(float dyaw, float dpitch)
 	newFront.y = sin(glm::radians(pitch));
 	newFront.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
 	front = glm::normalize(newFront);
+	right = glm::normalize(glm::cross(front, up));
 
 	// std::cerr << "rotation: " << yaw << " " << pitch << " " << roll << std::endl;
 }
