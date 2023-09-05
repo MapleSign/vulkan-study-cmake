@@ -40,15 +40,14 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
 
     clockFreature.pNext = &features12;
 
-    if (std::find_if(requiredExtentions.begin(), requiredExtentions.end(), [](const char* ext) {return strcmp(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, ext); }) != requiredExtentions.end()) {
-        VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
-        rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
 
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+    if (std::find_if(requiredExtentions.begin(), requiredExtentions.end(), [](const char* ext) {return strcmp(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, ext); }) != requiredExtentions.end()) {
+        rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
         features12.pNext = &rtPipelineFeatures;
 
-        VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
         asFeatures.accelerationStructure = VK_TRUE;
-
         rtPipelineFeatures.pNext = &asFeatures;
     }
 

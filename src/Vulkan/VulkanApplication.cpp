@@ -200,8 +200,7 @@ void VulkanApplication::buildRayTracing()
 
 void VulkanApplication::mainLoop()
 {
-    const int sceneSum = 5;
-    const char* sceneNames[] = { "Caustics", "Deferred", "GI", "PBR", "Shadow"};
+    const char* sceneNames[] = { "Caustics", "Deferred", "GI", "PBR", "Shadow" };
     const char* sceneFilePath[] = {
         "../amd/Caustics/Caustics.gltf",
         "../amd/Deferred/Deferred.gltf",
@@ -209,6 +208,8 @@ void VulkanApplication::mainLoop()
         "../amd/PBR/PBR.gltf",
         "../amd/Shadow/Shadow.gltf",
     };
+    int sceneSum = sizeof(sceneNames) / sizeof(char*);
+
     static int sceneItem = 2;
 
     loadScene(sceneFilePath[sceneItem]);
