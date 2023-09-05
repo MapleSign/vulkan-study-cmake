@@ -21,7 +21,7 @@ void getMetallicRoughness(inout State state, in GltfMaterial material)
     {
         // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
         // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
-        vec4 mrSample = texture(textureSampler[material.pbrMetallicRoughnessTexture], state.texCoord);
+        vec4 mrSample = texture(textureSampler[nonuniformEXT(material.pbrMetallicRoughnessTexture)], state.texCoord);
         perceptualRoughness = mrSample.g * perceptualRoughness;
         metallic = mrSample.b * metallic;
     }
@@ -30,7 +30,7 @@ void getMetallicRoughness(inout State state, in GltfMaterial material)
     baseColor = material.pbrBaseColorFactor;
     if(material.pbrBaseColorTexture > -1)
     {
-        baseColor *= texture(textureSampler[material.pbrBaseColorTexture], state.texCoord);
+        baseColor *= texture(textureSampler[nonuniformEXT(material.pbrBaseColorTexture)], state.texCoord);
     }
 
     // baseColor.rgb = mix(baseColor.rgb * (vec3(1.0) - f0), vec3(0), metallic);
@@ -80,7 +80,7 @@ void getSpecularGlossiness(inout State state, in GltfMaterial material)
 
     if(material.khrSpecularGlossinessTexture > -1)
     {
-        vec4 sgSample = texture(textureSampler[material.khrSpecularGlossinessTexture], state.texCoord);
+        vec4 sgSample = texture(textureSampler[nonuniformEXT(material.khrSpecularGlossinessTexture)], state.texCoord);
         perceptualRoughness = 1 - material.khrGlossinessFactor * sgSample.a;  // glossiness to roughness
         f0 *= sgSample.rgb;                                                   // specular
     }
@@ -90,7 +90,7 @@ void getSpecularGlossiness(inout State state, in GltfMaterial material)
 
     vec4 diffuseColor = material.khrDiffuseFactor;
     if(material.khrDiffuseTexture > -1)
-    diffuseColor *= texture(textureSampler[material.khrDiffuseTexture], state.texCoord);
+    diffuseColor *= texture(textureSampler[nonuniformEXT(material.khrDiffuseTexture)], state.texCoord);
 
     baseColor.rgb = diffuseColor.rgb * oneMinusSpecularStrength;
     metallic = solveMetallic(diffuseColor.rgb, specularColor, oneMinusSpecularStrength);
@@ -111,7 +111,7 @@ void getMaterialsAndTextures(inout State state, inout GltfMaterial material)
     // Perturbating the normal if a normal map is present
     if(material.normalTexture > -1)
     {
-        vec3 normalVector = texture(textureSampler[material.normalTexture], state.texCoord).xyz;
+        vec3 normalVector = texture(textureSampler[nonuniformEXT(material.normalTexture)], state.texCoord).xyz;
         normalVector = normalize(normalVector * 2.0 - 1.0);
         normalVector *= vec3(material.normalTextureScale, material.normalTextureScale, 1.0);
         state.normal = normalize(TBN * normalVector);
@@ -121,7 +121,7 @@ void getMaterialsAndTextures(inout State state, inout GltfMaterial material)
     state.mat.emission = material.emissiveFactor;
     if(material.emissiveTexture > -1)
         state.mat.emission *=
-            texture(textureSampler[material.emissiveTexture], state.texCoord).rgb;
+            texture(textureSampler[nonuniformEXT(material.emissiveTexture)], state.texCoord).rgb;
 
     // Basic material
     if(material.shadingModel == 0)
@@ -137,7 +137,7 @@ void getMaterialsAndTextures(inout State state, inout GltfMaterial material)
     state.mat.transmission = material.transmissionFactor;
     if(material.transmissionTexture > -1)
     {
-        state.mat.transmission *= texture(textureSampler[material.transmissionTexture], state.texCoord).r;
+        state.mat.transmission *= texture(textureSampler[nonuniformEXT(material.transmissionTexture)], state.texCoord).r;
     }
 
     // KHR_materials_ior
@@ -149,12 +149,12 @@ void getMaterialsAndTextures(inout State state, inout GltfMaterial material)
     state.mat.clearcoatRoughness = material.clearcoatRoughness;
     if(material.clearcoatTexture > -1)
     {
-        state.mat.clearcoat *= texture(textureSampler[material.clearcoatTexture], state.texCoord).r;
+        state.mat.clearcoat *= texture(textureSampler[nonuniformEXT(material.clearcoatTexture)], state.texCoord).r;
     }
     if(material.clearcoatRoughnessTexture > -1)
     {
         state.mat.clearcoatRoughness *=
-            texture(textureSampler[material.clearcoatRoughnessTexture], state.texCoord).g;
+            texture(textureSampler[nonuniformEXT(material.clearcoatRoughnessTexture)], state.texCoord).g;
     }
     state.mat.clearcoatRoughness = max(state.mat.clearcoatRoughness, 0.001);
 }
