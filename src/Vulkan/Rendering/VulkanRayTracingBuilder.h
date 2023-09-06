@@ -24,6 +24,11 @@ struct PushConstantRayTracing {
 	int frame;
 	int maxDepth;
 	int sampleNumbers;
+
+	float defocusAngle; // For Lens Approximation
+	float focusDist;    // For Lens Approximation
+	float zFar;         // For Lens Approximation
+
 };
 
 class VulkanRayTracingBuilder

@@ -14,9 +14,13 @@ const float CameraConstVariable::SPEED = 2.5f;
 const float CameraConstVariable::SENSITIVITY = 0.1f;
 const float CameraConstVariable::ZOOM = 45.0f;
 
+const float CameraConstVariable::ZNEAR = 0.1f;
+const float CameraConstVariable::ZFAR = 100.0f;
+
 BaseCamera::BaseCamera(glm::vec3 position, glm::vec3 up, float yaw, float pitch, float roll) :
 	position{position}, up{up}, yaw{yaw}, pitch{pitch}, roll{roll},
-	front{ CameraConstVariable::FRONT }, speed{ CameraConstVariable::SPEED }, sensitivity{ CameraConstVariable::SENSITIVITY }, zoom{ CameraConstVariable::ZOOM }
+	front{ CameraConstVariable::FRONT }, speed{ CameraConstVariable::SPEED }, sensitivity{ CameraConstVariable::SENSITIVITY }, zoom{ CameraConstVariable::ZOOM },
+	zNear{CameraConstVariable::ZNEAR}, zFar{CameraConstVariable::ZFAR}
 {
 	right = glm::normalize(glm::cross(front, up));
 
@@ -89,7 +93,8 @@ void FPSCamera::rotate(float dyaw, float dpitch)
 	newFront.y = sin(glm::radians(pitch));
 	newFront.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
 	front = glm::normalize(newFront);
-	right = glm::normalize(glm::cross(front, up));
+	right = glm::normalize(glm::cross(front, CameraConstVariable::UP));
+	up = glm::normalize(glm::cross(right, front));
 
 	// std::cerr << "rotation: " << yaw << " " << pitch << " " << roll << std::endl;
 }

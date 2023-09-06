@@ -1,6 +1,7 @@
 #include "gltf_material.glsl"
 #include "pbr.glsl"
 
+
 vec3 pathtrace(Ray r,int maxDepth)
 {
     //int maxDepth = 10;
@@ -36,9 +37,9 @@ vec3 pathtrace(Ray r,int maxDepth)
                 vec3 env = pcRay.clearColor.xyz * pcRay.lightIntensity * 0.1;
                 if (any(isnan(weight)))
                 {
-                    //weight = vec3(0);
-                    hitValue = vec3(1,0,0);
-                    return hitValue;
+                    weight += vec3(0);
+                    //hitValue = vec3(1,0,0);
+                    //return hitValue;
                 }
                 else
                     hitValue += env * weight;
@@ -135,6 +136,25 @@ vec3 pathtrace(Ray r,int maxDepth)
     return hitValue;
 }
 
+vec3 defoucueDiskSample(float focusDist)
+{
+    
+    vec3 cameraFront = vec3(0,0,1);
+    vec3 cameraUp = vec3(0,1,0);
+    vec3 cameraRight=vec3(1,0,0);
+
+    float defocusRadius = focusDist*tan(pcRay.defocusAngle/2);
+
+    vec3 defocusDiskU = cameraRight*defocusRadius;
+    vec3 defocusDiskV = cameraUp*defocusRadius;
+
+    vec3 p = randonInUnitDisk(prd.seed);
+
+    vec3 defoucueDisk = defocusDiskU*p[0]+defocusDiskV*p[1];
+
+    return defoucueDisk;
+}
+
 vec3 samplePixel(ivec2 imageCoord, ivec2 imageSize,int maxDepth)
 {
     float r1 = rnd(prd.seed);
@@ -147,11 +167,18 @@ vec3 samplePixel(ivec2 imageCoord, ivec2 imageSize,int maxDepth)
     const vec2 inUV = pixelCenter / vec2(imageSize);
     vec2 d = inUV * 2.0 - 1.0;
 
-    vec4 origin = uni.viewInverse * vec4(0, 0, 0, 1);
-    vec4 target = uni.projInverse * vec4(d.x, d.y, 1, 1);
-    vec4 direction = uni.viewInverse * vec4(normalize(target.xyz), 0);
+    float focusDistRatio=pcRay.focusDist/pcRay.zFar;
 
-    Ray r = Ray(origin.xyz, direction.xyz);
+    //vec4 origin = uni.viewInverse * vec4(0, 0, 0, 1);
+    vec4 originView = (pcRay.defocusAngle <= 0) ? vec4(0, 0, 0, 1) : (vec4(defoucueDiskSample(focusDistRatio), 1));
+    vec4 originWorld = uni.viewInverse*originView;
+    
+    //vec4 target = uni.projInverse * vec4(d.x, d.y, focusDistRatio, 1);
+    vec4 targetView = uni.projInverse * vec4(d.x, d.y, -1, 1)*pcRay.focusDist;
+    //target.z*=focusDistRatio;
+    vec4 direction = uni.viewInverse * vec4(normalize(targetView.xyz-originView.xyz), 0);
+
+    Ray r = Ray(originWorld.xyz, direction.xyz);
     vec3 radiance = pathtrace(r, maxDepth);
 
     return radiance;

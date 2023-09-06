@@ -220,6 +220,7 @@ void VulkanApplication::mainLoop()
         glfwPollEvents();
         bool changed = false;
         bool sceneChanged = false;
+        bool cameraChanged = false;
         gui->newFrame();
         ImGui::Begin("Debug");
         changed |= ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
@@ -252,6 +253,15 @@ void VulkanApplication::mainLoop()
             sceneChanged = ImGui::Combo("Scene", &sceneItem, sceneNames, sceneSum);
             changed |= sceneChanged;
         }
+        if (ImGui::CollapsingHeader("Camera"), ImGuiTreeNodeFlags_DefaultOpen)
+        {
+            cameraChanged |= ImGui::SliderAngle("Defocus Angle", &pcRay.defocusAngle, 0, 179.9);
+            cameraChanged |= ImGui::SliderFloat("Focus Dist", &pcRay.focusDist, 0.0001, 20);
+            changed |= cameraChanged;
+        }
+
+        const auto& camera = scene->getActiveCamera();
+        pcRay.zFar = camera->zFar;
 
         if (changed) {
             resetFrameCount();

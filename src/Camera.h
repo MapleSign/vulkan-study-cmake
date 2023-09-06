@@ -23,6 +23,9 @@ public:
 	static const float SPEED;
 	static const float SENSITIVITY;
 	static const float ZOOM;
+
+	static const float ZNEAR;
+	static const float ZFAR;
 };
 
 class BaseCamera {
@@ -39,6 +42,9 @@ public:
 	float speed;
 	float sensitivity;
 	float zoom;
+
+	float zNear;
+	float zFar;
 
 	BaseCamera(glm::vec3 position = CameraConstVariable::POSITION, glm::vec3 up = CameraConstVariable::UP, 
 		float yaw = CameraConstVariable::YAW, float pitch = CameraConstVariable::PITCH, float roll = CameraConstVariable::ROLL);

@@ -116,7 +116,7 @@ void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
 
     GlobalData ubo{};
     ubo.view = camera->calcLookAt();
-    ubo.proj = glm::perspective(glm::radians(45.0f), (float)extent.width / (float)extent.height, 0.1f, 100.0f);
+    ubo.proj = glm::perspective(glm::radians(camera->zoom), (float)extent.width / (float)extent.height, camera->zNear, camera->zFar);
     ubo.proj[1][1] *= -1;
     ubo.viewInverse = glm::inverse(ubo.view);
     ubo.projInverse = glm::inverse(ubo.proj);
