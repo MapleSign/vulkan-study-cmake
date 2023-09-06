@@ -218,10 +218,13 @@ void VulkanApplication::mainLoop()
     while (!glfwWindowShouldClose(window->getHandle()))
     {
         glfwPollEvents();
+
         bool changed = false;
         bool sceneChanged = false;
         bool cameraChanged = false;
+
         gui->newFrame();
+
         ImGui::Begin("Debug");
         changed |= ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
         if (rtSupport)
@@ -239,6 +242,7 @@ void VulkanApplication::mainLoop()
                 changed |= ImGui::SliderFloat3("Direction", &pcRay.lightPosition.x, -1.f, 1.f);
             changed |= ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
         }
+
         if (rtSupport)
         {
             if (ImGui::CollapsingHeader("Ray Tracing"), ImGuiTreeNodeFlags_DefaultOpen)
@@ -248,11 +252,13 @@ void VulkanApplication::mainLoop()
                 changed |= ImGui::SliderInt("Samples Per Frame", &pcRay.sampleNumbers, 1, 12);
             }
         }
+
         if (ImGui::CollapsingHeader("Scenes"), ImGuiTreeNodeFlags_DefaultOpen)
         {
             sceneChanged = ImGui::Combo("Scene", &sceneItem, sceneNames, sceneSum);
             changed |= sceneChanged;
         }
+
         if (ImGui::CollapsingHeader("Camera"), ImGuiTreeNodeFlags_DefaultOpen)
         {
             cameraChanged |= ImGui::SliderAngle("Defocus Angle", &pcRay.defocusAngle, 0, 179.9);

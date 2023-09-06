@@ -57,23 +57,20 @@ void createCoordinateSystem(in vec3 N, out vec3 Nt, out vec3 Nb)
     Nb = cross(N, Nt);
 }
 
-float lengthSquared(vec3 e){
-    return e.x*e.x+e.y*e.y+e.z*e.z;
-}
-
-float randFloat(inout uint seed,float min,float max)
+float randFloat(inout uint seed, float minValue, float maxValue)
 {
-    return min+(max-min)*rnd(seed);
+    return minValue + (maxValue-minValue) * rnd(seed);
 }
 
 vec3 randonInUnitDisk(inout uint seed)
 {
-    while(true){
+    while(true)
+    {
         vec3 p;
-        p.x=randFloat(seed,-1,1);
-        p.y=randFloat(seed,-1,1);
-        p.z=0;
-        if(lengthSquared(p)<1)
+        p.x = randFloat(seed,-1,1);
+        p.y = randFloat(seed,-1,1);
+        p.z = 0;
+        if(dot(p, p) < 1)
         {
             return p;
         }

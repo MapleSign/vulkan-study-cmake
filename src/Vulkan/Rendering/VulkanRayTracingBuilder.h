@@ -17,18 +17,18 @@ struct BuildAccelerationStructure
 };
 
 struct PushConstantRayTracing {
-	glm::vec4 clearColor;
-	glm::vec3 lightPosition;
-	float lightIntensity;
-	int lightType;
-	int frame;
-	int maxDepth;
-	int sampleNumbers;
+	glm::vec4 clearColor{};
+	glm::vec3 lightPosition{ -0.029, -1.00, -0.058 };
+	float lightIntensity = 3.f;
+	int lightType = 1;
+	int frame = -1;
+	int maxDepth = 5;
+	int sampleNumbers = 1;
 
-	float defocusAngle; // For Lens Approximation
-	float focusDist;    // For Lens Approximation
-	float zFar;         // For Lens Approximation
-
+	// For Lens Approximation
+	float defocusAngle = 0;
+	float focusDist = 1;
+	float zFar = 100;
 };
 
 class VulkanRayTracingBuilder

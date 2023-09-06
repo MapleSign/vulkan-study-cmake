@@ -97,7 +97,6 @@ struct PushConstantRay
     float defocusAngle; // For Lens Approximation
     float focusDist;    // For Lens Approximation
     float zFar;         // For Lens Approximation
-
 };
 
 struct Vertex  // See ObjLoader, copy of VertexObj, could be compressed for device

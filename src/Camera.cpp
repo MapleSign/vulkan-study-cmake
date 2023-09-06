@@ -18,12 +18,11 @@ const float CameraConstVariable::ZNEAR = 0.1f;
 const float CameraConstVariable::ZFAR = 100.0f;
 
 BaseCamera::BaseCamera(glm::vec3 position, glm::vec3 up, float yaw, float pitch, float roll) :
-	position{position}, up{up}, yaw{yaw}, pitch{pitch}, roll{roll},
+	position{ position }, up{ up }, yaw{ yaw }, pitch{ pitch }, roll{ roll },
 	front{ CameraConstVariable::FRONT }, speed{ CameraConstVariable::SPEED }, sensitivity{ CameraConstVariable::SENSITIVITY }, zoom{ CameraConstVariable::ZOOM },
-	zNear{CameraConstVariable::ZNEAR}, zFar{CameraConstVariable::ZFAR}
+	zNear{ CameraConstVariable::ZNEAR }, zFar{ CameraConstVariable::ZFAR }
 {
 	right = glm::normalize(glm::cross(front, up));
-
 }
 
 
