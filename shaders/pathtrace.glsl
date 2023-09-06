@@ -91,8 +91,8 @@ vec3 pathtrace(Ray r,int maxDepth)
         if (dot(state.ffnormal, L) < 0) {
             BsdfSampleRec directBsdf;
             directBsdf.f = PbrEval(state, -r.direction, state.ffnormal, -L, directBsdf.pdf);
-            float misWeight = max(0, powerHeuristic(lightPdf, directBsdf.pdf)); // multi importance sampling weight
-            Li = misWeight * directBsdf.f * abs(dot(-L, state.ffnormal)) * lightIntensity * weight / lightPdf;
+            float misWeightBsdf = max(0, powerHeuristic(directBsdf.pdf, lightPdf)); // multi importance sampling weight
+            Li = misWeightBsdf * directBsdf.f * abs(dot(-L, state.ffnormal)) * lightIntensity * weight / directBsdf.pdf;
         }
 
         BsdfSampleRec bsdf;
