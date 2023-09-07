@@ -214,6 +214,8 @@ void VulkanApplication::mainLoop()
     static int sceneItem = 2;
 
     loadScene(sceneFilePath[sceneItem]);
+
+    bool enablePostProcessing = false;
    
     while (!glfwWindowShouldClose(window->getHandle()))
     {
@@ -274,8 +276,8 @@ void VulkanApplication::mainLoop()
                 "Median filter",
                 "Bilateral filter"
             };
-            static bool enablePostProcessing = false;
-            ImGui::Checkbox("enable", &enablePostProcessing);
+            
+            ImGui::Checkbox("denoising", &enablePostProcessing);
             ImGui::Combo("Denoising algorithm", &pcPost.denoisingType, denoisingAlgorithmStr, denoisingAlgorithmSum);
             pcPost.enable = enablePostProcessing ? 1 : 0;
             if (pcPost.denoisingType == 2)

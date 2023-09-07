@@ -69,8 +69,8 @@ void FPSCamera::move(CameraDirection direction, float deltaTime)
 	case CameraDirection::BACK: position -= glm::vec3(front.x, 0.0f, front.z) * (speed * deltaTime); break;
 	case CameraDirection::LEFT: position -= glm::normalize(glm::cross(front, up)) * (speed * deltaTime); break;
 	case CameraDirection::RIGHT: position += glm::normalize(glm::cross(front, up)) * (speed * deltaTime); break;
-	case CameraDirection::HEADUP: position += up * (speed * deltaTime); break;
-	case CameraDirection::DOWN: position -= up * (speed * deltaTime); break;
+	case CameraDirection::HEADUP: position += CameraConstVariable::UP * (speed * deltaTime); break;
+	case CameraDirection::DOWN: position -= CameraConstVariable::UP * (speed * deltaTime); break;
 	}
 
 	// std::cerr << "location: " << position.x << " " << position.y << " " << position.z << std::endl;

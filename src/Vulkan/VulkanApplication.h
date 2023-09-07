@@ -109,7 +109,7 @@ private:
     bool useRayTracer = true;
     glm::vec4 clearColor{ 0.5f, 0.8f, 0.9f, 1.0f };
     PushConstantRayTracing pcRay{};
-    PushConstantPost pcPost{1,1};
+    PushConstantPost pcPost{0,2,1.0,1.0};
 
     std::vector<const char*> getRequiredExtensions();
     static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
