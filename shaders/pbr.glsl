@@ -47,8 +47,10 @@ float GgxV(float alpha, float NdotL, float NdotV) {
     float G1_L = NdotL / (NdotL * (1 - k) + k);
     float G1_V = NdotV / (NdotV * (1 - k) + k);
     float G = G1_L * G1_V;
-
-    return G / (4 * NdotL * NdotV);
+    
+    if (G > 0.0)
+        return G / (4 * NdotL * NdotV);
+    else return 0.0;
 }
 
 vec3 GgxSample(float alpha, float r1, float r2) {

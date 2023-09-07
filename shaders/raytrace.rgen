@@ -45,7 +45,9 @@ void main()
         if( isnan(new_sample.r) || isnan(new_sample.g) || isnan(new_sample.b) )
             hitValue += vec3(0);
         else
-            hitValue += new_sample;
+        {
+            hitValue += clamp(new_sample, 0.0, 1.0);
+        }
     }
 
     hitValue = hitValue / NBSAMPLES;
