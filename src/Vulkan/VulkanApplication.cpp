@@ -94,7 +94,7 @@ void VulkanApplication::loadScene(const char* filename)
     auto vertShader = resManager->createShaderModule("shaders/spv/passthrough.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
 
     auto fragShader = resManager->createShaderModule("shaders/spv/post.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
-    fragShader.addShaderResourcePushConstant(0, sizeof(float));
+    fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantPost));
     fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 0);
 
     renderPipeline = std::make_unique<VulkanRenderPipeline>(*device, *resManager, std::move(vertShader), std::move(fragShader));
@@ -259,11 +259,33 @@ void VulkanApplication::mainLoop()
             changed |= sceneChanged;
         }
 
-        if (ImGui::CollapsingHeader("Camera"), ImGuiTreeNodeFlags_DefaultOpen)
+        if (ImGui::CollapsingHeader("Camera"))
         {
             cameraChanged |= ImGui::SliderAngle("Defocus Angle", &pcRay.defocusAngle, 0, 179.9);
             cameraChanged |= ImGui::SliderFloat("Focus Dist", &pcRay.focusDist, 0.0001, 20);
             changed |= cameraChanged;
+        }
+
+        if (ImGui::CollapsingHeader("Post-processing"))
+        {
+            const int denoisingAlgorithmSum = 3;
+            const char* denoisingAlgorithmStr[denoisingAlgorithmSum] = {
+                "Mean filtering",
+                "Median filter",
+                "Bilateral filter"
+            };
+            static bool enablePostProcessing = false;
+            ImGui::Checkbox("enable", &enablePostProcessing);
+            ImGui::Combo("Denoising algorithm", &pcPost.denoisingType, denoisingAlgorithmStr, denoisingAlgorithmSum);
+            pcPost.enable = enablePostProcessing ? 1 : 0;
+            if (pcPost.denoisingType == 2)
+            {
+                ImGui::Text("Bilateral Filter setting");
+                ImGui::SliderFloat("sigma space", &pcPost.sigmaSpace, 0.0, 5);
+                ImGui::SliderFloat("sigma color", &pcPost.sigmaColor, 0.0, 5);
+            }
+
+            
         }
 
         const auto& camera = scene->getActiveCamera();
@@ -379,7 +401,7 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
     auto aspectRatio = static_cast<float>(extent.width) / static_cast<float>(extent.height);
     vkCmdPushConstants(commandBuffer.getHandle(), 
         renderPipeline->getPipelineLayout().getHandle(), 
-        VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &aspectRatio);
+        VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pcPost), &pcPost);
 
     auto postDescSetHandle = postData.descriptorSets[frameIndex][0].getHandle();
     vkCmdBindDescriptorSets(commandBuffer.getHandle(), 

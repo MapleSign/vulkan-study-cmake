@@ -36,6 +36,16 @@ const std::vector<const char*> rtExtensions = {
     VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
 };
 
+// Push constant structure for the post-processing
+struct PushConstantPost
+{
+    int enable;
+    int denoisingType;
+
+    float sigmaSpace;  // For bilateral filter
+    float sigmaColor;  // For bilateral filter
+};
+
 class VulkanApplication
 {
 public:
@@ -99,6 +109,7 @@ private:
     bool useRayTracer = true;
     glm::vec4 clearColor{ 0.5f, 0.8f, 0.9f, 1.0f };
     PushConstantRayTracing pcRay{};
+    PushConstantPost pcPost{1,1};
 
     std::vector<const char*> getRequiredExtensions();
     static void mouse_callback(GLFWwindow* window, double xpos, double ypos);

@@ -99,6 +99,16 @@ struct PushConstantRay
     float zFar;         // For Lens Approximation
 };
 
+// Push constant structure for the post-processing
+struct PushConstantPost
+{
+    int enable;
+    int denoisingType;
+
+    float sigmaSpace;  // For bilateral filter
+    float sigmaColor;  // For bilateral filter
+};
+
 struct Vertex  // See ObjLoader, copy of VertexObj, could be compressed for device
 {
 	vec3 pos;

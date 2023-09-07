@@ -23,7 +23,7 @@ void VulkanRenderPipeline::prepare()
 
     std::vector<VkPushConstantRange> pushConstantRanges;
     std::unordered_map<uint32_t, std::vector<VulkanShaderResource>> descriptorResourceSets;
-
+    
     createLayoutInfo(shaderResources, pushConstantRanges, descriptorResourceSets);
 
     for (const auto& [setIndex, setResources] : descriptorResourceSets) {
