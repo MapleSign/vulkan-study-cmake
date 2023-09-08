@@ -107,6 +107,8 @@ struct PushConstantPost
 
     float sigmaSpace;  // For bilateral filter
     float sigmaColor;  // For bilateral filter
+
+    float exposure;
 };
 
 struct Vertex  // See ObjLoader, copy of VertexObj, could be compressed for device

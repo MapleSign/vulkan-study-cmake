@@ -270,6 +270,8 @@ void VulkanApplication::mainLoop()
 
         if (ImGui::CollapsingHeader("Post-processing"))
         {
+            ImGui::SliderFloat("Exposure", &pcPost.exposure, 0.0, 10.0);
+
             const int denoisingAlgorithmSum = 3;
             const char* denoisingAlgorithmStr[denoisingAlgorithmSum] = {
                 "Mean filtering",
@@ -284,7 +286,7 @@ void VulkanApplication::mainLoop()
             {
                 ImGui::Text("Bilateral Filter setting");
                 ImGui::SliderFloat("sigma space", &pcPost.sigmaSpace, 0.0, 5);
-                ImGui::SliderFloat("sigma color", &pcPost.sigmaColor, 0.0, 5);
+                ImGui::SliderFloat("sigma color", &pcPost.sigmaColor, 0.0, 100);
             }
 
             

@@ -37,10 +37,10 @@ float toGray(vec4 color)
     return 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
 }
 
-vec3 hdrToLdr(float gamma, vec3 hdrColor)
+vec3 hdrToLdr(float gamma, float exposure, vec3 hdrColor)
 {
     // Reinhard色调映射
-    vec3 mapped = hdrColor / (hdrColor + vec3(1.0));
+    vec3 mapped = vec3(1.0) - exp(-hdrColor * exposure);;
     // Gamma校正
     return pow(mapped, vec3(gamma));
 }
@@ -53,6 +53,8 @@ void main()
     ivec2 imageSize = textureSize(noisyTxt, 0);
     float offsetX = 1.0 / imageSize.x;
     float offsetY = 1.0 / imageSize.y;
+
+    vec3 color = hdrToLdr(gamma, pcPost.exposure, texture(noisyTxt, uv).xyz);
 
     vec2 offsets[9] = vec2[](
         vec2(-offsetX, offsetY),  // top-left
@@ -68,7 +70,7 @@ void main()
 
     if (pcPost.enable == 0)
     {
-        fragColor = vec4(hdrToLdr(gamma, texture(noisyTxt, uv).xyz), 1.0);
+        fragColor = vec4(color, 1.0);
     }
     else
     {
@@ -83,7 +85,7 @@ void main()
             vec3 sampleTex[9];
             for (int i = 0; i < 9; i++)
             {
-                sampleTex[i] = vec3(texture(noisyTxt, uv + offsets[i]));
+                sampleTex[i] = hdrToLdr(gamma, pcPost.exposure, texture(noisyTxt, uv + offsets[i]).xyz);
             }
             vec3 col = vec3(0.0);
             for (int i = 0; i < 9; i++)
@@ -103,7 +105,7 @@ void main()
 
             for (int i = 0; i < 9; i++)
             {
-                sampleTex = vec3(texture(noisyTxt, uv + offsets[i]));
+                sampleTex = hdrToLdr(gamma, pcPost.exposure, texture(noisyTxt, uv + offsets[i]).xyz);
                 sampleR[i] = sampleTex.x;
                 sampleG[i] = sampleTex.y;
                 sampleB[i] = sampleTex.z;
@@ -130,15 +132,14 @@ void main()
             vec3 sumC = vec3(0.);
             float halfSize = sigS * 2;
 
-            float c = toGray(texture(noisyTxt, uv)) * 255;
-            vec3 centerColor = hdrToLdr(gamma, texture(noisyTxt, uv).xyz) * 255;
+            vec3 centerColor = color * 255;
 
             for (float i = -halfSize; i <= halfSize; i++)
             {
                 for (float j = -halfSize; j <= halfSize; j++)
                 {
                     vec2 pos = vec2(i, j);
-                    vec3 offsetColor = hdrToLdr(gamma, texture(noisyTxt, uv + pos / imageSize).xyz) * 255;
+                    vec3 offsetColor = hdrToLdr(gamma, pcPost.exposure, texture(noisyTxt, uv + pos / imageSize).xyz) * 255;
 
                     float distS = length(pos);
                     // float distC = toGray(offsetColor) - c;
