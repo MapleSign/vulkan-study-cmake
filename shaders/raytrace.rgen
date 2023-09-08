@@ -46,7 +46,8 @@ void main()
             hitValue += vec3(0);
         else
         {
-            hitValue += clamp(new_sample, 0.0, 1.0);
+            // hitValue += clamp(new_sample, 0.0, 1.0);
+            hitValue += new_sample;
         }
     }
 
