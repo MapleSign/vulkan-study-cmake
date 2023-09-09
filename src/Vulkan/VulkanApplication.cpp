@@ -27,7 +27,19 @@ VulkanApplication::VulkanApplication() :
     glfwSetDropCallback(window->getHandle(), drop_callback);
     glfwSetScrollCallback(window->getHandle(), scroll_callback);
 
-    instance = std::make_unique<VulkanInstance>(getRequiredExtensions(), validationLayers);
+    if (enableValidationLayers) {
+        try {
+            instance = std::make_unique<VulkanInstance>(getRequiredExtensions(), validationLayers);
+        }
+        catch (const std::exception&) {
+            // try without validation layers
+            enableValidationLayers = false;
+            instance = std::make_unique<VulkanInstance>(getRequiredExtensions(), std::vector<const char*>());
+        }
+    }
+    else {
+        instance = std::make_unique<VulkanInstance>(getRequiredExtensions(), std::vector<const char*>());
+    }
 
     surface = window->createSurface(instance->getHandle());
 

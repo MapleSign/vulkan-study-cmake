@@ -50,7 +50,8 @@ VulkanInstance::VulkanInstance(std::vector<const char*> requiredExtensions, std:
 
     queryGPUs();
 
-    setupDebugMessenger();
+    if (!requiredValidationLayers.empty())
+        setupDebugMessenger();
 }
 
 VulkanInstance::~VulkanInstance() {
