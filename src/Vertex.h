@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 
 #include <vector>
-#include <Volk/volk.h>
+#include <volk.h>
 
 struct Vertex {
     glm::vec3 pos;

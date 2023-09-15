@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Volk/volk.h>
+#include <volk.h>
 #include <GLFW/glfw3.h>
 
 #include "../Vulkan/VulkanCommon.h"
