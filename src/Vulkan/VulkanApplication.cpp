@@ -84,8 +84,7 @@ void VulkanApplication::loadScene(const char* filename)
     reinterpret_cast<FPSCamera*>(scene->getActiveCamera())->rotate(0, 0);
     scene->loadGLTFFile(filename);
 
-    scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 0.f, 0.f });
-    scene->addPointLight("light1", { -40.f, 0.f, 10.f }, { 0.0f, 1.f, 0.f });
+    scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 1.f, 1.f });
 
     VkSampler sampler = resManager->createSampler();
     for (const auto& [name, model] : scene->getModelMap()) {
@@ -215,11 +214,11 @@ void VulkanApplication::mainLoop()
 {
     const char* sceneNames[] = { "Caustics", "Deferred", "GI", "PBR", "Shadow" };
     const char* sceneFilePath[] = {
-        "./assets/Caustics/Caustics.gltf",
-        "./assets/Deferred/Deferred.gltf",
-        "./assets/GI/GI.gltf",
-        "./assets/PBR/PBR.gltf",
-        "./assets/Shadow/Shadow.gltf",
+        "../amd/Caustics/Caustics.gltf",
+        "../amd/Deferred/Deferred.gltf",
+        "../amd/GI/GI.gltf",
+        "../amd/PBR/PBR.gltf",
+        "../amd/Shadow/Shadow.gltf",
     };
     int sceneSum = sizeof(sceneNames) / sizeof(char*);
 
@@ -300,8 +299,6 @@ void VulkanApplication::mainLoop()
                 ImGui::SliderFloat("sigma space", &pcPost.sigmaSpace, 0.0, 5);
                 ImGui::SliderFloat("sigma color", &pcPost.sigmaColor, 0.0, 100);
             }
-
-            
         }
 
         const auto& camera = scene->getActiveCamera();
@@ -313,6 +310,32 @@ void VulkanApplication::mainLoop()
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::Text("Frame index %d", pcRay.frame);
         ImGui::End();
+
+
+        auto dirLight = scene->getDirLight();
+        dirLight->direction = -pcRay.lightPosition;
+
+        auto ptLight = scene->getPointLight("light0");
+        ptLight->position = pcRay.lightPosition;
+
+        if (pcRay.lightType == 0) {
+            ptLight->ambient = pcRay.lightIntensity * glm::vec3(0.1f);
+            ptLight->diffuse = pcRay.lightIntensity * glm::vec3(1.0f);
+            ptLight->specular = pcRay.lightIntensity * glm::vec3(1.0f);
+
+            dirLight->ambient = glm::vec3(0.0f);
+            dirLight->diffuse = glm::vec3(0.0f);
+            dirLight->specular = glm::vec3(0.0f);
+        }
+        else {
+            dirLight->ambient = pcRay.lightIntensity * glm::vec3(0.1f);
+            dirLight->diffuse = pcRay.lightIntensity * glm::vec3(1.0f);
+            dirLight->specular = pcRay.lightIntensity * glm::vec3(1.0f);
+
+            ptLight->ambient = glm::vec3(0.0f);
+            ptLight->diffuse = glm::vec3(0.0f);
+            ptLight->specular = glm::vec3(0.0f);
+        }
 
         drawFrame();
 
