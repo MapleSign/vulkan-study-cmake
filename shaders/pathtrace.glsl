@@ -1,5 +1,5 @@
 #include "gltf_material.glsl"
-#include "raytrace_pbr.glsl"
+#include "pbr.glsl"
 
 vec3 pathtrace(Ray r,int maxDepth)
 {
@@ -53,7 +53,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         state.ffnormal = dot(state.normal, r.direction) <= 0.0 ? state.normal : -state.normal;
         createCoordinateSystem(state.ffnormal, state.tangent, state.bitangent);
         state.eta = dot(state.normal, state.ffnormal) > 0.0 ? (1.0 / state.mat.ior) : state.mat.ior;
-        // return state.normal;
+        // return (state.normal + vec3(1)) * 0.5;
         // return vec3(state.mat.roughness);
         // return vec3(state.mat.metallic);
         // return state.mat.f0;

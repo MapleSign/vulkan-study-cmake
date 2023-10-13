@@ -313,7 +313,7 @@ void VulkanApplication::mainLoop()
 
 
         auto dirLight = scene->getDirLight();
-        dirLight->direction = -pcRay.lightPosition;
+        dirLight->direction = pcRay.lightPosition;
 
         auto ptLight = scene->getPointLight("light0");
         ptLight->position = pcRay.lightPosition;

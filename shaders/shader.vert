@@ -37,14 +37,14 @@ void main() {
     mat4 model = objectBuffer.objects[id].model;
 
     gl_Position = globalUniform.global.proj * globalUniform.global.view * model * vec4(inPosition, 1.0);
-    fragNormal = mat3(transpose(inverse(model))) * inNormal;
+    mat3 normalMatrix = mat3(transpose(inverse(model)));
+    fragNormal = normalMatrix * inNormal;
     fragTexCoord = inTexCoord;
     fragPos = (model * vec4(inPosition, 1.0)).rgb;
 
-    vec3 T = normalize(vec3(model * vec4(inTangent, 0.0)));
-    vec3 N = normalize(vec3(model * vec4(inNormal, 0.0)));
-    vec3 B = normalize(cross(N, T) * inBitangent);
-    mat3 TBN = mat3(T, B, N);
+    vec3 T = normalMatrix * inTangent;
+    vec3 B = normalMatrix * inBitangent;
+    mat3 TBN = mat3(T, B, fragNormal);
     fragTBN = TBN;
     fragTangent = T;
     fragBitangent = B;

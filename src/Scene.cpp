@@ -271,9 +271,9 @@ PointLight* Scene::addPointLight(const char* name, glm::vec3 pos, glm::vec3 colo
 	light->diffuse = color * intensity;
 	light->specular = color * intensity;
 
-	light->constant = 1.0f;
-	light->linear = 0.09f;
-	light->quadratic = 0.032f;
+	light->constant = 0.0f;
+	light->linear = 0.0f;
+	light->quadratic = 0.2f;
 
 	pointLightMap.emplace(name, light);
 

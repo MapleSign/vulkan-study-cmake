@@ -8,6 +8,8 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_buffer_reference2 : require
 
+#extension GL_ARB_shader_clock : enable
+
 #include "raycommon.glsl"
 #include "random.glsl"
 #include "host_device.h"
@@ -47,8 +49,16 @@ layout(location = 0) out vec4 outColor;
 #include "gltf_material.glsl"
 #include "pbr.glsl"
 
-vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, Material mat);
-vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, Material mat);
+vec3 calcLight(inout State state, vec3 V, vec3 L, vec3 lightIntensity, float lightPdf) {
+    vec3 Li = vec3(0);
+    if (dot(state.ffnormal, L) > 0) {
+        BsdfSampleRec directBsdf;
+        directBsdf.f = PbrEval(state, V, state.ffnormal, L, directBsdf.pdf);
+        float misWeightBsdf = max(0, powerHeuristic(directBsdf.pdf, lightPdf)); // multi importance sampling weight
+        Li = misWeightBsdf * directBsdf.f * abs(dot(L, state.ffnormal)) * lightIntensity / directBsdf.pdf;
+    }
+    return Li;
+}
 
 void main() {
     ObjDesc objResource = objDesc.i[constants.objId];
@@ -60,64 +70,32 @@ void main() {
 
     State state;
     state.position = fragPos;
-    state.normal = fragNormal;
+    state.normal = normalize(fragNormal);
     state.texCoord = fragTexCoord;
-    state.tangent = fragTangent;
-    state.bitangent = fragBitangent;
+    state.tangent = normalize(fragTangent);
+    state.bitangent = normalize(fragBitangent);
     getMaterialsAndTextures(state, mat);
-
-    // vec3 norm = normalize(fragNormal);
-    vec3 norm = texture(textureSampler[mat.normalTexture], fragTexCoord).rgb;
-    norm = normalize(norm * 2.0 - 1.0);
-    norm = normalize(fragTBN * norm);
+    
+    if(mat.alphaMode == ALPHA_MASK && state.mat.alpha < mat.alphaCutoff) {
+        discard;
+    }
 
     vec3 viewDir = normalize(constants.viewPos - fragPos);
-
-    vec3 result = calcDirLight(dirLightInfo.dirLight, norm, viewDir, state.mat);
+    vec3 lightDir = -normalize(dirLightInfo.dirLight.direction);
+    state.ffnormal = dot(state.normal, viewDir) >= 0.0 ? state.normal : -state.normal;
+    
+    vec3 result = calcLight(state, viewDir, lightDir, dirLightInfo.dirLight.diffuse, 1.0);
+    
     for (int i = 0; i < constants.lightNum; ++i) {
-        result += calcPointLight(pointLightInfo.pointLights[i], norm, fragPos, viewDir, state.mat);    
+        PointLight light = pointLightInfo.pointLights[i];
+        lightDir = normalize(light.position - fragPos);
+        float distance = length(light.position - fragPos);
+        float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+        result += calcLight(state, viewDir, lightDir, light.diffuse * attenuation, 1.0);    
     }
 
     outColor = vec4(result + state.mat.emission, 1.0);
-    // outColor = vec4((norm + vec3(1)) * 0.5, 1.0);
-    // outColor = vec4(norm, 1.0);
-    // outColor = vec4(fragTexCoord, 0, 1);
+    // outColor = vec4((state.normal + vec3(1)) * 0.5, 1.0);
+    // outColor = vec4(state.texCoord, 0, 1);
     // outColor = vec4(1.0);
-}
-
-vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, Material mat)
-{
-    vec3 lightDir = normalize(light.direction);
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-    // diffuse shading
-    float diff = max(dot(normal, lightDir), 0.0);
-    // specular shading
-//    vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
-    // combine results
-    vec3 ambient = light.ambient * mat.albedo;
-    vec3 diffuse = light.diffuse * diff * mat.albedo;
-    vec3 specular = vec3(0);
-    return (ambient + diffuse + specular);
-}
-
-// calculates the color when using a point light.
-vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, Material mat)
-{
-    vec3 lightDir = normalize(light.position - fragPos);
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-    // diffuse shading
-    float diff = max(dot(normal, lightDir), 0.0);
-    // specular shading
-//    vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
-    // attenuation
-    float distance = length(light.position - fragPos);
-    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    
-    // combine results
-    vec3 ambient = light.ambient * mat.albedo;
-    vec3 diffuse = light.diffuse * diff * mat.albedo;
-    vec3 specular = vec3(0);
-    
-    return attenuation * (ambient + diffuse + specular);
 }
