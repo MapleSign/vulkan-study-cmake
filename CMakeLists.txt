@@ -23,12 +23,10 @@ add_subdirectory(src)
 
 find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
 
-## find all the shader files under the shaders folder
-# file(GLOB_RECURSE GLSL_SOURCE_FILES
-#     "${PROJECT_SOURCE_DIR}/shaders/*.frag"
-#     "${PROJECT_SOURCE_DIR}/shaders/*.vert"
-#     "${PROJECT_SOURCE_DIR}/shaders/*.comp"
-#     )
+# find all the shader files under the shaders folder
+file(GLOB_RECURSE GLSL_INCLUDE_FILES
+    "${PROJECT_SOURCE_DIR}/shaders/*.glsl"
+    )
 
 set(GLSL_SOURCE_FILES 
     "${PROJECT_SOURCE_DIR}/shaders/shader.frag"

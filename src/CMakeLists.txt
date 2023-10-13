@@ -5,6 +5,7 @@ set(ENGINE_FILES
     Scene.h
     Vertex.h
     Texture.h
+    Light.h
 
     Camera.cpp
     Mesh.cpp

@@ -28,7 +28,9 @@ layout(location = 4) in vec3 inBitangent;
 layout(location = 0) out vec3 fragNormal;
 layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragPos;
-layout(location = 3) out mat3 fragTBN;
+layout(location = 3) out vec3 fragTangent;
+layout(location = 4) out vec3 fragBitangent;
+layout(location = 5) out mat3 fragTBN; // assigned multiple location 5,6,7
 
 void main() {
     int id = constants.objId;
@@ -44,4 +46,6 @@ void main() {
     vec3 B = normalize(cross(N, T) * inBitangent);
     mat3 TBN = mat3(T, B, N);
     fragTBN = TBN;
+    fragTangent = T;
+    fragBitangent = B;
 }

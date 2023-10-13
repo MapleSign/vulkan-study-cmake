@@ -1,6 +1,5 @@
 #include "gltf_material.glsl"
-#include "pbr.glsl"
-
+#include "raytrace_pbr.glsl"
 
 vec3 pathtrace(Ray r,int maxDepth)
 {

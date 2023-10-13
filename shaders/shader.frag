@@ -8,6 +8,8 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_buffer_reference2 : require
 
+#include "raycommon.glsl"
+#include "random.glsl"
 #include "host_device.h"
 
 layout(push_constant) uniform PushConstants {
@@ -36,12 +38,17 @@ layout(set = 0, binding = eTextures) uniform sampler2D[] textureSampler;
 layout(location = 0) in vec3 fragNormal;
 layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragPos;
-layout(location = 3) in mat3 fragTBN;
+layout(location = 3) in vec3 fragTangent;
+layout(location = 4) in vec3 fragBitangent;
+layout(location = 5) in mat3 fragTBN; // assigned multiple location 5,6,7
 
 layout(location = 0) out vec4 outColor;
 
-vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, GltfMaterial mat);
-vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, GltfMaterial mat);
+#include "gltf_material.glsl"
+#include "pbr.glsl"
+
+vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, Material mat);
+vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, Material mat);
 
 void main() {
     ObjDesc objResource = objDesc.i[constants.objId];
@@ -51,6 +58,14 @@ void main() {
     int matIndex = matIndices.i[gl_PrimitiveID];
     GltfMaterial mat = materials.m[matIndex];
 
+    State state;
+    state.position = fragPos;
+    state.normal = fragNormal;
+    state.texCoord = fragTexCoord;
+    state.tangent = fragTangent;
+    state.bitangent = fragBitangent;
+    getMaterialsAndTextures(state, mat);
+
     // vec3 norm = normalize(fragNormal);
     vec3 norm = texture(textureSampler[mat.normalTexture], fragTexCoord).rgb;
     norm = normalize(norm * 2.0 - 1.0);
@@ -58,19 +73,19 @@ void main() {
 
     vec3 viewDir = normalize(constants.viewPos - fragPos);
 
-    vec3 result = calcDirLight(dirLightInfo.dirLight, norm, viewDir, mat);
+    vec3 result = calcDirLight(dirLightInfo.dirLight, norm, viewDir, state.mat);
     for (int i = 0; i < constants.lightNum; ++i) {
-        result += calcPointLight(pointLightInfo.pointLights[i], norm, fragPos, viewDir, mat);    
+        result += calcPointLight(pointLightInfo.pointLights[i], norm, fragPos, viewDir, state.mat);    
     }
 
-    outColor = vec4(result, 1.0);
+    outColor = vec4(result + state.mat.emission, 1.0);
     // outColor = vec4((norm + vec3(1)) * 0.5, 1.0);
     // outColor = vec4(norm, 1.0);
     // outColor = vec4(fragTexCoord, 0, 1);
     // outColor = vec4(1.0);
 }
 
-vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, GltfMaterial mat)
+vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, Material mat)
 {
     vec3 lightDir = normalize(light.direction);
     vec3 halfwayDir = normalize(lightDir + viewDir);
@@ -80,24 +95,14 @@ vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, GltfMaterial mat)
 //    vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
     // combine results
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-    if (mat.shadingModel == 1) {
-        ambient = light.ambient * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
-        diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
-        specular = light.specular * spec * vec3(texture(textureSampler[mat.khrSpecularGlossinessTexture], fragTexCoord));
-    }
-    else {
-        ambient = light.ambient * vec3(texture(textureSampler[mat.pbrBaseColorTexture], fragTexCoord));
-        diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.pbrBaseColorTexture], fragTexCoord));
-        specular = vec3(0);
-    }
+    vec3 ambient = light.ambient * mat.albedo;
+    vec3 diffuse = light.diffuse * diff * mat.albedo;
+    vec3 specular = vec3(0);
     return (ambient + diffuse + specular);
 }
 
 // calculates the color when using a point light.
-vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, GltfMaterial mat)
+vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, Material mat)
 {
     vec3 lightDir = normalize(light.position - fragPos);
     vec3 halfwayDir = normalize(lightDir + viewDir);
@@ -110,19 +115,9 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, G
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));    
     // combine results
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-    if (mat.shadingModel == 1) {
-        ambient = light.ambient * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
-        diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.khrDiffuseTexture], fragTexCoord));
-        specular = light.specular * spec * vec3(texture(textureSampler[mat.khrSpecularGlossinessTexture], fragTexCoord));
-    }
-    else {
-        ambient = light.ambient * vec3(texture(textureSampler[mat.pbrBaseColorTexture], fragTexCoord));
-        diffuse = light.diffuse * diff * vec3(texture(textureSampler[mat.pbrBaseColorTexture], fragTexCoord));
-        specular = vec3(0);
-    }
+    vec3 ambient = light.ambient * mat.albedo;
+    vec3 diffuse = light.diffuse * diff * mat.albedo;
+    vec3 specular = vec3(0);
     
     return attenuation * (ambient + diffuse + specular);
 }

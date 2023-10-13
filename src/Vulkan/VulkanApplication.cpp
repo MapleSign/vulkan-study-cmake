@@ -258,7 +258,7 @@ void VulkanApplication::mainLoop()
 
         if (rtSupport)
         {
-            if (ImGui::CollapsingHeader("Ray Tracing"), ImGuiTreeNodeFlags_DefaultOpen)
+            if (ImGui::CollapsingHeader("Ray Tracing", ImGuiTreeNodeFlags_DefaultOpen))
             {
                 changed |= ImGui::SliderInt("Max Iteration", &maxFrames, 1, 10000);
                 changed |= ImGui::SliderInt("Max Ray Depth", &pcRay.maxDepth, 1, 10);
@@ -266,7 +266,7 @@ void VulkanApplication::mainLoop()
             }
         }
 
-        if (ImGui::CollapsingHeader("Scenes"), ImGuiTreeNodeFlags_DefaultOpen)
+        if (ImGui::CollapsingHeader("Scenes", ImGuiTreeNodeFlags_DefaultOpen))
         {
             sceneChanged = ImGui::Combo("Scene", &sceneItem, sceneNames, sceneSum);
             changed |= sceneChanged;
