@@ -90,9 +90,10 @@ void getSpecularGlossiness(inout State state, in GltfMaterial material)
 
     vec4 diffuseColor = material.khrDiffuseFactor;
     if(material.khrDiffuseTexture > -1)
-    diffuseColor *= texture(textureSampler[nonuniformEXT(material.khrDiffuseTexture)], state.texCoord);
+        diffuseColor *= texture(textureSampler[nonuniformEXT(material.khrDiffuseTexture)], state.texCoord);
 
     baseColor.rgb = diffuseColor.rgb * oneMinusSpecularStrength;
+    baseColor.a = diffuseColor.a;
     metallic = solveMetallic(diffuseColor.rgb, specularColor, oneMinusSpecularStrength);
 
     state.mat.albedo    = baseColor.xyz;

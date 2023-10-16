@@ -28,6 +28,12 @@ layout(set = 1, binding = 1) uniform PointLightInfo {
     PointLight pointLights[MAX_POINT_LIGHT_NUM];
 } pointLightInfo;
 
+layout(set = 1, binding = 2) uniform _ShadowUniform {
+    ShadowData shadowUniform;
+};
+
+layout(set = 1, binding = 3) uniform sampler2D shadowMapSampler;
+
 layout(buffer_reference, scalar) buffer Vertices { Vertex v[]; }; // Positions of an object
 layout(buffer_reference, scalar) buffer Indices { ivec3 i[]; }; // Triangle indices
 layout(buffer_reference, scalar) buffer Materials { GltfMaterial m[]; }; // Array of all materials on an object
@@ -42,7 +48,7 @@ layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragPos;
 layout(location = 3) in vec3 fragTangent;
 layout(location = 4) in vec3 fragBitangent;
-layout(location = 5) in mat3 fragTBN; // assigned multiple location 5,6,7
+layout(location = 5) in vec4 fragPosLightSpace;
 
 layout(location = 0) out vec4 outColor;
 
@@ -58,6 +64,28 @@ vec3 calcLight(inout State state, vec3 V, vec3 L, vec3 lightIntensity, float lig
         Li = misWeightBsdf * directBsdf.f * abs(dot(L, state.ffnormal)) * lightIntensity / directBsdf.pdf;
     }
     return Li;
+}
+
+float calcShadow(vec4 fragPosLightSpace) {
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    projCoords.xy = projCoords.xy * 0.5 + 0.5;
+
+    float closestDepth = texture(shadowMapSampler, projCoords.xy).r;
+    float currentDepth = projCoords.z - shadowUniform.bias;
+    float shadow = 0.0;
+
+    vec2 texelSize = 1.0 / textureSize(shadowMapSampler, 0);
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+            float pcfDepth = texture(shadowMapSampler, projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += currentDepth > pcfDepth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
+
+    return shadow;
 }
 
 void main() {
@@ -84,7 +112,8 @@ void main() {
     vec3 lightDir = -normalize(dirLightInfo.dirLight.direction);
     state.ffnormal = dot(state.normal, viewDir) >= 0.0 ? state.normal : -state.normal;
     
-    vec3 result = calcLight(state, viewDir, lightDir, dirLightInfo.dirLight.diffuse, 1.0);
+    float shadow = calcShadow(fragPosLightSpace);
+    vec3 result = (1.0 - shadow) * calcLight(state, viewDir, lightDir, dirLightInfo.dirLight.diffuse, 1.0);
     
     for (int i = 0; i < constants.lightNum; ++i) {
         PointLight light = pointLightInfo.pointLights[i];
@@ -95,6 +124,7 @@ void main() {
     }
 
     outColor = vec4(result + state.mat.emission, 1.0);
+    // outColor = vec4(vec3(shadow), 1.0);
     // outColor = vec4((state.normal + vec3(1)) * 0.5, 1.0);
     // outColor = vec4(state.texCoord, 0, 1);
     // outColor = vec4(1.0);

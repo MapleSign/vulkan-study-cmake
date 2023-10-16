@@ -1,4 +1,4 @@
-#version 450
+#version 460
 
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_EXT_scalar_block_layout : enable
@@ -29,25 +29,14 @@ layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec3 inTangent;
 layout(location = 4) in vec3 inBitangent;
 
-layout(location = 0) out vec3 fragNormal;
-layout(location = 1) out vec2 fragTexCoord;
-layout(location = 2) out vec3 fragPos;
-layout(location = 3) out vec3 fragTangent;
-layout(location = 4) out vec3 fragBitangent;
-layout(location = 5) out vec4 fragPosLightSpace;
+layout(location = 0) out vec2 fragCoord;
 
-void main() {
+void main()
+{
     int id = constants.objId;
     mat4 model = objectBuffer.objects[id].model;
 
-    gl_Position = globalUniform.global.proj * globalUniform.global.view * model * vec4(inPosition, 1.0);
-    mat3 normalMatrix = mat3(transpose(inverse(model)));
-    fragNormal = normalMatrix * inNormal;
-    fragTexCoord = inTexCoord;
-    fragPos = (model * vec4(inPosition, 1.0)).rgb;
-
-    fragTangent = normalMatrix * inTangent;
-    fragBitangent = normalMatrix * inBitangent;
-
-    fragPosLightSpace = shadowUniform.lightSpace * vec4(fragPos, 1.0);
+    gl_Position = shadowUniform.lightSpace * model * vec4(inPosition, 1.0);
+    
+    fragCoord = inTexCoord;
 }

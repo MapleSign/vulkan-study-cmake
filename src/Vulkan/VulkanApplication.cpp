@@ -6,8 +6,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -45,7 +43,8 @@ VulkanApplication::VulkanApplication() :
 
     VulkanPhysicalDevice* gpu;
     auto requiredExtensions = deviceExtensions;
-    requiredExtensions.insert(requiredExtensions.end(), rtExtensions.begin(), rtExtensions.end());
+    rtSupport = false;
+    //requiredExtensions.insert(requiredExtensions.end(), rtExtensions.begin(), rtExtensions.end());
     try {
         // check if there is a GPU supporting all extensions
         gpu = &instance->getSuitableGPU(surface, requiredExtensions);
@@ -53,6 +52,7 @@ VulkanApplication::VulkanApplication() :
     catch (const std::exception&) {
         // if not remove RT and try again
         rtSupport = false;
+        useRayTracer = false;
         requiredExtensions = deviceExtensions;
         gpu = &instance->getSuitableGPU(surface, requiredExtensions);
     }
@@ -417,10 +417,10 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
 {
     commandBuffer.begin(0);
 
-    if (!useRayTracer) {
+    if (!rtSupport || !useRayTracer) {
         graphicBuilder->draw(commandBuffer, clearColor);
     }
-    else {
+    else if (rtSupport) {
         updateFrameCount();
         if (pcRay.frame < maxFrames) {
             pcRay.clearColor = clearColor;

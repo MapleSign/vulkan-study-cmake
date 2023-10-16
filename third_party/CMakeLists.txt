@@ -8,6 +8,8 @@ option(GLFW_INSTALL OFF)
 option(BUILD_SHARED_LIBS ON)
 add_subdirectory(glfw)
 
+add_definitions(-DGLM_FORCE_RADIANS)
+add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 add_library(glm INTERFACE)
 add_library(vma INTERFACE)
 add_library(stb INTERFACE)

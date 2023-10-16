@@ -31,7 +31,7 @@ VulkanRenderPass::VulkanRenderPass(const VulkanDevice& device,
     }
 
     std::vector<VkAttachmentReference> colorRefs;
-    VkAttachmentReference depthRef;
+    VkAttachmentReference depthRef{-1};
     for (size_t i = 0; i < attachDescs.size(); ++i) {
         VkAttachmentReference ref{};
         ref.attachment = toU32(i);
@@ -51,8 +51,8 @@ VulkanRenderPass::VulkanRenderPass(const VulkanDevice& device,
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = toU32(colorRefs.size());
-    subpass.pColorAttachments = colorRefs.data();
-    subpass.pDepthStencilAttachment = &depthRef;
+    subpass.pColorAttachments = colorRefs.empty() ? nullptr : colorRefs.data();
+    subpass.pDepthStencilAttachment = depthRef.attachment == -1 ? nullptr : &depthRef;
 
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;

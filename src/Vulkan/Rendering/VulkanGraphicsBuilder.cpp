@@ -4,6 +4,8 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent) :
     device{ device }, resManager{ resManager }, extent{ extent }
 {
+    shadowPass = std::make_unique<ShadowRenderPass>(device, resManager, VkExtent2D{ 4096, 4096 });
+
     VulkanImage offscreenColorImage{
             device, convert2Dto3D(extent),
             VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
@@ -24,9 +26,12 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
 
     auto vertShader = resManager.createShaderModule("shaders/spv/shader.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
     vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+
     vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1, 
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
     vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
+
+    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
 
     auto fragShader = resManager.createShaderModule("shaders/spv/shader.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
     fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
@@ -38,6 +43,8 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
 
     fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 0);
     fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 1);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 1, 3);
 
     renderPipeline = std::make_unique<VulkanRenderPipeline>(device, resManager, std::move(vertShader), std::move(fragShader));
     renderPipeline->prepare();
@@ -76,9 +83,22 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     lightData = resManager.requireSceneData(*renderPipeline->getDescriptorSetLayouts()[1], 1,
         {
             {0, {device.getGPU().pad_uniform_buffer_size(sizeof(DirLight)), 1}},
-            {1, {device.getGPU().pad_uniform_buffer_size(sizeof(PointLight) * 16), 1}}
+            {1, {device.getGPU().pad_uniform_buffer_size(sizeof(PointLight) * 16), 1}},
+            {2, {device.getGPU().pad_uniform_buffer_size(sizeof(ShadowRenderPass::ShadowData)), 1}},
         }
     );
+
+    VkSamplerCreateInfo shadowSamplerInfo{};
+    auto shadowSampler = resManager.createSampler();
+    for (auto& dset : lightData.descriptorSets) {
+        dset->addWrite(3, 
+            VkDescriptorImageInfo{
+                shadowSampler,
+                shadowPass->getShadowDepth()->getHandle(),
+                VK_IMAGE_LAYOUT_GENERAL
+            }
+        );
+    }
     lightData.update();
 }
 
@@ -130,15 +150,29 @@ void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
     }
     buffer->unmap();
 
-    const DirLight* dirLight = scene->getDirLight();
-    lightData.uniformBuffers[currentImage][0]->update(dirLight, device.getGPU().pad_uniform_buffer_size(sizeof(DirLight)), 0);
+    // Light Data
+    size_t offset = 0;
+    size_t size = 0;
 
-    auto offset = device.getGPU().pad_uniform_buffer_size(sizeof(DirLight));
+    size = device.getGPU().pad_uniform_buffer_size(sizeof(DirLight));
+    const DirLight* dirLight = scene->getDirLight();
+    lightData.uniformBuffers[currentImage][0]->update(dirLight, size, 0);
+
+    offset += size;
     std::vector<PointLight> pointLights;
     for (const auto& [name, light] : scene->getPointLightMap()) {
         pointLights.push_back(*light);
     }
-    lightData.uniformBuffers[currentImage][0]->update(pointLights.data(), device.getGPU().pad_uniform_buffer_size(sizeof(PointLight) * pointLights.size()), offset);
+    size = device.getGPU().pad_uniform_buffer_size(sizeof(PointLight) * pointLights.size());
+    lightData.uniformBuffers[currentImage][0]->update(pointLights.data(), size, offset);
+
+    offset += device.getGPU().pad_uniform_buffer_size(sizeof(PointLight) * 16);
+    auto lightProj = glm::ortho(-20.f, 20.f, -20.f, 20.f, 0.1f, 60.f);
+    lightProj[1][1] *= -1;
+    auto lightView = glm::lookAt(dirLight->direction * -50.f, glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));
+    ShadowRenderPass::ShadowData shadowData{ lightProj * lightView };
+    size = device.getGPU().pad_uniform_buffer_size(sizeof(shadowData));
+    lightData.uniformBuffers[currentImage][0]->update(&shadowData, size, offset);
 
     pushConstants.lightNum = scene->getPointLightMap().size();
     pushConstants.viewPos = camera->position;
@@ -146,6 +180,8 @@ void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
 
 void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearColor)
 {
+    shadowPass->draw(cmdBuf, *globalData.descriptorSets[0], *lightData.descriptorSets[0]);
+
     std::vector<VkClearValue> clearValues{ 2 };
     //clearValues[0].color = {{0.2f, 0.3f, 0.3f, 1.0f}};
     clearValues[0].color = { {clearColor.r, clearColor.g, clearColor.b, clearColor.a} };
@@ -162,6 +198,110 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
         0, 1, &globalDescriptorSetHandle, 0, nullptr);
 
     auto lightDescriptorSetHandle = lightData.descriptorSets[0]->getHandle();
+    vkCmdBindDescriptorSets(cmdBuf.getHandle(),
+        renderPipeline->getGraphicsPipeline().getBindPoint(),
+        renderPipeline->getPipelineLayout().getHandle(),
+        1, 1, &lightDescriptorSetHandle, 0, nullptr);
+
+    for (size_t i = 0; i < resManager.getRenderMeshNum(); ++i) {
+        const auto& renderMesh = resManager.getRenderMesh(i);
+        pushConstants.objId = i;
+
+        const auto& pipelineLayout = renderPipeline->getPipelineLayout();
+        vkCmdPushConstants(cmdBuf.getHandle(), pipelineLayout.getHandle(),
+            pipelineLayout.getPushConstantRanges()[0].stageFlags, 0, sizeof(PushConstantRaster), &pushConstants);
+
+        vkCmdBindVertexBuffers(cmdBuf.getHandle(), 0, 1, &renderMesh.vertexBuffer.buffer, &renderMesh.vertexBuffer.offset);
+
+        vkCmdBindIndexBuffer(cmdBuf.getHandle(), renderMesh.indexBuffer.buffer, renderMesh.indexBuffer.offset, renderMesh.indexType);
+
+
+        cmdBuf.drawIndexed(renderMesh.indexNum, 1, 0, 0, 0);
+    }
+
+
+    cmdBuf.endRenderPass();
+}
+
+ShadowRenderPass::ShadowRenderPass(
+    const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent) :
+    device{ device }, resManager{ resManager }, extent{ extent }
+{
+    auto depthFormat = findDepthFormat(device.getGPU().getHandle());
+    VulkanImage shadowDepthImage{
+        device, convert2Dto3D(extent), depthFormat, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+    };
+    std::vector<VulkanImage> images{};
+    images.push_back(std::move(shadowDepthImage));
+    renderTarget = std::make_unique<VulkanRenderTarget>(std::move(images));
+
+    shadowDepth = &renderTarget->getViews()[0];
+
+    auto attatchments = renderTarget->getAttatchments();
+    attatchments[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+    std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
+    renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos);
+
+    framebuffer = std::make_unique<VulkanFramebuffer>(device, *renderTarget, *renderPass);
+
+    auto vertShader = resManager.createShaderModule("shaders/spv/shadow.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
+    vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+
+    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1,
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
+
+    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
+
+    auto fragShader = resManager.createShaderModule("shaders/spv/shadow.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+    fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+
+    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1,
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(),
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+
+    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 0);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 1);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 1, 3);
+
+    renderPipeline = std::make_unique<VulkanRenderPipeline>(device, resManager, std::move(vertShader), std::move(fragShader));
+    renderPipeline->prepare();
+    renderPipeline->recreatePipeline(extent, *renderPass);
+}
+
+ShadowRenderPass::~ShadowRenderPass()
+{
+    renderPipeline.reset();
+
+    framebuffer.reset();
+    renderPass.reset();
+    renderTarget.reset();
+}
+
+void ShadowRenderPass::update(float deltaTime, const Scene* scene)
+{
+}
+
+void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet)
+{
+    std::vector<VkClearValue> clearValues{ 1 };
+    //clearValues[0].color = {{0.2f, 0.3f, 0.3f, 1.0f}};
+    clearValues[0].depthStencil = { 1.0f, 0 };
+    cmdBuf.beginRenderPass(*renderTarget, *renderPass, *framebuffer, clearValues, VK_SUBPASS_CONTENTS_INLINE);
+
+
+    cmdBuf.bindPipeline(renderPipeline->getGraphicsPipeline());
+
+    auto globalDescriptorSetHandle = globalSet.getHandle();
+    vkCmdBindDescriptorSets(cmdBuf.getHandle(),
+        renderPipeline->getGraphicsPipeline().getBindPoint(),
+        renderPipeline->getPipelineLayout().getHandle(),
+        0, 1, &globalDescriptorSetHandle, 0, nullptr);
+
+    auto lightDescriptorSetHandle = lightSet.getHandle();
     vkCmdBindDescriptorSets(cmdBuf.getHandle(),
         renderPipeline->getGraphicsPipeline().getBindPoint(),
         renderPipeline->getPipelineLayout().getHandle(),

@@ -33,6 +33,8 @@ set(GLSL_SOURCE_FILES
     "${PROJECT_SOURCE_DIR}/shaders/shader.vert"
     "${PROJECT_SOURCE_DIR}/shaders/passthrough.vert"
     "${PROJECT_SOURCE_DIR}/shaders/post.frag"
+    "${PROJECT_SOURCE_DIR}/shaders/shadow.vert"
+    "${PROJECT_SOURCE_DIR}/shaders/shadow.frag"
 
     "${PROJECT_SOURCE_DIR}/shaders/raytrace.rgen"
     "${PROJECT_SOURCE_DIR}/shaders/raytrace.rmiss"

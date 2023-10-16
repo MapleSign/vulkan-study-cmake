@@ -75,6 +75,11 @@ struct ObjectData {
     mat4 model;
 };
 
+struct ShadowData {
+    mat4 lightSpace;
+    float bias;
+};
+
 // Push constant structure for the raster
 struct PushConstantRaster
 {
