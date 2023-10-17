@@ -186,6 +186,7 @@ public:
     VulkanDescriptorSet& requireDescriptorSet(const VulkanDescriptorSetLayout& descSetLayout, const BindingMap<VkDescriptorBufferInfo>& bufferInfos, const BindingMap<VkDescriptorImageInfo>& imageInfos);
     VulkanDescriptorPool& requireDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
     VulkanTexture& requireTexture(const char* filename, VkSampler sampler);
+    VulkanTexture& requireCubeMapTexture(std::vector<std::string> filenames, VkSampler sampler);
 
     VkSampler createSampler(VkSamplerCreateInfo* createInfo = nullptr);
     VulkanShaderModule createShaderModule(const char* filepath, VkShaderStageFlagBits stageFlag, const char* name);

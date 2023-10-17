@@ -281,6 +281,13 @@ VulkanTexture& VulkanResourceManager::requireTexture(const char* filename, VkSam
     return *texture;
 }
 
+VulkanTexture& VulkanResourceManager::requireCubeMapTexture(std::vector<std::string> filenames, VkSampler sampler)
+{
+    auto texture = new VulkanTexture(device, filenames, sampler, commandPool, device.getGraphicsQueue());
+    textureMap.emplace_back(texture);
+    return *texture;
+}
+
 VkSampler VulkanResourceManager::createSampler(VkSamplerCreateInfo* createInfo)
 {
     VkSampler sampler;

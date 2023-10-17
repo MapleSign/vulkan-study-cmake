@@ -91,7 +91,7 @@ void VulkanCommandBuffer::copyBufferToImage(const VulkanBuffer& buffer, const Vu
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.imageSubresource.mipLevel = 0;
 	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = 1;
+	region.imageSubresource.layerCount = image.getArrayLayers();
 
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = image.getExtent();

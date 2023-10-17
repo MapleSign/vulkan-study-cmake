@@ -6,9 +6,7 @@ const VulkanRenderTarget::CreateFunc VulkanRenderTarget::DEFAULT_CREATE_FUNC = [
     VulkanImage depthImage{ 
         image.getDevice(), image.getExtent(), 
         depthFormat, VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        1
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
     };
 
     std::vector<VulkanImage> images;

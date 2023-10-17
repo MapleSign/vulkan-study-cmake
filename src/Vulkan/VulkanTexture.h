@@ -11,7 +11,21 @@
 class VulkanTexture
 {
 public:
-    VulkanTexture(const VulkanDevice& device, const char* filename, VkSampler sampler, const VulkanCommandPool& commandPool, const VulkanQueue& queue);
+    VulkanTexture(
+        const VulkanDevice& device, 
+        const char* filename, 
+        VkSampler sampler, 
+        const VulkanCommandPool& commandPool, 
+        const VulkanQueue& queue
+    );
+
+    VulkanTexture(
+        const VulkanDevice& device, 
+        const std::vector<std::string> filenames, 
+        VkSampler sampler, 
+        const VulkanCommandPool& commandPool, 
+        const VulkanQueue& queue
+    );
 
     ~VulkanTexture();
 
@@ -24,4 +38,5 @@ private:
     std::unique_ptr<VulkanImageView> imageView;
     VkSampler sampler;
     uint32_t mipLevels;
+    uint32_t arrayLayers;
 };

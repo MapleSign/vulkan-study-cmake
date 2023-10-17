@@ -3,19 +3,22 @@
 #include "VulkanImage.h"
 
 VulkanImage::VulkanImage(const VulkanDevice& device, const VkExtent3D& extent, VkFormat format, VkImageTiling tiling,
-    VkImageUsageFlags usage, VkMemoryPropertyFlags properties, uint32_t mipLevels) :
-    extent{ extent }, device{ device }, format{ format }, sampleCount{ VK_SAMPLE_COUNT_1_BIT }, usage{ usage }, mipLevels{ mipLevels }
+    VkImageUsageFlags usage, VkImageCreateFlags flags, VkMemoryPropertyFlags properties,
+    uint32_t mipLevels, uint32_t arrayLayers) :
+    extent{ extent }, device{ device }, format{ format }, sampleCount{ VK_SAMPLE_COUNT_1_BIT },
+    usage{ usage }, flags{ flags }, mipLevels{ mipLevels }, arrayLayers{ arrayLayers }
 {
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
     imageInfo.extent = extent;
     imageInfo.mipLevels = mipLevels;
-    imageInfo.arrayLayers = 1;
+    imageInfo.arrayLayers = arrayLayers;
     imageInfo.format = format;
     imageInfo.tiling = tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = usage;
+    imageInfo.flags = flags;
     imageInfo.samples = sampleCount;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -43,14 +46,17 @@ VulkanImage::VulkanImage(const VulkanDevice& device, VkImage handle, const VkExt
 {
 }
 
-VulkanImage::VulkanImage(VulkanImage&& other) noexcept:
-    device{other.device}, 
-    image{other.image}, 
-    imageMemory{other.imageMemory},
-    extent{other.extent},
-    format{ other.format }, 
-    usage{ other.usage }, 
-    sampleCount{ other.sampleCount }
+VulkanImage::VulkanImage(VulkanImage&& other) noexcept :
+    device{ other.device },
+    image{ other.image },
+    imageMemory{ other.imageMemory },
+    extent{ other.extent },
+    format{ other.format },
+    usage{ other.usage },
+    flags{ other.flags },
+    sampleCount{ other.sampleCount },
+    mipLevels{ other.mipLevels },
+    arrayLayers{ other.arrayLayers }
 {
     other.image = VK_NULL_HANDLE;
     other.imageMemory = VK_NULL_HANDLE;
@@ -74,6 +80,11 @@ VkImageUsageFlags VulkanImage::getUsage() const { return usage; }
 uint32_t VulkanImage::getMipLevels() const
 {
     return mipLevels;
+}
+
+uint32_t VulkanImage::getArrayLayers() const
+{
+    return arrayLayers;
 }
 
 const VulkanDevice &VulkanImage::getDevice() const { return device; }

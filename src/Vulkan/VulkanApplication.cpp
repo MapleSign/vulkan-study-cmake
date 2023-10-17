@@ -125,6 +125,17 @@ void VulkanApplication::loadScene(const char* filename)
 
     if (rtSupport)
         buildRayTracing();
+
+    resManager->requireCubeMapTexture(
+        { 
+            "assets/textures/skybox/right.jpg", 
+            "assets/textures/skybox/left.jpg",
+            "assets/textures/skybox/bottom.jpg", 
+            "assets/textures/skybox/top.jpg",
+            "assets/textures/skybox/front.jpg", 
+            "assets/textures/skybox/back.jpg"
+        }, 
+        sampler);
 }
 
 VulkanApplication::~VulkanApplication()
