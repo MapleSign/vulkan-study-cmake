@@ -137,6 +137,8 @@ void VulkanCommandPool::generateMipmaps(const VulkanImage& image, const VulkanQu
         throw std::runtime_error("texture image format does not support linear blitting!");
     }
 
+    uint32_t arrayLayers = image.getArrayLayers();
+
     auto commandBuffer = beginSingleTimeCommands();
 
     // we will resue this barrier info
@@ -146,78 +148,57 @@ void VulkanCommandPool::generateMipmaps(const VulkanImage& image, const VulkanQu
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = arrayLayers;
     barrier.subresourceRange.levelCount = 1;
 
     int32_t mipWidth = image.getExtent().width;
     int32_t mipHeight = image.getExtent().height;
 
-    for (uint32_t layer = 0; layer < image.getArrayLayers(); ++layer) {
-        // generate mipmap for this layer
-        barrier.subresourceRange.baseArrayLayer = layer;
-
-        for (uint32_t i = 1; i < image.getMipLevels(); i++) {
-            // generate mipmap i, trans from mimap i - 1
-            barrier.subresourceRange.baseMipLevel = i - 1;
-            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-            vkCmdPipelineBarrier(
-                commandBuffer->getHandle(),
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                0,
-                0, nullptr,
-                0, nullptr,
-                1, &barrier
-            );
-
-            VkImageBlit blit{};
-            blit.srcOffsets[0] = { 0, 0, 0 };
-            blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
-
-            blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            blit.srcSubresource.mipLevel = i - 1; // last mipmap
-            blit.srcSubresource.baseArrayLayer = layer;
-            blit.srcSubresource.layerCount = 1;
-
-            blit.dstOffsets[0] = { 0, 0, 0 };
-            blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
-
-            blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            blit.dstSubresource.mipLevel = i; // new mipmap
-            blit.dstSubresource.baseArrayLayer = layer;
-            blit.dstSubresource.layerCount = 1;
-
-            vkCmdBlitImage(commandBuffer->getHandle(),
-                image.getHandle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                image.getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                1, &blit,
-                VK_FILTER_LINEAR);
-
-            // the i - 1 mipmap will nerver be used again, transition to read only
-            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-            barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-            vkCmdPipelineBarrier(commandBuffer->getHandle(),
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-                0, nullptr,
-                0, nullptr,
-                1, &barrier);
-
-            // shrink size
-            if (mipWidth > 1) mipWidth /= 2;
-            if (mipHeight > 1) mipHeight /= 2;
-        }
-
-        // transition the last mipmap to readonly
-        barrier.subresourceRange.baseMipLevel = image.getMipLevels() - 1;
+    for (uint32_t i = 1; i < image.getMipLevels(); i++) {
+        // generate mipmap i, trans from mimap i - 1
+        barrier.subresourceRange.baseMipLevel = i - 1;
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        vkCmdPipelineBarrier(
+            commandBuffer->getHandle(),
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier
+        );
+
+        VkImageBlit blit{};
+        blit.srcOffsets[0] = { 0, 0, 0 };
+        blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+
+        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.srcSubresource.mipLevel = i - 1; // last mipmap
+        blit.srcSubresource.baseArrayLayer = 0;
+        blit.srcSubresource.layerCount = arrayLayers;
+
+        blit.dstOffsets[0] = { 0, 0, 0 };
+        blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
+
+        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.dstSubresource.mipLevel = i; // new mipmap
+        blit.dstSubresource.baseArrayLayer = 0;
+        blit.dstSubresource.layerCount = arrayLayers;
+
+        vkCmdBlitImage(commandBuffer->getHandle(),
+            image.getHandle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            image.getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1, &blit,
+            VK_FILTER_LINEAR);
+
+        // the i - 1 mipmap will nerver be used again, transition to read only
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
         vkCmdPipelineBarrier(commandBuffer->getHandle(),
@@ -225,7 +206,24 @@ void VulkanCommandPool::generateMipmaps(const VulkanImage& image, const VulkanQu
             0, nullptr,
             0, nullptr,
             1, &barrier);
+
+        // shrink size
+        if (mipWidth > 1) mipWidth /= 2;
+        if (mipHeight > 1) mipHeight /= 2;
     }
+
+    // transition the last mipmap to readonly
+    barrier.subresourceRange.baseMipLevel = image.getMipLevels() - 1;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(commandBuffer->getHandle(),
+        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+        0, nullptr,
+        0, nullptr,
+        1, &barrier);
 
     endSingleTimeCommands(*commandBuffer, queue);
 }

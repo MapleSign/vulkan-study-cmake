@@ -14,5 +14,5 @@ layout(location = 0) in vec3 fragCoord;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    outColor = textureLod(envSampler, fragCoord, 0);
+    outColor = texture(envSampler, fragCoord);
 }
