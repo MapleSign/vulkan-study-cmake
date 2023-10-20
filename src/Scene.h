@@ -17,6 +17,7 @@ public:
 	~Scene();
 
 	std::vector<Model*> loadGLTFFile(const char* filename);
+	std::vector<Model*> addModelsFromGltfFile(const char* filename);
 	Model* addModel(const char* modelName, const char* objFilename);
 	Model* getModel(const char* modelName);
 	std::unordered_map<std::string, std::unique_ptr<Model>>& getModelMap();

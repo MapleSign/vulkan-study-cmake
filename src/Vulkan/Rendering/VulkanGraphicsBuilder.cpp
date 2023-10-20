@@ -40,6 +40,8 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
     fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(), 
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 4, 1,
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
 
     fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 0);
     fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 1);
@@ -48,6 +50,7 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
 
     renderPipeline = std::make_unique<VulkanRenderPipeline>(device, resManager, std::move(vertShader), std::move(fragShader));
     renderPipeline->prepare();
+    renderPipeline->getPipelineState();
     renderPipeline->recreatePipeline(extent, *renderPass);
 
     globalData = resManager.requireSceneData(*renderPipeline->getDescriptorSetLayouts()[0], 1,
@@ -74,9 +77,12 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     std::transform(resManager.getTextures().begin(), resManager.getTextures().end(), imageInfos.begin(),
         [](const auto& tex) { return tex->getImageInfo(); });
 
+    auto skyboxCubeMapImageInfo = resManager.getCubeMapTextures()[resManager.getSkybox().cubeMap]->getImageInfo();
+
     for (auto& dset : globalData.descriptorSets) {
         dset->addWrite(2, objDescBuffer.getBufferInfo());
         dset->addWriteArray(3, imageInfos.data());
+        dset->addWrite(4, skyboxCubeMapImageInfo);
     }
     globalData.update();
 
@@ -100,6 +106,8 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
         );
     }
     lightData.update();
+
+    skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, *renderPass);
 }
 
 VulkanGraphicsBuilder::~VulkanGraphicsBuilder()
@@ -189,6 +197,8 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
     cmdBuf.beginRenderPass(*renderTarget, *renderPass, *framebuffer, clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
 
+    skyboxPass->draw(cmdBuf, *globalData.descriptorSets[0], *lightData.descriptorSets[0]);
+
     cmdBuf.bindPipeline(renderPipeline->getGraphicsPipeline());
 
     auto globalDescriptorSetHandle = globalData.descriptorSets[0]->getHandle();
@@ -223,9 +233,23 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
     cmdBuf.endRenderPass();
 }
 
+GraphicsRenderPass::GraphicsRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent) :
+    device{ device }, resManager{ resManager }, extent{ extent }
+{
+}
+
+GraphicsRenderPass::~GraphicsRenderPass()
+{
+    renderPipeline.reset();
+
+    framebuffer.reset();
+    renderPass.reset();
+    renderTarget.reset();
+}
+
 ShadowRenderPass::ShadowRenderPass(
     const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent) :
-    device{ device }, resManager{ resManager }, extent{ extent }
+    GraphicsRenderPass(device, resManager, extent)
 {
     auto depthFormat = findDepthFormat(device.getGPU().getHandle());
     VulkanImage shadowDepthImage{
@@ -261,6 +285,8 @@ ShadowRenderPass::ShadowRenderPass(
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
     fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(),
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 4, 1,
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
 
     fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 0);
     fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 1);
@@ -270,19 +296,6 @@ ShadowRenderPass::ShadowRenderPass(
     renderPipeline = std::make_unique<VulkanRenderPipeline>(device, resManager, std::move(vertShader), std::move(fragShader));
     renderPipeline->prepare();
     renderPipeline->recreatePipeline(extent, *renderPass);
-}
-
-ShadowRenderPass::~ShadowRenderPass()
-{
-    renderPipeline.reset();
-
-    framebuffer.reset();
-    renderPass.reset();
-    renderTarget.reset();
-}
-
-void ShadowRenderPass::update(float deltaTime, const Scene* scene)
-{
 }
 
 void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet)
@@ -325,4 +338,66 @@ void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorS
 
 
     cmdBuf.endRenderPass();
+}
+
+SkyboxRenderPass::SkyboxRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
+    const VulkanRenderPass& graphicsRenderPass) :
+    GraphicsRenderPass(device, resManager, extent), graphicsRenderPass{ graphicsRenderPass }
+{
+    auto vertShader = resManager.createShaderModule("shaders/spv/skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
+    vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+
+    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1,
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
+
+    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
+
+    auto fragShader = resManager.createShaderModule("shaders/spv/skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+    fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+
+    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1,
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(),
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 4, 1, 
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+
+    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 0);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 1);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 1, 3);
+
+    renderPipeline = std::make_unique<VulkanRenderPipeline>(device, resManager, std::move(vertShader), std::move(fragShader));
+    renderPipeline->prepare();
+    renderPipeline->getPipelineState().cullMode = VK_CULL_MODE_NONE;
+    renderPipeline->getPipelineState().depthStencilState.depth_test_enable = VK_FALSE;
+    renderPipeline->getPipelineState().depthStencilState.depth_write_enable = VK_FALSE;
+    renderPipeline->recreatePipeline(extent, graphicsRenderPass);
+}
+
+void SkyboxRenderPass::draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet)
+{
+    const auto& skybox = resManager.getSkybox();
+
+    cmdBuf.bindPipeline(renderPipeline->getGraphicsPipeline());
+
+    auto globalDescriptorSetHandle = globalSet.getHandle();
+    vkCmdBindDescriptorSets(cmdBuf.getHandle(),
+        renderPipeline->getGraphicsPipeline().getBindPoint(),
+        renderPipeline->getPipelineLayout().getHandle(),
+        0, 1, &globalDescriptorSetHandle, 0, nullptr);
+
+    auto lightDescriptorSetHandle = lightSet.getHandle();
+    vkCmdBindDescriptorSets(cmdBuf.getHandle(),
+        renderPipeline->getGraphicsPipeline().getBindPoint(),
+        renderPipeline->getPipelineLayout().getHandle(),
+        1, 1, &lightDescriptorSetHandle, 0, nullptr);
+
+    vkCmdBindVertexBuffers(cmdBuf.getHandle(), 0, 1, &skybox.vertexBuffer.buffer, &skybox.vertexBuffer.offset);
+
+    vkCmdBindIndexBuffer(cmdBuf.getHandle(), skybox.indexBuffer.buffer, skybox.indexBuffer.offset, skybox.indexType);
+
+
+    cmdBuf.drawIndexed(skybox.indexNum, 1, 0, 0, 0);
 }

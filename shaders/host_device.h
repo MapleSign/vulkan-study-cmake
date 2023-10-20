@@ -24,7 +24,8 @@ START_BINDING(SceneBindings)
 eGlobals = 0,  // Global uniform containing camera matrices
 eObjData = 1,  // Access to the object data
 eObjDescs = 2,  // Access to the object descriptions
-eTextures = 3  // Access to textures
+eTextures = 3,  // Access to textures
+eEnvTexture = 4
 END_BINDING();
 
 START_BINDING(RtxBindings)

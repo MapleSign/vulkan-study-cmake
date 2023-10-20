@@ -13,6 +13,9 @@
 #include "VulkanDescriptorSet.h"
 #include "VulkanTexture.h"
 
+using RenderMeshID = uint64_t;
+using TextureID = uint64_t;
+
 // Information of a obj model when referenced in a shader
 struct ObjDesc
 {
@@ -130,8 +133,15 @@ struct RenderModel
     std::vector<RenderMesh> meshes;
 };
 
-using RenderMeshID = uint64_t;
-using TextureID = uint64_t;
+struct Skybox
+{
+    VkIndexType indexType;
+    uint32_t indexNum;
+    uint32_t vertexNum;
+    VkDescriptorBufferInfo vertexBuffer;
+    VkDescriptorBufferInfo indexBuffer;
+    TextureID cubeMap;
+};
 
 // raytracing
 struct BlasInput
@@ -168,6 +178,13 @@ public:
         const GltfMaterial& mat, 
         const std::vector<RenderTexture>& textures);
 
+    Skybox& requireSkybox(
+        const std::vector<Vertex>& vertices,
+        const std::vector<uint32_t>& indices,
+        const std::vector<std::string>& filenames,
+        VkSampler sampler
+        );
+
     SceneData requireSceneData(const VulkanDescriptorSetLayout& descSetLayout, uint32_t threadCount,
         const std::map<uint32_t, std::pair<VkDeviceSize, size_t>>& bufferSizeInfos);
 
@@ -186,7 +203,7 @@ public:
     VulkanDescriptorSet& requireDescriptorSet(const VulkanDescriptorSetLayout& descSetLayout, const BindingMap<VkDescriptorBufferInfo>& bufferInfos, const BindingMap<VkDescriptorImageInfo>& imageInfos);
     VulkanDescriptorPool& requireDescriptorPool(const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
     VulkanTexture& requireTexture(const char* filename, VkSampler sampler);
-    VulkanTexture& requireCubeMapTexture(std::vector<std::string> filenames, VkSampler sampler);
+    VulkanTexture& requireCubeMapTexture(const std::vector<std::string>& filenames, VkSampler sampler);
 
     VkSampler createSampler(VkSamplerCreateInfo* createInfo = nullptr);
     VulkanShaderModule createShaderModule(const char* filepath, VkShaderStageFlagBits stageFlag, const char* name);
@@ -197,6 +214,8 @@ public:
 
     const std::vector<std::unique_ptr<VulkanTexture>>& getTextures() const;
     size_t getTextureNum() const;
+    const std::vector<std::unique_ptr<VulkanTexture>>& getCubeMapTextures() const { return cubeMapTextureMap; }
+    size_t getCubeMapTextureNum() const { return cubeMapTextureMap.size(); }
 
     inline RenderMesh& getRenderMesh(RenderMeshID id) {
         return meshes[id];
@@ -210,12 +229,16 @@ public:
         return meshes;
     }
 
+    inline Skybox& getSkybox() { return *skybox; }
+
 private:
     const VulkanDevice& device;
     VulkanCommandPool& commandPool;
 
+    std::unique_ptr<Skybox> skybox;
     std::vector<RenderMesh> meshes;
     std::vector<std::unique_ptr<VulkanTexture>> textureMap;
+    std::vector<std::unique_ptr<VulkanTexture>> cubeMapTextureMap;
     std::unordered_set<VkSampler> samplerSet;
 
     std::unordered_map<VulkanBuffer*, std::unique_ptr<VulkanBuffer>> bufferSet;

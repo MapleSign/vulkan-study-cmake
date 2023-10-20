@@ -153,6 +153,7 @@ void VulkanCommandPool::generateMipmaps(const VulkanImage& image, const VulkanQu
     int32_t mipHeight = image.getExtent().height;
 
     for (uint32_t layer = 0; layer < image.getArrayLayers(); ++layer) {
+        // generate mipmap for this layer
         barrier.subresourceRange.baseArrayLayer = layer;
 
         for (uint32_t i = 1; i < image.getMipLevels(); i++) {
@@ -211,20 +212,20 @@ void VulkanCommandPool::generateMipmaps(const VulkanImage& image, const VulkanQu
             if (mipWidth > 1) mipWidth /= 2;
             if (mipHeight > 1) mipHeight /= 2;
         }
+
+        // transition the last mipmap to readonly
+        barrier.subresourceRange.baseMipLevel = image.getMipLevels() - 1;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier(commandBuffer->getHandle(),
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
     }
-
-    // transition the last mipmap to readonly
-    barrier.subresourceRange.baseMipLevel = image.getMipLevels() - 1;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    vkCmdPipelineBarrier(commandBuffer->getHandle(),
-        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier);
 
     endSingleTimeCommands(*commandBuffer, queue);
 }

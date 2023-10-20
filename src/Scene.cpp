@@ -155,7 +155,7 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 			meshes.emplace_back(nullptr, vertices, indices, textures, mat);
 		}
 
-		auto model = new Model(std::move(meshes));
+		auto model = new Model(tNode.name, std::move(meshes));
 		if (!tNode.translation.empty())
 			model->transComp.translate = { tNode.translation[0], tNode.translation[1], tNode.translation[2] };
 		if (!tNode.scale.empty())
@@ -173,19 +173,28 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 					glm::dot(glm::vec3(0.f, 0.f, 1.f), axis)
 				);*/
 		}
+		models.push_back(model);
+	}
 
-		if (modelMap.find(tNode.name) == modelMap.end())
-			modelMap.emplace(tNode.name, model);
+	return models;
+}
+
+std::vector<Model*> Scene::addModelsFromGltfFile(const char* filename)
+{
+	auto models = loadGLTFFile(filename);
+	for (auto model : models) {
+		if (modelMap.find(model->getName()) == modelMap.end())
+			modelMap.emplace(model->getName(), model);
 		else {
 			for (int i = 1;; ++i) {
-				std::string name = tNode.name + "_" + std::to_string(i);
+				std::string name = model->getName() + "_" + std::to_string(i);
 				if (modelMap.find(name) == modelMap.end()) {
+					model->setName(name);
 					modelMap.emplace(name, model);
 					break;
 				}
 			}
 		}
-		models.push_back(model);
 	}
 
 	return models;

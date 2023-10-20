@@ -15,7 +15,40 @@ struct PushConstantRaster {
     int lightNum;
 };
 
-class ShadowRenderPass
+class GraphicsRenderPass
+{
+public:
+    GraphicsRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent);
+    ~GraphicsRenderPass();
+
+    virtual void update(float deltaTime, const Scene* scene) {};
+    virtual void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) = 0;
+
+protected:
+    const VulkanDevice& device;
+    VulkanResourceManager& resManager;
+    VkExtent2D extent;
+
+    std::unique_ptr<VulkanRenderTarget> renderTarget;
+    std::unique_ptr<VulkanRenderPass> renderPass;
+    std::unique_ptr<VulkanFramebuffer> framebuffer;
+
+    std::unique_ptr<VulkanRenderPipeline> renderPipeline;
+};
+
+class SkyboxRenderPass : GraphicsRenderPass
+{
+public:
+    SkyboxRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
+        const VulkanRenderPass& graphicsRenderPass);
+
+    void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
+
+private:
+    const VulkanRenderPass& graphicsRenderPass;
+};
+
+class ShadowRenderPass : GraphicsRenderPass
 {
 public:
     struct ShadowData {
@@ -24,25 +57,13 @@ public:
     };
 
     ShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent);
-    ~ShadowRenderPass();
 
-    void update(float deltaTime, const Scene* scene);
-    void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet);
+    void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
 
     constexpr const VulkanImageView* getShadowDepth() const { return shadowDepth; }
 
 private:
-    const VulkanDevice& device;
-    VulkanResourceManager& resManager;
-    VkExtent2D extent;
-
     const VulkanImageView* shadowDepth;
-
-    std::unique_ptr<VulkanRenderTarget> renderTarget;
-    std::unique_ptr<VulkanRenderPass> renderPass;
-    std::unique_ptr<VulkanFramebuffer> framebuffer;
-
-    std::unique_ptr<VulkanRenderPipeline> renderPipeline;
 
     PushConstantRaster pushConstants{};
 };
@@ -83,4 +104,5 @@ private:
     PushConstantRaster pushConstants{};
 
     std::unique_ptr<ShadowRenderPass> shadowPass;
+    std::unique_ptr<SkyboxRenderPass> skyboxPass;
 };

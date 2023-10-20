@@ -6,8 +6,8 @@ Model::Model(const char* objFilename)
 {
 }
 
-Model::Model(std::vector<Mesh>&& meshes) :
-    meshes{ std::move(meshes) }
+Model::Model(std::string name, std::vector<Mesh>&& meshes) :
+    name{ name }, meshes{ std::move(meshes) }
 {
     for (auto& m : this->meshes) {
         m.parent = this;

@@ -48,7 +48,7 @@ VulkanTexture::VulkanTexture(
 }
 
 VulkanTexture::VulkanTexture(
-    const VulkanDevice& device, const std::vector<std::string> filenames, VkSampler sampler,
+    const VulkanDevice& device, const std::vector<std::string>& filenames, VkSampler sampler,
     const VulkanCommandPool& commandPool, const VulkanQueue& queue) :
     device{ device }, sampler{ sampler }, mipLevels{ 1 }
 {

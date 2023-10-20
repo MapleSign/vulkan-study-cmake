@@ -30,6 +30,7 @@ VulkanResourceManager::~VulkanResourceManager()
     bufferSet.clear();
 
     textureMap.clear();
+    cubeMapTextureMap.clear();
 
     for (const auto& sampler : samplerSet)
         vkDestroySampler(device.getHandle(), sampler, nullptr);
@@ -177,6 +178,31 @@ RenderMeshID VulkanResourceManager::requireRenderMesh(
     return meshes.size() - 1;
 }
 
+Skybox& VulkanResourceManager::requireSkybox(
+    const std::vector<Vertex>& vertices, 
+    const std::vector<uint32_t>& indices, 
+    const std::vector<std::string>& filenames, 
+    VkSampler sampler)
+{
+    auto& vertexBuffer = requireBufferWithData(vertices,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    auto& indexBuffer = requireBufferWithData(indices,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    auto& cubeMap = requireCubeMapTexture(filenames, sampler);
+
+    skybox = std::make_unique<Skybox>();
+    skybox->cubeMap = cubeMapTextureMap.size() - 1;
+
+    skybox->vertexBuffer = vertexBuffer.getBufferInfo();
+    skybox->vertexNum = toU32(vertices.size());
+    
+    skybox->indexBuffer = indexBuffer.getBufferInfo();
+    skybox->indexNum = toU32(indices.size());
+    skybox->indexType = VK_INDEX_TYPE_UINT32;
+
+    return *skybox;
+}
+
 SceneData VulkanResourceManager::requireSceneData(const VulkanDescriptorSetLayout& descSetLayout, uint32_t threadCount,
     const std::map<uint32_t, std::pair<VkDeviceSize, size_t>>& bufferSizeInfos)
 {
@@ -281,10 +307,10 @@ VulkanTexture& VulkanResourceManager::requireTexture(const char* filename, VkSam
     return *texture;
 }
 
-VulkanTexture& VulkanResourceManager::requireCubeMapTexture(std::vector<std::string> filenames, VkSampler sampler)
+VulkanTexture& VulkanResourceManager::requireCubeMapTexture(const std::vector<std::string>& filenames, VkSampler sampler)
 {
     auto texture = new VulkanTexture(device, filenames, sampler, commandPool, device.getGraphicsQueue());
-    textureMap.emplace_back(texture);
+    cubeMapTextureMap.emplace_back(texture);
     return *texture;
 }
 

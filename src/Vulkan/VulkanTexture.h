@@ -21,7 +21,7 @@ public:
 
     VulkanTexture(
         const VulkanDevice& device, 
-        const std::vector<std::string> filenames, 
+        const std::vector<std::string>& filenames, 
         VkSampler sampler, 
         const VulkanCommandPool& commandPool, 
         const VulkanQueue& queue

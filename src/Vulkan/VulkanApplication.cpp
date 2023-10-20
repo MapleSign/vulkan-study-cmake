@@ -82,7 +82,7 @@ void VulkanApplication::loadScene(const char* filename)
     scene->getActiveCamera()->yaw = -182;
     scene->getActiveCamera()->pitch = 0.79;
     reinterpret_cast<FPSCamera*>(scene->getActiveCamera())->rotate(0, 0);
-    scene->loadGLTFFile(filename);
+    scene->addModelsFromGltfFile(filename);
 
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 1.f, 1.f });
 
@@ -99,6 +99,37 @@ void VulkanApplication::loadScene(const char* filename)
             resManager->getRenderMesh(id).tranformMatrix = model->transComp.getTransformMatrix() * mesh.transComp.getTransformMatrix();
         }
     }
+
+    const VkPhysicalDeviceProperties& properties = device->getGPU().getProperties();
+    VkSamplerCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    info.magFilter = VK_FILTER_LINEAR;
+    info.minFilter = VK_FILTER_LINEAR;
+    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    info.anisotropyEnable = VK_TRUE;
+    info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    info.unnormalizedCoordinates = VK_FALSE;
+    info.compareEnable = VK_FALSE;
+    info.compareOp = VK_COMPARE_OP_ALWAYS;
+    info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    info.mipLodBias = 0.0f;
+    info.minLod = 0.0f;
+    info.maxLod = 100.0f;
+    auto& cube = scene->loadGLTFFile("assets/models/cube/cube.gltf")[0]->getMeshes()[0];
+    resManager->requireSkybox(
+        cube.vertices, cube.indices, 
+        {
+            "assets/textures/skybox/right.jpg",
+            "assets/textures/skybox/left.jpg",
+            "assets/textures/skybox/top.jpg",
+            "assets/textures/skybox/bottom.jpg",
+            "assets/textures/skybox/front.jpg",
+            "assets/textures/skybox/back.jpg"
+        },
+        resManager->createSampler(&info));
 
     graphicBuilder = std::make_unique<VulkanGraphicsBuilder>(*device, *resManager, window->getExtent());
 
@@ -125,17 +156,6 @@ void VulkanApplication::loadScene(const char* filename)
 
     if (rtSupport)
         buildRayTracing();
-
-    resManager->requireCubeMapTexture(
-        { 
-            "assets/textures/skybox/right.jpg", 
-            "assets/textures/skybox/left.jpg",
-            "assets/textures/skybox/bottom.jpg", 
-            "assets/textures/skybox/top.jpg",
-            "assets/textures/skybox/front.jpg", 
-            "assets/textures/skybox/back.jpg"
-        }, 
-        sampler);
 }
 
 VulkanApplication::~VulkanApplication()
