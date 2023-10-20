@@ -112,6 +112,8 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
 
 VulkanGraphicsBuilder::~VulkanGraphicsBuilder()
 {
+    skyboxPass.reset();
+
     renderPipeline.reset();
 
     framebuffer.reset();
@@ -135,6 +137,16 @@ void VulkanGraphicsBuilder::recreateGraphicsBuilder(const VkExtent2D extent)
     offscreenColor = &renderTarget->getViews()[0];
     offscreenDepth = &renderTarget->getViews()[1];
 
+    auto attatchments = renderTarget->getAttatchments();
+    attatchments.front().finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+    std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
+    renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos);
+
+    framebuffer = std::make_unique<VulkanFramebuffer>(device, *renderTarget, *renderPass);
+
+    renderPipeline->recreatePipeline(extent, *renderPass);
+
+    skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, *renderPass);
 }
 
 void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)

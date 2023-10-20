@@ -616,7 +616,8 @@ void VulkanApplication::handleSurfaceChange()
 
     graphicBuilder->recreateGraphicsBuilder(extent);
 
-    rtBuilder->recreateRayTracingBuilder(*(graphicBuilder->getOffscreenColor()));
+    if (rtSupport)
+        rtBuilder->recreateRayTracingBuilder(*(graphicBuilder->getOffscreenColor()));
 
     renderContext->recreateSwapChain(extent);
 

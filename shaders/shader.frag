@@ -42,6 +42,7 @@ layout(buffer_reference, scalar) buffer MatIndices { int i[]; }; // Material ID 
 layout(set = 0, binding = eObjDescs, scalar) buffer ObjDescBuffer { ObjDesc i[]; } objDesc;
 
 layout(set = 0, binding = eTextures) uniform sampler2D[] textureSampler;
+layout(set = 0, binding = eEnvTexture) uniform samplerCube envSampler;
 
 layout(location = 0) in vec3 fragNormal;
 layout(location = 1) in vec2 fragTexCoord;
@@ -109,8 +110,10 @@ void main() {
     }
 
     vec3 viewDir = normalize(constants.viewPos - fragPos);
-    vec3 lightDir = -normalize(dirLightInfo.dirLight.direction);
     state.ffnormal = dot(state.normal, viewDir) >= 0.0 ? state.normal : -state.normal;
+    createCoordinateSystem(state.ffnormal, state.tangent, state.bitangent);
+
+    vec3 lightDir = -normalize(dirLightInfo.dirLight.direction);
     
     float shadow = calcShadow(fragPosLightSpace);
     vec3 result = (1.0 - shadow) * calcLight(state, viewDir, lightDir, dirLightInfo.dirLight.diffuse, 1.0);
@@ -122,6 +125,18 @@ void main() {
         float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
         result += calcLight(state, viewDir, lightDir, light.diffuse * attenuation, 1.0);    
     }
+
+    int numSamples = 16;
+    BsdfSampleRec indirectBsdf;
+    uint seed = 1;
+    vec3 sampleColor = vec3(0);
+    for (int i = 0; i < numSamples; ++i) {
+        indirectBsdf.f = PbrSample(state, viewDir, state.ffnormal, indirectBsdf.L, indirectBsdf.pdf, seed);
+        vec3 sampleLight = texture(envSampler, indirectBsdf.L).rgb;
+        sampleColor += indirectBsdf.f  * sampleLight * abs(dot(state.ffnormal, indirectBsdf.L)) / indirectBsdf.pdf;
+    }
+    sampleColor /= numSamples;
+    result += sampleColor * 0.1;
 
     outColor = vec4(result + state.mat.emission, 1.0);
     // outColor = vec4(vec3(shadow), 1.0);
