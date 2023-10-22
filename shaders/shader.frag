@@ -126,17 +126,17 @@ void main() {
         result += calcLight(state, viewDir, lightDir, light.diffuse * attenuation, 1.0);    
     }
 
-    int numSamples = 16;
+    int numSamples = 64;
     BsdfSampleRec indirectBsdf;
-    uint seed = 1;
+    uint seed = constants.objId;
     vec3 sampleColor = vec3(0);
     for (int i = 0; i < numSamples; ++i) {
         indirectBsdf.f = PbrSample(state, viewDir, state.ffnormal, indirectBsdf.L, indirectBsdf.pdf, seed);
         vec3 sampleLight = texture(envSampler, indirectBsdf.L).rgb;
-        sampleColor += indirectBsdf.f  * sampleLight * abs(dot(state.ffnormal, indirectBsdf.L)) / indirectBsdf.pdf;
+        sampleColor += indirectBsdf.f * sampleLight * abs(dot(state.ffnormal, indirectBsdf.L)) / indirectBsdf.pdf;
     }
     sampleColor /= numSamples;
-    result += sampleColor * 0.1;
+    result += sampleColor * 0.05;
 
     outColor = vec4(result + state.mat.emission, 1.0);
     // outColor = vec4(vec3(shadow), 1.0);

@@ -43,8 +43,8 @@ VulkanApplication::VulkanApplication() :
 
     VulkanPhysicalDevice* gpu;
     auto requiredExtensions = deviceExtensions;
-    rtSupport = false;
-    //requiredExtensions.insert(requiredExtensions.end(), rtExtensions.begin(), rtExtensions.end());
+    //rtSupport = false;
+    requiredExtensions.insert(requiredExtensions.end(), rtExtensions.begin(), rtExtensions.end());
     try {
         // check if there is a GPU supporting all extensions
         gpu = &instance->getSuitableGPU(surface, requiredExtensions);
