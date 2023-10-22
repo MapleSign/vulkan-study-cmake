@@ -31,9 +31,9 @@ vec3 pathtrace(Ray r,int maxDepth)
         /* Miss */
         if (prd.hitT == INFINITY) {
             if(depth == 0)
-                hitValue = pcRay.clearColor.xyz * 0.8;
+                hitValue = texture(envSampler, r.direction).rgb;
             else {
-                vec3 env = pcRay.clearColor.xyz * pcRay.lightIntensity * 0.1;
+                vec3 env = texture(envSampler, r.direction).rgb;
                 if (any(isnan(weight)))
                 {
                     weight = vec3(0);
