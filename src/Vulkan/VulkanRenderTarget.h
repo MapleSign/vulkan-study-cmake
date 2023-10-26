@@ -37,6 +37,7 @@ public:
 	const std::vector<VulkanImage>& getImages() const;
 	const std::vector<VulkanImageView>& getViews() const;
 	VkExtent2D getExtent() const;
+	uint32_t getLayers() const;
 	const std::vector<VulkanAttatchment>& getAttatchments() const;
 
 private:
@@ -47,6 +48,7 @@ private:
 	std::vector<VulkanAttatchment> attatchments;
 
 	VkExtent2D extent;
+	uint32_t layers;
 
 	std::vector<uint32_t> inputAttatchments = {};
 	std::vector<uint32_t> outputAttatchments = { 0 };

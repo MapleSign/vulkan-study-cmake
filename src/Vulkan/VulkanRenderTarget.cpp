@@ -21,6 +21,7 @@ VulkanRenderTarget::VulkanRenderTarget(std::vector<VulkanImage>&& images):
 {
     extent.height = this->images.front().getExtent().height;
     extent.width = this->images.front().getExtent().width;
+    layers = this->images.front().getArrayLayers();
 
     for (auto &image : this->images) {
         imageViews.emplace_back(image);
@@ -51,6 +52,11 @@ const std::vector<VulkanImage>& VulkanRenderTarget::getImages() const { return i
 const std::vector<VulkanImageView>& VulkanRenderTarget::getViews() const { return imageViews; }
 
 VkExtent2D VulkanRenderTarget::getExtent() const { return extent; }
+
+uint32_t VulkanRenderTarget::getLayers() const
+{
+    return layers;
+}
 
 const std::vector<VulkanAttatchment>& VulkanRenderTarget::getAttatchments() const
 {

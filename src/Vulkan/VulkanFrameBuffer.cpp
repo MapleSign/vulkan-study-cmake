@@ -19,7 +19,7 @@ VulkanFramebuffer::VulkanFramebuffer(const VulkanDevice& device, const VulkanRen
     framebufferInfo.pAttachments = attachments.data();
     framebufferInfo.width = renderTarget.getExtent().width;
     framebufferInfo.height = renderTarget.getExtent().height;
-    framebufferInfo.layers = 1;
+    framebufferInfo.layers = renderTarget.getLayers();
 
     if (vkCreateFramebuffer(device.getHandle(), &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to create framebuffer!");
