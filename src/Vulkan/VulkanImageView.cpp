@@ -17,10 +17,18 @@ VulkanImageView::VulkanImageView(VulkanImage &image, VkFormat format):
         aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
+    VkImageViewType viewType;
+    if (image.getArrayLayers() > 1) {
+        if (image.getFlags() & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+            viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+        else viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+    }
+    else viewType = VK_IMAGE_VIEW_TYPE_2D;
+
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image.getHandle();
-    viewInfo.viewType = image.getArrayLayers() == 6 ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.viewType = viewType;
     viewInfo.format = format;
     viewInfo.subresourceRange.aspectMask = aspectFlags;
     viewInfo.subresourceRange.baseMipLevel = 0;

@@ -25,6 +25,7 @@ public:
     VkFormat getFormat() const;
     VkSampleCountFlagBits getSampleCount() const;
     VkImageUsageFlags getUsage() const;
+    VkImageCreateFlags getFlags() const;
     uint32_t getMipLevels() const;
     uint32_t getArrayLayers() const;
 

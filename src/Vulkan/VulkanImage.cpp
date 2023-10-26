@@ -77,6 +77,11 @@ VkFormat VulkanImage::getFormat() const { return format; }
 VkSampleCountFlagBits VulkanImage::getSampleCount() const { return sampleCount; }
 VkImageUsageFlags VulkanImage::getUsage() const { return usage; }
 
+VkImageCreateFlags VulkanImage::getFlags() const
+{
+    return flags;
+}
+
 uint32_t VulkanImage::getMipLevels() const
 {
     return mipLevels;
