@@ -14,7 +14,7 @@ class VulkanRenderPipeline
 {
 public:
 	VulkanRenderPipeline(const VulkanDevice& device, const VulkanResourceManager& resManager,
-		VulkanShaderModule&& vertShader, VulkanShaderModule&& fragShader);
+		VulkanShaderModule&& vertShader, VulkanShaderModule&& fragShader, std::unique_ptr<VulkanShaderModule>&& geomShader = nullptr);
 	~VulkanRenderPipeline();
 
 	void recreatePipeline(const VkExtent2D extent, const VulkanRenderPass& renderPass);
@@ -32,6 +32,7 @@ private:
 
 	VulkanShaderModule vertShader;
 	VulkanShaderModule fragShader;
+	std::unique_ptr<VulkanShaderModule> geomShader;
 
 	std::vector<std::unique_ptr<VulkanDescriptorSetLayout>> descriptorSetLayouts;
 	std::unique_ptr<VulkanPipelineLayout> pipelineLayout;

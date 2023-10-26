@@ -3,8 +3,9 @@
 #include "VulkanRenderPipeline.h"
 
 VulkanRenderPipeline::VulkanRenderPipeline(const VulkanDevice& device, const VulkanResourceManager& resManager,
-    VulkanShaderModule&& vertShader, VulkanShaderModule&& fragShader) :
-    device{ device }, resManager{ resManager }, vertShader{ std::move(vertShader) }, fragShader{ std::move(fragShader) }
+    VulkanShaderModule&& vertShader, VulkanShaderModule&& fragShader, std::unique_ptr<VulkanShaderModule>&& geomShader) :
+    device{ device }, resManager{ resManager }, vertShader{ std::move(vertShader) }, fragShader{ std::move(fragShader) },
+    geomShader{ std::move(geomShader) }
 {
 }
 
@@ -17,10 +18,14 @@ VulkanRenderPipeline::~VulkanRenderPipeline()
 
 void VulkanRenderPipeline::prepare()
 {
-    std::vector<VulkanShaderResource> shaderResources{};
-    shaderResources.insert(shaderResources.end(), this->vertShader.getShaderResources().begin(), this->vertShader.getShaderResources().end());
-    shaderResources.insert(shaderResources.end(), this->fragShader.getShaderResources().begin(), this->fragShader.getShaderResources().end());
+    std::vector<VulkanShaderModule*> shaders{ &vertShader, &fragShader };
+    if (geomShader)
+        shaders.push_back(geomShader.get());
 
+    std::vector<VulkanShaderResource> shaderResources{};
+    for (const auto& s : shaders)
+        shaderResources.insert(shaderResources.end(), s->getShaderResources().begin(), s->getShaderResources().end());
+   
     std::vector<VkPushConstantRange> pushConstantRanges;
     std::unordered_map<uint32_t, std::vector<VulkanShaderResource>> descriptorResourceSets;
     
@@ -35,10 +40,10 @@ void VulkanRenderPipeline::prepare()
         [](auto& dsl) { return dsl.get(); });
     pipelineLayout = std::make_unique<VulkanPipelineLayout>(device, descSetLayoutPointers, pushConstantRanges);
 
-    std::vector<VkPipelineShaderStageCreateInfo> stageInfos{
-        vertShader.getShaderStageInfo(),
-        fragShader.getShaderStageInfo()
-    };
+    std::vector<VkPipelineShaderStageCreateInfo> stageInfos{ shaders.size() };
+    std::transform(shaders.begin(), shaders.end(), stageInfos.begin(), 
+        [](const VulkanShaderModule* s) { return s->getShaderStageInfo(); }
+    );
 
     state.pipelineLayout = pipelineLayout.get();
     state.subpass = 0;
