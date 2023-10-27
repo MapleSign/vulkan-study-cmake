@@ -12,6 +12,7 @@ set(ENGINE_FILES
     Model.cpp
     Scene.cpp
     Vertex.cpp
+    Light.cpp
     
     main.cpp
 )

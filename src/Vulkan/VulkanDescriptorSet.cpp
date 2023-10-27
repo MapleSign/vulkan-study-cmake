@@ -78,26 +78,20 @@ void VulkanDescriptorSet::addWrite(uint32_t dstBinding, const VkWriteDescriptorS
     descriptorWrites.push_back(descriptorWrite);
 }
 
-VkWriteDescriptorSet VulkanDescriptorSet::makeWriteArray(uint32_t dstBinding)
+VkWriteDescriptorSet VulkanDescriptorSet::makeWriteArray(uint32_t dstBinding, uint32_t count, uint32_t arrayElement)
 {
-    const auto& bindings = descSetLayout.getBindings();
-    const auto& binding = *std::find_if(bindings.begin(), bindings.end(), [=](const auto& b) { return b.binding == dstBinding; });
-
-    VkWriteDescriptorSet descriptorWrite{};
-    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = descriptorSet;
-    descriptorWrite.dstBinding = dstBinding;
-    descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = binding.descriptorType;
-    descriptorWrite.descriptorCount = binding.descriptorCount;
+    auto descriptorWrite = makeWrite(dstBinding, arrayElement);
+    descriptorWrite.descriptorCount = count;
 
     return descriptorWrite;
 }
 
-void VulkanDescriptorSet::addWriteArray(uint32_t dstBinding, const VkDescriptorImageInfo* imageInfos)
+void VulkanDescriptorSet::addWriteArray(uint32_t dstBinding, const std::vector<VkDescriptorImageInfo>& imageInfos)
 {
-    auto descriptorWrite = makeWriteArray(dstBinding);
-    descriptorWrite.pImageInfo = imageInfos;
+    for (size_t i = 0; i < imageInfos.size(); ++i)
+        this->imageInfos[dstBinding][i] = imageInfos[i];
+    auto descriptorWrite = makeWriteArray(dstBinding, imageInfos.size());
+    descriptorWrite.pImageInfo = imageInfos.data();
 
     descriptorWrites.push_back(descriptorWrite);
 }

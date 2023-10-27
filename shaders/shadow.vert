@@ -29,14 +29,16 @@ layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec3 inTangent;
 layout(location = 4) in vec3 inBitangent;
 
-layout(location = 0) out vec2 fragCoord;
+layout(location = 0) out VS_OUT {
+    vec2 fragCoord;
+};
 
 void main()
 {
     int id = constants.objId;
     mat4 model = objectBuffer.objects[id].model;
 
-    gl_Position = shadowUniform.lightSpace * model * vec4(inPosition, 1.0);
+    gl_Position = model * vec4(inPosition, 1.0);
     
     fragCoord = inTexCoord;
 }

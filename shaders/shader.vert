@@ -19,10 +19,6 @@ layout(set = 0, binding = eObjData, scalar) readonly buffer ObjectBuffer {
 	ObjectData objects[];
 } objectBuffer;
 
-layout(set = 1, binding = 2) uniform _ShadowUniform {
-    ShadowData shadowUniform;
-};
-
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inTexCoord;
@@ -34,7 +30,6 @@ layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragPos;
 layout(location = 3) out vec3 fragTangent;
 layout(location = 4) out vec3 fragBitangent;
-layout(location = 5) out vec4 fragPosLightSpace;
 
 void main() {
     int id = constants.objId;
@@ -48,6 +43,4 @@ void main() {
 
     fragTangent = normalMatrix * inTangent;
     fragBitangent = normalMatrix * inBitangent;
-
-    fragPosLightSpace = shadowUniform.lightSpace * vec4(fragPos, 1.0);
 }

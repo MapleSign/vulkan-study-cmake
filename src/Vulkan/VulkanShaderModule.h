@@ -44,7 +44,7 @@ public:
     ~VulkanShaderModule();
 
     void addShaderResourceUniform(ShaderResourceType type, uint32_t set, uint32_t binding, uint32_t descriptorCount = 1, VkShaderStageFlags flags = 0);
-    void addShaderResourcePushConstant(uint32_t offset, uint32_t size);
+    void addShaderResourcePushConstant(uint32_t offset, uint32_t size, VkShaderStageFlags flags = 0);
     void addShaderResource(VulkanShaderResource res);
     const std::vector<VulkanShaderResource>& getShaderResources() const;
 

@@ -31,8 +31,10 @@ public:
 	void setCamera(const char* cameraName);
 	std::unordered_map<std::string, std::unique_ptr<BaseCamera>>& getCameraMap();
 
-	DirLight* getDirLight();
-	const DirLight* getDirLight() const;
+	DirLight* addDirLight(const char* name, glm::vec3 dir = {0.f, 0.5f, -0.5f}, glm::vec3 color = { 1.f, 1.f, 1.f }, float intensity = 80.f);
+	DirLight* getDirLight(const char* name);
+	std::unordered_map<std::string, std::unique_ptr<DirLight>>& getDirLightMap();
+	const std::unordered_map<std::string, std::unique_ptr<DirLight>>& getDirLightMap() const;
 
 	PointLight* addPointLight(const char* name, glm::vec3 pos = {0.f, 0.f, 10.f}, glm::vec3 color = {1.f, 1.f, 1.f }, float intensity = 80.f);
 	PointLight* getPointLight(const char* name);
@@ -44,6 +46,6 @@ private:
 	std::unordered_map<std::string, std::unique_ptr<BaseCamera>> cameraMap;
 	std::unordered_map<std::string, std::unique_ptr<Model>> modelMap;
 
-	std::unique_ptr<DirLight> dirLight;
+	std::unordered_map<std::string, std::unique_ptr<DirLight>> dirLightMap;
 	std::unordered_map<std::string, std::unique_ptr<PointLight>> pointLightMap;
 };

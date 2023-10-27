@@ -343,30 +343,23 @@ void VulkanApplication::mainLoop()
         ImGui::End();
 
 
-        auto dirLight = scene->getDirLight();
+        auto dirLight = scene->getDirLight("light0");
         dirLight->direction = pcRay.lightPosition;
 
         auto ptLight = scene->getPointLight("light0");
         ptLight->position = pcRay.lightPosition;
 
         if (pcRay.lightType == 0) {
-            ptLight->ambient = pcRay.lightIntensity * glm::vec3(0.1f);
-            ptLight->diffuse = pcRay.lightIntensity * glm::vec3(1.0f);
-            ptLight->specular = pcRay.lightIntensity * glm::vec3(1.0f);
+            ptLight->intensity = pcRay.lightIntensity;
 
-            dirLight->ambient = glm::vec3(0.0f);
-            dirLight->diffuse = glm::vec3(0.0f);
-            dirLight->specular = glm::vec3(0.0f);
+            dirLight->intensity = 0.f;
         }
         else {
-            dirLight->ambient = pcRay.lightIntensity * glm::vec3(0.1f);
-            dirLight->diffuse = pcRay.lightIntensity * glm::vec3(1.0f);
-            dirLight->specular = pcRay.lightIntensity * glm::vec3(1.0f);
+            dirLight->intensity = pcRay.lightIntensity;
 
-            ptLight->ambient = glm::vec3(0.0f);
-            ptLight->diffuse = glm::vec3(0.0f);
-            ptLight->specular = glm::vec3(0.0f);
+            ptLight->intensity = 0.f;
         }
+        dirLight->update();
 
         drawFrame();
 

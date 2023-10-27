@@ -12,7 +12,8 @@
 struct PushConstantRaster {
     glm::vec3 viewPos;
     int objId;
-    int lightNum;
+    int dirLightNum;
+    int pointLightNum;
 };
 
 class GraphicsRenderPass
@@ -21,7 +22,7 @@ public:
     GraphicsRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent);
     ~GraphicsRenderPass();
 
-    virtual void update(float deltaTime, const Scene* scene) {};
+    virtual void update(float deltaTime, const Scene* scene) = 0;
     virtual void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) = 0;
 
 protected:
@@ -42,6 +43,7 @@ public:
     SkyboxRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
         const VulkanRenderPass& graphicsRenderPass);
 
+    void update(float deltaTime, const Scene* scene) override;
     void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
 
 private:
@@ -56,8 +58,9 @@ public:
         float bias = 0.0001;
     };
 
-    ShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent);
+    ShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, uint32_t lightNum);
 
+    void update(float deltaTime, const Scene* scene) override;
     void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
 
     constexpr const VulkanImageView* getShadowDepth() const { return shadowDepth; }

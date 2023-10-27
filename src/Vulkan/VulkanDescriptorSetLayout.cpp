@@ -34,6 +34,7 @@ VkDescriptorType findDescriptorType(ShaderResourceType type)
 VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(const VulkanDevice& device, uint32_t set, const std::vector<VulkanShaderResource>& shaderResources) :
     device{ device }, set{ set }
 {
+    bindings.resize(shaderResources.size());
     for (const auto& res : shaderResources) {
         VkDescriptorSetLayoutBinding layoutBinding{};
         layoutBinding.binding = res.binding;
@@ -42,7 +43,7 @@ VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(const VulkanDevice& device,
         layoutBinding.pImmutableSamplers = nullptr;
         layoutBinding.stageFlags = res.stageFlags;
 
-        bindings.emplace_back(std::move(layoutBinding));
+        bindings[res.binding] = layoutBinding; // we assume that bindings are always from 0 to max binding.(continuous)
     }
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};

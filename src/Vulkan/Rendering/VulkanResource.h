@@ -44,6 +44,7 @@ struct SceneData {
     std::vector<std::vector<VulkanBuffer*>> uniformBuffers;
 
     void update() const;
+    void updateData(uint32_t frameIdx, uint32_t binding, void* data, size_t size, uint32_t arrayElement = 0);
 };
 
 struct RenderMaterial {

@@ -3,23 +3,28 @@
 #include <glm/glm.hpp>
 
 struct DirLight {
-    alignas(16) glm::vec3 direction;
+    glm::vec3 direction;
+    float pad;
 
-    alignas(16) glm::vec3 ambient;
-    alignas(16) glm::vec3 diffuse;
-    alignas(16) glm::vec3 specular;
+    glm::vec3 color;
+    float intensity;
+
+    glm::mat4 lightSpace;
+
+    void update();
 };
 
 struct PointLight {
     alignas(16) glm::vec3 position;
+
+    alignas(4) glm::vec3 color;
+    alignas(4) float intensity;
     
     alignas(4) float constant;
     alignas(4) float linear;
-    alignas(4) float quadratic;
-    
-    alignas(16) glm::vec3 ambient;
-    alignas(16) glm::vec3 diffuse;
-    alignas(16) glm::vec3 specular;
+    alignas(8) float quadratic;
+
+    glm::mat4 lightSpace[6];
 };
 
 class Light

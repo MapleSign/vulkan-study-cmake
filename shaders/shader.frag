@@ -18,21 +18,20 @@ layout(push_constant) uniform PushConstants {
     PushConstantRaster constants;
 };
 
-#define MAX_POINT_LIGHT_NUM 16
+layout(set = 1, binding = 0) buffer DirLightInfo {
+    DirLight dirLight[];
+};
 
-layout(set = 1, binding = 0) uniform DirLightInfo {
-    DirLight dirLight;
-} dirLightInfo;
-
-layout(set = 1, binding = 1) uniform PointLightInfo {
-    PointLight pointLights[MAX_POINT_LIGHT_NUM];
-} pointLightInfo;
+layout(set = 1, binding = 1) buffer PointLightInfo {
+    PointLight pointLights[];
+};
 
 layout(set = 1, binding = 2) uniform _ShadowUniform {
     ShadowData shadowUniform;
 };
 
-layout(set = 1, binding = 3) uniform sampler2D shadowMapSampler;
+layout(set = 1, binding = 3) uniform sampler2D[] dirLightShadowMaps;
+layout(set = 1, binding = 4) uniform samplerCube[] pointLightShadowMaps;
 
 layout(buffer_reference, scalar) buffer Vertices { Vertex v[]; }; // Positions of an object
 layout(buffer_reference, scalar) buffer Indices { ivec3 i[]; }; // Triangle indices
@@ -49,7 +48,6 @@ layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragPos;
 layout(location = 3) in vec3 fragTangent;
 layout(location = 4) in vec3 fragBitangent;
-layout(location = 5) in vec4 fragPosLightSpace;
 
 layout(location = 0) out vec4 outColor;
 
@@ -67,20 +65,20 @@ vec3 calcLight(inout State state, vec3 V, vec3 L, vec3 lightIntensity, float lig
     return Li;
 }
 
-float calcShadow(vec4 fragPosLightSpace) {
+float calcShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
 
-    float closestDepth = texture(shadowMapSampler, projCoords.xy).r;
+    float closestDepth = texture(shadowMap, projCoords.xy).r;
     float currentDepth = projCoords.z - shadowUniform.bias;
     float shadow = 0.0;
 
-    vec2 texelSize = 1.0 / textureSize(shadowMapSampler, 0);
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
     for(int x = -1; x <= 1; ++x)
     {
         for(int y = -1; y <= 1; ++y)
         {
-            float pcfDepth = texture(shadowMapSampler, projCoords.xy + vec2(x, y) * texelSize).r;
+            float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
             shadow += currentDepth > pcfDepth ? 1.0 : 0.0;
         }
     }
@@ -112,18 +110,25 @@ void main() {
     vec3 viewDir = normalize(constants.viewPos - fragPos);
     state.ffnormal = dot(state.normal, viewDir) >= 0.0 ? state.normal : -state.normal;
     createCoordinateSystem(state.ffnormal, state.tangent, state.bitangent);
+    
+    vec3 result = vec3(0.0);
+    for (int i = 0; i < constants.dirLightNum; ++i) {
+        vec3 lightDir = -normalize(dirLight[i].direction);
+        vec3 lightIntensity = dirLight[i].intensity * dirLight[i].color;
 
-    vec3 lightDir = -normalize(dirLightInfo.dirLight.direction);
+        vec4 fragPosLightSpace = dirLight[i].lightSpace * vec4(fragPos, 1.0);
+
+        float shadow = calcShadow(dirLightShadowMaps[nonuniformEXT(i)], fragPosLightSpace);
+        result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
+    }
     
-    float shadow = calcShadow(fragPosLightSpace);
-    vec3 result = (1.0 - shadow) * calcLight(state, viewDir, lightDir, dirLightInfo.dirLight.diffuse, 1.0);
-    
-    for (int i = 0; i < constants.lightNum; ++i) {
-        PointLight light = pointLightInfo.pointLights[i];
-        lightDir = normalize(light.position - fragPos);
+    for (int i = 0; i < constants.pointLightNum; ++i) {
+        PointLight light = pointLights[i];
+        vec3 lightDir = normalize(light.position - fragPos);
         float distance = length(light.position - fragPos);
         float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
-        result += calcLight(state, viewDir, lightDir, light.diffuse * attenuation, 1.0);    
+        vec3 lightIntensity = light.color * light.intensity * attenuation;
+        result += calcLight(state, viewDir, lightDir, lightIntensity, 1.0);    
     }
 
     int numSamples = 64;

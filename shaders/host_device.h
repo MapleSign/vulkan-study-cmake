@@ -37,21 +37,23 @@ END_BINDING();
 struct DirLight {
 	vec3 direction;
 
-	vec3 ambient;
-	vec3 diffuse;
-	vec3 specular;
+	vec3 color;
+    float intensity;
+
+    mat4 lightSpace;
 };
 
 struct PointLight {
 	vec3 position;
 
+	vec3 color;
+    float intensity;
+    
 	float constant;
 	float linear;
 	float quadratic;
 
-	vec3 ambient;
-	vec3 diffuse;
-	vec3 specular;
+    mat4 lightSpaces[6];
 };
 
 // Information of a obj model when referenced in a shader
@@ -86,7 +88,8 @@ struct PushConstantRaster
 {
 	vec3 viewPos;
 	int objId;
-	int lightNum;
+    int dirLightNum;
+	int pointLightNum;
 };
 
 // Push constant structure for the ray tracer

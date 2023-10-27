@@ -9,16 +9,13 @@
 #include "GLTF/GLTFHelper.h"
 
 Scene::Scene() :
-	activeCamera{ nullptr }, dirLight{ new DirLight() }
+	activeCamera{ nullptr }
 {
 	auto defaultCameraName = "default";
 	addFPSCamera(defaultCameraName);
 	setCamera(defaultCameraName);
 
-	dirLight->direction = glm::vec3(-0.2f, -1.0f, -0.3f);
-	dirLight->ambient = { 0.2f, 0.2f, 0.2f };
-	dirLight->diffuse = { 0.5f, 0.5f, 0.5f };
-	dirLight->specular = { 1.0f, 1.0f, 1.0f };
+	addDirLight("light0", { -0.2f, -1.0f, -0.3f }, { 1.f, 1.f, 1.f }, 1.f);
 }
 
 Scene::~Scene()
@@ -262,23 +259,40 @@ std::unordered_map<std::string, std::unique_ptr<BaseCamera>>& Scene::getCameraMa
 	return cameraMap;
 }
 
-DirLight* Scene::getDirLight()
+DirLight* Scene::addDirLight(const char* name, glm::vec3 dir, glm::vec3 color, float intensity)
 {
-	return dirLight.get();
+	auto light = new DirLight();
+	light->direction = dir;
+	light->color = color;
+	light->intensity = intensity;
+	light->update();
+
+	dirLightMap.emplace(name, light);
+
+	return light;
 }
 
-const DirLight* Scene::getDirLight() const
+DirLight* Scene::getDirLight(const char* name)
 {
-	return dirLight.get();
+	return dirLightMap[name].get();
+}
+
+std::unordered_map<std::string, std::unique_ptr<DirLight>>& Scene::getDirLightMap()
+{
+	return dirLightMap;
+}
+
+const std::unordered_map<std::string, std::unique_ptr<DirLight>>& Scene::getDirLightMap() const
+{
+	return dirLightMap;
 }
 
 PointLight* Scene::addPointLight(const char* name, glm::vec3 pos, glm::vec3 color, float intensity)
 {
 	auto light = new PointLight();
 	light->position = pos;
-	light->ambient = color * intensity / 100.f;
-	light->diffuse = color * intensity;
-	light->specular = color * intensity;
+	light->color = color;
+	light->intensity = intensity;
 
 	light->constant = 0.0f;
 	light->linear = 0.0f;

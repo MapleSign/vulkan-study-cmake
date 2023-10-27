@@ -211,20 +211,31 @@ SceneData VulkanResourceManager::requireSceneData(const VulkanDescriptorSetLayou
     sceneData.uniformBuffers.resize(threadCount);
 
     VkDeviceSize uniformBufferSize = 0;
+    VkDeviceSize storageBufferSize = 0;
     for (auto& [binding, bufferSizeInfo] : bufferSizeInfos) {
         if (descSetLayout.getType(binding) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
             uniformBufferSize += bufferSizeInfo.first * bufferSizeInfo.second;
+        else if (descSetLayout.getType(binding) == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+            storageBufferSize += bufferSizeInfo.first * bufferSizeInfo.second;
     }
 
     BindingMap<VkDescriptorBufferInfo> bufferInfos{};
     for (uint32_t threadIdx = 0; threadIdx < threadCount; ++threadIdx) {
+        sceneData.uniformBuffers[threadIdx] = { 2, nullptr };
         if (uniformBufferSize != 0) {
             auto& uniformBuffer = requireBuffer(uniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-            sceneData.uniformBuffers[threadIdx].push_back(&uniformBuffer);
+            sceneData.uniformBuffers[threadIdx][0] = &uniformBuffer;
         }
 
-        VkDeviceSize offset = 0;
+        if (storageBufferSize != 0) {
+            auto& storageBuffer = requireBuffer(storageBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            sceneData.uniformBuffers[threadIdx][1] = &storageBuffer;
+        }
+
+        VkDeviceSize uniformOffset = 0;
+        VkDeviceSize storageOffset = 0;
         for (const auto& [bindingIndex, bufferSizeInfo] : bufferSizeInfos)
         {
             bufferInfos[bindingIndex] = {};
@@ -233,23 +244,24 @@ SceneData VulkanResourceManager::requireSceneData(const VulkanDescriptorSetLayou
                 for (size_t i = 0; i < bufferSizeInfo.second; ++i) {
                     VkDescriptorBufferInfo info{};
                     info.buffer = uniformBuffer->getHandle();
-                    info.offset = offset;
+                    info.offset = uniformOffset;
                     info.range = bufferSizeInfo.first;
                     bufferInfos[bindingIndex][i] = info;
 
-                    offset += bufferSizeInfo.first;
+                    uniformOffset += bufferSizeInfo.first;
                 }
             }
-            else {
-                auto& storageBuffer = requireBuffer(bufferSizeInfo.first, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-                sceneData.uniformBuffers[threadIdx].push_back(&storageBuffer);
+            else if (descSetLayout.getType(bindingIndex) == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
+                auto& storageBuffer = sceneData.uniformBuffers[threadIdx][1];
+                for (size_t i = 0; i < bufferSizeInfo.second; ++i) {
+                    VkDescriptorBufferInfo info{};
+                    info.buffer = storageBuffer->getHandle();
+                    info.offset = storageOffset;
+                    info.range = bufferSizeInfo.first;
+                    bufferInfos[bindingIndex][i] = info;
 
-                VkDescriptorBufferInfo info{};
-                info.buffer = storageBuffer.getHandle();
-                info.offset = 0;
-                info.range = bufferSizeInfo.first;
-                bufferInfos[bindingIndex][0] = info;
+                    storageOffset += bufferSizeInfo.first;
+                }
             }
         }
     }
@@ -430,4 +442,23 @@ void SceneData::update() const
 {
     for (auto& ds : descriptorSets)
         ds->update();
+}
+
+void SceneData::updateData(uint32_t frameIdx, uint32_t binding, void* data, size_t size, uint32_t arrayElement)
+{
+    uint32_t bufferIdx = 0;
+    switch (descSetLayout->getBindings()[binding].descriptorType)
+    {
+    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        bufferIdx = 0;
+        break;
+    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        bufferIdx = 1;
+        break;
+    default:
+        break;
+    }
+    auto& buffer = uniformBuffers[frameIdx][bufferIdx];
+    const auto& bufferInfo = descriptorSets[frameIdx]->getBufferInfos().at(binding).at(arrayElement);
+    buffer->update(data, size, bufferInfo.offset);
 }

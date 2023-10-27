@@ -25,8 +25,11 @@ public:
 	void addWrite(uint32_t dstBinding, const VkDescriptorImageInfo& imageInfo, uint32_t arrayElement = 0);
 	void addWrite(uint32_t dstBinding, const VkWriteDescriptorSetAccelerationStructureKHR* as, uint32_t arrayElement = 0);
 
-	VkWriteDescriptorSet makeWriteArray(uint32_t dstBinding);
-	void addWriteArray(uint32_t dstBinding, const VkDescriptorImageInfo* imageInfos);
+	VkWriteDescriptorSet makeWriteArray(uint32_t dstBinding, uint32_t count, uint32_t arrayElement = 0);
+	void addWriteArray(uint32_t dstBinding, const std::vector<VkDescriptorImageInfo>& imageInfos);
+
+	const BindingMap<VkDescriptorBufferInfo>& getBufferInfos() const { return bufferInfos; }
+	const BindingMap<VkDescriptorImageInfo>& getImageInfos()const { return imageInfos; }
 
     VkDescriptorSet getHandle() const;
 

@@ -42,10 +42,10 @@ void VulkanShaderModule::addShaderResourceUniform(ShaderResourceType type, uint3
     shaderResources.emplace_back(std::move(res));
 }
 
-void VulkanShaderModule::addShaderResourcePushConstant(uint32_t offset, uint32_t size)
+void VulkanShaderModule::addShaderResourcePushConstant(uint32_t offset, uint32_t size, VkShaderStageFlags flags)
 {
     VulkanShaderResource res;
-    res.stageFlags = shaderStageInfo.stage;
+    res.stageFlags = shaderStageInfo.stage | flags;
     res.type = ShaderResourceType::PushConstant;
     res.offset = offset;
     res.size = size;
