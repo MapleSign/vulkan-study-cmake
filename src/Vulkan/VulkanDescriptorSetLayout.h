@@ -25,6 +25,7 @@ private:
     uint32_t set;
     VkDescriptorSetLayout descriptorSetLayout;
     std::vector<VkDescriptorSetLayoutBinding> bindings;
+    std::vector<VkDescriptorSetLayoutCreateFlags> bindingFlags;
 
     const VulkanDevice& device;
 };

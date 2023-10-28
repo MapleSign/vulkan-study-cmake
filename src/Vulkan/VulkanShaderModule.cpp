@@ -31,11 +31,13 @@ VulkanShaderModule::~VulkanShaderModule() {
         vkDestroyShaderModule(device.getHandle(), shaderModule, nullptr);
 }
 
-void VulkanShaderModule::addShaderResourceUniform(ShaderResourceType type, uint32_t set, uint32_t binding, uint32_t descriptorCount, VkShaderStageFlags flags)
+void VulkanShaderModule::addShaderResourceUniform(ShaderResourceType type, uint32_t set, uint32_t binding, 
+    uint32_t descriptorCount, VkShaderStageFlags flags, ShaderResourceMode mode)
 {
     VulkanShaderResource res;
     res.stageFlags = shaderStageInfo.stage | flags;
     res.type = type;
+    res.mode = mode;
     res.set = set;
     res.binding = binding;
     res.descriptorCount = descriptorCount;

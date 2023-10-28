@@ -15,10 +15,18 @@ enum class ShaderResourceType
     AccelerationStructure
 };
 
+enum class ShaderResourceMode
+{
+    Static,
+    Dynamic,
+    UpdateAfterBind
+};
+
 struct VulkanShaderResource
 {
     VkShaderStageFlags stageFlags;
     ShaderResourceType type;
+    ShaderResourceMode mode{ ShaderResourceMode::Static };
 
     uint32_t set;
     uint32_t binding;
@@ -43,7 +51,8 @@ public:
 
     ~VulkanShaderModule();
 
-    void addShaderResourceUniform(ShaderResourceType type, uint32_t set, uint32_t binding, uint32_t descriptorCount = 1, VkShaderStageFlags flags = 0);
+    void addShaderResourceUniform(ShaderResourceType type, uint32_t set, uint32_t binding, 
+        uint32_t descriptorCount = 1, VkShaderStageFlags flags = 0, ShaderResourceMode mode = { ShaderResourceMode::Static });
     void addShaderResourcePushConstant(uint32_t offset, uint32_t size, VkShaderStageFlags flags = 0);
     void addShaderResource(VulkanShaderResource res);
     const std::vector<VulkanShaderResource>& getShaderResources() const;

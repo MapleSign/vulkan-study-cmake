@@ -63,10 +63,12 @@ public:
     void update(float deltaTime, const Scene* scene) override;
     void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
 
-    constexpr const VulkanImageView* getShadowDepth() const { return shadowDepth; }
+    constexpr const std::vector<std::unique_ptr<VulkanImageView>>& getShadowDepths() const { return shadowDepths; }
 
 private:
-    const VulkanImageView* shadowDepth;
+    uint32_t maxLightNum;
+
+    std::vector<std::unique_ptr<VulkanImageView>> shadowDepths;
 
     PushConstantRaster pushConstants{};
 };

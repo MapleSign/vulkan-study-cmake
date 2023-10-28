@@ -35,6 +35,7 @@ VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(const VulkanDevice& device,
     device{ device }, set{ set }
 {
     bindings.resize(shaderResources.size());
+    bindingFlags.resize(shaderResources.size());
     for (const auto& res : shaderResources) {
         VkDescriptorSetLayoutBinding layoutBinding{};
         layoutBinding.binding = res.binding;
@@ -44,12 +45,22 @@ VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(const VulkanDevice& device,
         layoutBinding.stageFlags = res.stageFlags;
 
         bindings[res.binding] = layoutBinding; // we assume that bindings are always from 0 to max binding.(continuous)
+        bindingFlags[res.binding] = res.mode == ShaderResourceMode::UpdateAfterBind ? 
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT :
+            0;
     }
+
+    VkDescriptorSetLayoutBindingFlagsCreateInfo layoutBindingFlagsInfo{};
+    layoutBindingFlagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+    layoutBindingFlagsInfo.bindingCount = toU32(bindingFlags.size());
+    layoutBindingFlagsInfo.pBindingFlags = bindingFlags.data();
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+    layoutInfo.bindingCount = toU32(bindings.size());
     layoutInfo.pBindings = bindings.data();
+    layoutInfo.pNext = &layoutBindingFlagsInfo;
 
     if (vkCreateDescriptorSetLayout(device.getHandle(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor set layout!");

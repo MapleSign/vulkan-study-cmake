@@ -84,6 +84,7 @@ void VulkanApplication::loadScene(const char* filename)
     reinterpret_cast<FPSCamera*>(scene->getActiveCamera())->rotate(0, 0);
     scene->addModelsFromGltfFile(filename);
 
+    scene->addDirLight("light1", { -0.029, -1.00, 0.2 }, glm::vec3{ 1.0f }, { 3.0f });
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 1.f, 1.f });
 
     VkSampler sampler = resManager->createSampler();

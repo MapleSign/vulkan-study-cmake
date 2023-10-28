@@ -6,7 +6,7 @@
 class VulkanImageView
 {
 public:
-    VulkanImageView(VulkanImage& image, VkFormat format = VK_FORMAT_UNDEFINED);
+    VulkanImageView(const VulkanImage& image, VkFormat format = VK_FORMAT_UNDEFINED, uint32_t arrayLayer = 0, uint32_t layerCount = 0);
 
     VulkanImageView(VulkanImageView&) = delete;
 
@@ -16,11 +16,10 @@ public:
 
     VkImageView getHandle() const;
 
-    VulkanImage& getImage();
     constexpr const VulkanImage& getImage() const { return image; }
 
 private:
     VkImageView imageView{};
 
-    VulkanImage& image;
+    const VulkanImage& image;
 };
