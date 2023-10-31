@@ -16,10 +16,16 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice device) {
 	vkGetPhysicalDeviceFeatures(device, &features);
 
 	// raytracing properties
-	rtProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
-	properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-	properties2.pNext = &rtProperties;
-	vkGetPhysicalDeviceProperties2(device, &properties2);
+	if (properties.apiVersion >= VK_API_VERSION_1_1) {
+		features2.pNext = &clockFeatures;
+		clockFeatures.pNext = &features12;
+		features12.pNext = &rtPipelineFeatures;
+		rtPipelineFeatures.pNext = &asFeatures;
+		vkGetPhysicalDeviceFeatures2(device, &features2);
+
+		properties2.pNext = &rtProperties;
+		vkGetPhysicalDeviceProperties2(device, &properties2);
+	}
 
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);

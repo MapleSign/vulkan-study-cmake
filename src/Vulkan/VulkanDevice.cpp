@@ -46,7 +46,7 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
     VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
-    if (std::find_if(requiredExtentions.begin(), requiredExtentions.end(), [](const char* ext) {return strcmp(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, ext); }) != requiredExtentions.end()) {
+    if (std::find_if(requiredExtentions.begin(), requiredExtentions.end(), [](const char* ext) { return !strcmp(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, ext); }) != requiredExtentions.end()) {
         rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
         features12.pNext = &rtPipelineFeatures;
 
@@ -74,7 +74,8 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
         createInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateDevice(physicalDevice.getHandle(), &createInfo, nullptr, &device) != VK_SUCCESS) {
+    auto result = vkCreateDevice(physicalDevice.getHandle(), &createInfo, nullptr, &device);
+    if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to create logical device!");
     }
 
