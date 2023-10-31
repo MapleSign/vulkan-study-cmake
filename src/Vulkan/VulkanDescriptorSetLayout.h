@@ -17,6 +17,7 @@ public:
     ~VulkanDescriptorSetLayout();
 
     const VkDescriptorSetLayout& getHandle() const;
+    const std::vector<VulkanShaderResource> getShaderResources() const;
     const std::vector<VkDescriptorSetLayoutBinding>& getBindings() const;
     VkDescriptorType getType(size_t i) const;
     uint32_t getSetIndex() const;
@@ -24,6 +25,7 @@ public:
 private:
     uint32_t set;
     VkDescriptorSetLayout descriptorSetLayout;
+    std::vector<VulkanShaderResource> shaderResources;
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     std::vector<VkDescriptorSetLayoutCreateFlags> bindingFlags;
 

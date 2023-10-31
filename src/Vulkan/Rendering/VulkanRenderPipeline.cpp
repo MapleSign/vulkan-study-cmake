@@ -1,4 +1,4 @@
-#include <unordered_map>
+#include <map>
 
 #include "VulkanRenderPipeline.h"
 
@@ -27,7 +27,7 @@ void VulkanRenderPipeline::prepare()
         shaderResources.insert(shaderResources.end(), s->getShaderResources().begin(), s->getShaderResources().end());
    
     std::vector<VkPushConstantRange> pushConstantRanges;
-    std::unordered_map<uint32_t, std::vector<VulkanShaderResource>> descriptorResourceSets;
+    std::map<uint32_t, std::vector<VulkanShaderResource>> descriptorResourceSets;
     
     createLayoutInfo(shaderResources, pushConstantRanges, descriptorResourceSets);
 

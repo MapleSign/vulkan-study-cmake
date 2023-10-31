@@ -1,6 +1,6 @@
 #pragma once
 
-#include <unordered_map>
+#include <map>
 
 #include "VulkanCommon.h"
 #include "VulkanDevice.h"
@@ -40,7 +40,7 @@ struct VulkanShaderResource
 void createLayoutInfo(
     const std::vector<VulkanShaderResource>& resources, 
     std::vector<VkPushConstantRange>& pushConstantRanges, 
-    std::unordered_map<uint32_t, std::vector<VulkanShaderResource>>& descriptorResourceSets);
+    std::map<uint32_t, std::vector<VulkanShaderResource>>& descriptorResourceSets);
 
 class VulkanShaderModule
 {
@@ -55,6 +55,8 @@ public:
         uint32_t descriptorCount = 1, VkShaderStageFlags flags = 0, ShaderResourceMode mode = { ShaderResourceMode::Static });
     void addShaderResourcePushConstant(uint32_t offset, uint32_t size, VkShaderStageFlags flags = 0);
     void addShaderResource(VulkanShaderResource res);
+    void addShaderResources(const std::vector<VulkanShaderResource>& resources);
+
     const std::vector<VulkanShaderResource>& getShaderResources() const;
 
     VkShaderModule getHandle() const;

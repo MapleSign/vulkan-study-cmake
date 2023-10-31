@@ -4,8 +4,6 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent) :
     device{ device }, resManager{ resManager }, extent{ extent }
 {
-    shadowPass = std::make_unique<ShadowRenderPass>(device, resManager, VkExtent2D{ 4096, 4096 }, 2);
-
     VulkanImage offscreenColorImage{
             device, convert2Dto3D(extent),
             VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
@@ -27,7 +25,7 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     auto vertShader = resManager.createShaderModule("shaders/spv/shader.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
     vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster), VK_SHADER_STAGE_GEOMETRY_BIT);
 
-    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1, 
+    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1,
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
     vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
 
@@ -38,9 +36,9 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     auto fragShader = resManager.createShaderModule("shaders/spv/shader.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
     fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
 
-    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1, 
+    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1,
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(), 
+    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(),
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
     fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 4, 1,
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
@@ -55,6 +53,17 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     renderPipeline->getPipelineState();
     renderPipeline->recreatePipeline(extent, *renderPass);
 
+    // create other passes
+    std::vector<VulkanShaderResource> shaderResources{};
+    for (const auto& descLayout : renderPipeline->getDescriptorSetLayouts()) {
+        const auto& descShaderRes = descLayout->getShaderResources();
+        shaderResources.insert(shaderResources.end(), descShaderRes.begin(), descShaderRes.end());
+    }
+
+    shadowPass = std::make_unique<ShadowRenderPass>(device, resManager, VkExtent2D{ 4096, 4096 }, shaderResources, 2);
+    skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, shaderResources, *renderPass);
+
+    // create SceneData
     globalData = resManager.requireSceneData(*renderPipeline->getDescriptorSetLayouts()[0], 1,
         {
             {0, {device.getGPU().pad_uniform_buffer_size(sizeof(GlobalData)), 1}},
@@ -107,8 +116,6 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
         dset->addWriteArray(3, shadowImageInfos);
     }
     lightData.update();
-
-    skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, *renderPass);
 }
 
 VulkanGraphicsBuilder::~VulkanGraphicsBuilder()
@@ -147,7 +154,12 @@ void VulkanGraphicsBuilder::recreateGraphicsBuilder(const VkExtent2D extent)
 
     renderPipeline->recreatePipeline(extent, *renderPass);
 
-    skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, *renderPass);
+    std::vector<VulkanShaderResource> shaderResources{};
+    for (const auto& descLayout : renderPipeline->getDescriptorSetLayouts()) {
+        const auto& descShaderRes = descLayout->getShaderResources();
+        shaderResources.insert(shaderResources.end(), descShaderRes.begin(), descShaderRes.end());
+    }
+    skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, shaderResources, *renderPass);
 }
 
 void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
@@ -245,7 +257,8 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
     cmdBuf.endRenderPass();
 }
 
-GraphicsRenderPass::GraphicsRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent) :
+GraphicsRenderPass::GraphicsRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
+    const std::vector<VulkanShaderResource> shaderRes) :
     device{ device }, resManager{ resManager }, extent{ extent }
 {
 }
@@ -260,7 +273,8 @@ GraphicsRenderPass::~GraphicsRenderPass()
 }
 
 ShadowRenderPass::ShadowRenderPass(
-    const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, uint32_t maxLightNum) :
+    const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
+    const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum) :
     GraphicsRenderPass(device, resManager, extent), maxLightNum{ maxLightNum }
 {
     auto depthFormat = findDepthFormat(device.getGPU().getHandle());
@@ -289,14 +303,7 @@ ShadowRenderPass::ShadowRenderPass(
 
     auto vertShader = resManager.createShaderModule("shaders/spv/shadow.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
     vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
-
-    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1,
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
-    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
-
-    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 0);
-    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 1);
-    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
+    vertShader.addShaderResources(shaderRes);
 
     std::unique_ptr<VulkanShaderModule> geomShader = 
         std::make_unique<VulkanShaderModule>(
@@ -310,18 +317,6 @@ ShadowRenderPass::ShadowRenderPass(
 
     auto fragShader = resManager.createShaderModule("shaders/spv/shadow.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
     fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
-
-    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1,
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(),
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 4, 1,
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
-
-    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 0);
-    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 1);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 1, 3, 16, 0, ShaderResourceMode::UpdateAfterBind);
 
     renderPipeline = std::make_unique<VulkanRenderPipeline>(device, resManager, std::move(vertShader), std::move(fragShader), std::move(geomShader));
     renderPipeline->prepare();
@@ -377,34 +372,15 @@ void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorS
 }
 
 SkyboxRenderPass::SkyboxRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
-    const VulkanRenderPass& graphicsRenderPass) :
+    const std::vector<VulkanShaderResource> shaderRes, const VulkanRenderPass& graphicsRenderPass) :
     GraphicsRenderPass(device, resManager, extent), graphicsRenderPass{ graphicsRenderPass }
 {
     auto vertShader = resManager.createShaderModule("shaders/spv/skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
-    vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster), VK_SHADER_STAGE_GEOMETRY_BIT);
-
-    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1,
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
-    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
-
-    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 0, 1, VK_SHADER_STAGE_GEOMETRY_BIT);
-    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 1);
-    vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
+    vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+    vertShader.addShaderResources(shaderRes);
 
     auto fragShader = resManager.createShaderModule("shaders/spv/skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
     fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
-
-    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 2, 1,
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 3, resManager.getTextureNum(),
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 4, 1, 
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
-
-    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 0);
-    fragShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 1);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
-    fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 1, 3, 16, 0, ShaderResourceMode::UpdateAfterBind);
 
     renderPipeline = std::make_unique<VulkanRenderPipeline>(device, resManager, std::move(vertShader), std::move(fragShader));
     renderPipeline->prepare();

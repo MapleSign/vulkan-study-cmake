@@ -59,6 +59,11 @@ void VulkanShaderModule::addShaderResource(VulkanShaderResource res)
     shaderResources.push_back(res);
 }
 
+void VulkanShaderModule::addShaderResources(const std::vector<VulkanShaderResource>& resources)
+{
+    shaderResources.insert(shaderResources.end(), resources.begin(), resources.end());
+}
+
 const std::vector<VulkanShaderResource>& VulkanShaderModule::getShaderResources() const
 {
     return shaderResources;
@@ -72,7 +77,10 @@ VkPipelineShaderStageCreateInfo VulkanShaderModule::getShaderStageInfo() const {
     return shaderStageInfo;
 }
 
-void createLayoutInfo(const std::vector<VulkanShaderResource>& resources, std::vector<VkPushConstantRange>& pushConstantRanges, std::unordered_map<uint32_t, std::vector<VulkanShaderResource>>& descriptorResourceSets)
+void createLayoutInfo(
+    const std::vector<VulkanShaderResource>& resources, 
+    std::vector<VkPushConstantRange>& pushConstantRanges, 
+    std::map<uint32_t, std::vector<VulkanShaderResource>>& descriptorResourceSets)
 {
     for (const auto& res : resources) {
         if (res.type == ShaderResourceType::PushConstant) {

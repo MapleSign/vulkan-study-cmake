@@ -32,7 +32,7 @@ VkDescriptorType findDescriptorType(ShaderResourceType type)
 }
 
 VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(const VulkanDevice& device, uint32_t set, const std::vector<VulkanShaderResource>& shaderResources) :
-    device{ device }, set{ set }
+    device{ device }, set{ set }, shaderResources{ shaderResources }
 {
     bindings.resize(shaderResources.size());
     bindingFlags.resize(shaderResources.size());
@@ -68,7 +68,9 @@ VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(const VulkanDevice& device,
 }
 
 VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VulkanDescriptorSetLayout&& other) noexcept :
-    device{ other.device }, set{ other.set }, bindings{ other.bindings }, descriptorSetLayout{ other.descriptorSetLayout }
+    device{ other.device }, set{ other.set },
+    shaderResources{ other.shaderResources } , bindings{ other.bindings }, bindingFlags{ other.bindingFlags },
+    descriptorSetLayout{ other.descriptorSetLayout }
 {
     other.descriptorSetLayout = VK_NULL_HANDLE;
 }
@@ -80,6 +82,9 @@ VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() {
 }
 
 const VkDescriptorSetLayout &VulkanDescriptorSetLayout::getHandle() const { return descriptorSetLayout; }
+
+const std::vector<VulkanShaderResource> VulkanDescriptorSetLayout::getShaderResources() const { return shaderResources; }
+
 const std::vector<VkDescriptorSetLayoutBinding>& VulkanDescriptorSetLayout::getBindings() const { return bindings; }
 
 VkDescriptorType VulkanDescriptorSetLayout::getType(size_t i) const

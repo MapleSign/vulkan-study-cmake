@@ -19,7 +19,8 @@ struct PushConstantRaster {
 class GraphicsRenderPass
 {
 public:
-    GraphicsRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent);
+    GraphicsRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
+        const std::vector<VulkanShaderResource> shaderRes = {});
     ~GraphicsRenderPass();
 
     virtual void update(float deltaTime, const Scene* scene) = 0;
@@ -41,7 +42,7 @@ class SkyboxRenderPass : GraphicsRenderPass
 {
 public:
     SkyboxRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
-        const VulkanRenderPass& graphicsRenderPass);
+        const std::vector<VulkanShaderResource> shaderRes, const VulkanRenderPass& graphicsRenderPass);
 
     void update(float deltaTime, const Scene* scene) override;
     void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
@@ -58,7 +59,8 @@ public:
         float bias = 0.0001;
     };
 
-    ShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, uint32_t lightNum);
+    ShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
+        const std::vector<VulkanShaderResource> shaderRes, uint32_t lightNum);
 
     void update(float deltaTime, const Scene* scene) override;
     void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
