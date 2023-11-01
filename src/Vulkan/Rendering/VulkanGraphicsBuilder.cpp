@@ -29,8 +29,8 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
     vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
 
-    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 0, 1, VK_SHADER_STAGE_GEOMETRY_BIT);
-    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 1, 1, VK_SHADER_STAGE_GEOMETRY_BIT);
+    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 0, 1, VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 1, 1, VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 1, 2);
 
     auto fragShader = resManager.createShaderModule("shaders/spv/shader.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");

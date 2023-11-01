@@ -239,7 +239,7 @@ void VulkanApplication::buildRayTracing()
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::AccelerationStructure, 0, 0);
     rtShaders.back().addShaderResourceUniform(ShaderResourceType::StorageImage, 0, 1);
 
-    rtBuilder->createRayTracingPipeline(rtShaders, *graphicBuilder->getGlobalData().descSetLayout);
+    rtBuilder->createRayTracingPipeline(rtShaders, *graphicBuilder->getGlobalData().descSetLayout, *graphicBuilder->getLightData().descSetLayout);
     rtBuilder->createRtShaderBindingTable();
 }
 
@@ -456,7 +456,10 @@ void VulkanApplication::recordCommand(VulkanCommandBuffer &commandBuffer, const 
         updateFrameCount();
         if (pcRay.frame < maxFrames) {
             pcRay.clearColor = clearColor;
-            rtBuilder->raytrace(commandBuffer, *graphicBuilder->getGlobalData().descriptorSets[frameIndex], pcRay);
+            rtBuilder->raytrace(commandBuffer, 
+                *graphicBuilder->getGlobalData().descriptorSets[frameIndex], 
+                *graphicBuilder->getLightData().descriptorSets[frameIndex], 
+                pcRay);
         }
     }
     
@@ -513,6 +516,9 @@ void VulkanApplication::updateUniformBuffer(uint32_t currentImage)
     }
 
     graphicBuilder->update(deltaTime, scene.get());
+
+    pcRay.dirLightNum = scene->getDirLightMap().size();
+    pcRay.pointLightNum = scene->getPointLightMap().size();
 }
 
 void VulkanApplication::updateTlas()

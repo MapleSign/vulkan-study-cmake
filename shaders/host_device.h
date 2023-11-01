@@ -95,17 +95,25 @@ struct PushConstantRaster
 // Push constant structure for the ray tracer
 struct PushConstantRay
 {
+    // 0
 	vec4  clearColor;
+    // 4
 	vec3  lightPosition;
 	float lightIntensity;
+    // 8
 	int   lightType;
 	int   frame;
     int   maxDepth;
 	int   sampleNumbers;
-    
+    // 12
     float defocusAngle; // For Lens Approximation
     float focusDist;    // For Lens Approximation
     float zFar;         // For Lens Approximation
+
+    int dirLightNum;
+    // 16
+    int pointLightNum;
+    vec3 pad;
 };
 
 // Push constant structure for the post-processing

@@ -17,18 +17,26 @@ struct BuildAccelerationStructure
 };
 
 struct PushConstantRayTracing {
+	// 0
 	glm::vec4 clearColor{};
+	// 4
 	glm::vec3 lightPosition{ -0.029, -1.00, -0.058 };
 	float lightIntensity = 3.f;
+	// 8
 	int lightType = 1;
 	int frame = -1;
 	int maxDepth = 5;
 	int sampleNumbers = 1;
-
+	// 12
 	// For Lens Approximation
 	float defocusAngle = 0;
 	float focusDist = 1;
 	float zFar = 100;
+
+	int dirLightNum;
+	// 16
+	int pointLightNum;
+	glm::vec3 pad;
 };
 
 class VulkanRayTracingBuilder
@@ -39,10 +47,16 @@ public:
 
 	void recreateRayTracingBuilder(const VulkanImageView& offscreenColor);
 
-	void createRayTracingPipeline(const std::vector<VulkanShaderModule>& rtShaders, const VulkanDescriptorSetLayout& globalDescSetLayout);
+	void createRayTracingPipeline(
+		const std::vector<VulkanShaderModule>& rtShaders, 
+		const VulkanDescriptorSetLayout& globalDescSetLayout,
+		const VulkanDescriptorSetLayout& lightDescSetLayout);
 	void createRtShaderBindingTable();
 
-	void raytrace(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const PushConstantRayTracing& pcRay);
+	void raytrace(
+		VulkanCommandBuffer& cmdBuf, 
+		const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet, 
+		const PushConstantRayTracing& pcRay);
 
 	void buildBlas(const std::vector<BlasInput>& input, VkBuildAccelerationStructureFlagsKHR flags);
 

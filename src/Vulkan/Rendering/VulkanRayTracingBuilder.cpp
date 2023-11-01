@@ -33,7 +33,9 @@ void VulkanRayTracingBuilder::recreateRayTracingBuilder(const VulkanImageView& o
 }
 
 void VulkanRayTracingBuilder::createRayTracingPipeline(
-	const std::vector<VulkanShaderModule>& rtShaders, const VulkanDescriptorSetLayout& globalDescSetLayout)
+	const std::vector<VulkanShaderModule>& rtShaders, 
+	const VulkanDescriptorSetLayout& globalDescSetLayout,
+	const VulkanDescriptorSetLayout& lightDescSetLayout)
 {
 	std::vector<VulkanShaderResource> shaderResources{};
 	for (const auto& shader : rtShaders) {
@@ -97,6 +99,7 @@ void VulkanRayTracingBuilder::createRayTracingPipeline(
 		setLayouts.push_back(rtSetLayout.get());
 	}
 	setLayouts.push_back(const_cast<VulkanDescriptorSetLayout*>(&globalDescSetLayout));
+	setLayouts.push_back(const_cast<VulkanDescriptorSetLayout*>(&lightDescSetLayout));
 	rtPipelineLayout = std::make_unique<VulkanPipelineLayout>(device, setLayouts, pushConstantRanges);
 
 	VulkanRTPipelineState state{};
@@ -172,10 +175,12 @@ void VulkanRayTracingBuilder::createRtShaderBindingTable()
 	rtSBTBuffer->unmap();
 }
 
-void VulkanRayTracingBuilder::raytrace(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const PushConstantRayTracing& pcRay)
+void VulkanRayTracingBuilder::raytrace(
+	VulkanCommandBuffer& cmdBuf, 
+	const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet,
+	const PushConstantRayTracing& pcRay)
 {
-	
-	std::vector<VkDescriptorSet> descSets{ rtDescriptorSet->getHandle(), globalSet.getHandle() };
+	std::vector<VkDescriptorSet> descSets{ rtDescriptorSet->getHandle(), globalSet.getHandle(), lightSet.getHandle() };
 	vkCmdBindPipeline(cmdBuf.getHandle(), rtPipeline->getBindPoint(), rtPipeline->getHandle());
 	vkCmdBindDescriptorSets(cmdBuf.getHandle(), rtPipeline->getBindPoint(), rtPipelineLayout->getHandle(), 0,
 		toU32(descSets.size()), descSets.data(), 0, nullptr);

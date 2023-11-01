@@ -19,6 +19,14 @@ layout(set = 1, binding = eObjDescs, scalar) buffer ObjDescBuffer { ObjDesc i[];
 layout(set = 1, binding = eTextures) uniform sampler2D[] textureSampler;
 layout(set = 1, binding = eEnvTexture) uniform samplerCube envSampler;
 
+layout(set = 2, binding = 0) buffer DirLightInfo {
+    DirLight dirLights[];
+};
+
+layout(set = 2, binding = 1) buffer PointLightInfo {
+    PointLight pointLights[];
+};
+
 layout(set = 0, binding = 0) uniform accelerationStructureEXT topLevelAS;
 layout(set = 0, binding = 1, rgba32f) uniform image2D image;
 
@@ -31,7 +39,7 @@ layout(buffer_reference, scalar) buffer MatIndices { int i[]; }; // Material ID 
 
 #include "pathtrace.glsl"
 
-void main() 
+void main()
 {
     ivec2 imageSize = ivec2(gl_LaunchSizeEXT.xy);
     ivec2 imageCoord = ivec2(gl_LaunchIDEXT.xy);
