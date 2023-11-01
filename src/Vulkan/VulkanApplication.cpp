@@ -361,6 +361,7 @@ void VulkanApplication::mainLoop()
             ptLight->intensity = 0.f;
         }
         dirLight->update();
+        ptLight->update();
 
         drawFrame();
 

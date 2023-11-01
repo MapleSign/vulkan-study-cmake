@@ -44,6 +44,8 @@ struct DirLight {
 };
 
 struct PointLight {
+    mat4 lightSpaces[6];
+    
 	vec3 position;
 
 	vec3 color;
@@ -52,8 +54,6 @@ struct PointLight {
 	float constant;
 	float linear;
 	float quadratic;
-
-    mat4 lightSpaces[6];
 };
 
 // Information of a obj model when referenced in a shader

@@ -17,10 +17,12 @@ VulkanImageView::VulkanImageView(const VulkanImage &image, VkFormat format, uint
         aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
+    layerCount = layerCount == 0 ? image.getArrayLayers() : layerCount;
     VkImageViewType viewType;
-    if (image.getArrayLayers() > 1 && layerCount != 1) {
-        if (image.getFlags() & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
-            viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+    if (layerCount > 1) {
+        if (image.getFlags() & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) {
+            viewType = layerCount > 6 ? VK_IMAGE_VIEW_TYPE_CUBE_ARRAY : VK_IMAGE_VIEW_TYPE_CUBE;
+        }
         else viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
     }
     else viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -34,7 +36,7 @@ VulkanImageView::VulkanImageView(const VulkanImage &image, VkFormat format, uint
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = image.getMipLevels();
     viewInfo.subresourceRange.baseArrayLayer = arrayLayer;
-    viewInfo.subresourceRange.layerCount = layerCount == 0 ? image.getArrayLayers() : layerCount;
+    viewInfo.subresourceRange.layerCount = layerCount;
 
     if (vkCreateImageView(image.getDevice().getHandle(), &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
         throw std::runtime_error("failed to create texture image view!");

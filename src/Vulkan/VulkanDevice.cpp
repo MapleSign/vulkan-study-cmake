@@ -26,6 +26,7 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
     deviceFeatures.features.samplerAnisotropy = VK_TRUE;
     deviceFeatures.features.geometryShader = VK_TRUE;
     deviceFeatures.features.shaderInt64 = VK_TRUE;
+    deviceFeatures.features.imageCubeArray = VK_TRUE;
 
     VkPhysicalDeviceShaderClockFeaturesKHR clockFreature{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR };
     clockFreature.shaderDeviceClock = VK_TRUE;

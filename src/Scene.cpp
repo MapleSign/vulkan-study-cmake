@@ -298,6 +298,8 @@ PointLight* Scene::addPointLight(const char* name, glm::vec3 pos, glm::vec3 colo
 	light->linear = 0.0f;
 	light->quadratic = 0.2f;
 
+	light->update();
+
 	pointLightMap.emplace(name, light);
 
 	return light;

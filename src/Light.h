@@ -15,16 +15,21 @@ struct DirLight {
 };
 
 struct PointLight {
-    alignas(16) glm::vec3 position;
+    glm::mat4 lightSpaces[6];
 
-    alignas(4) glm::vec3 color;
-    alignas(4) float intensity;
+    glm::vec3 position;
+    float padding0;
+
+    glm::vec3 color;
+    float intensity;
     
-    alignas(4) float constant;
-    alignas(4) float linear;
-    alignas(8) float quadratic;
+    float constant;
+    float linear;
+    float quadratic;
 
-    glm::mat4 lightSpace[6];
+    float padding1;
+
+    void update();
 };
 
 class Light

@@ -65,7 +65,7 @@ vec3 calcLight(inout State state, vec3 V, vec3 L, vec3 lightIntensity, float lig
     return Li;
 }
 
-float calcShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
+float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
 
@@ -83,6 +83,16 @@ float calcShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
         }
     }
     shadow /= 9.0;
+
+    return shadow;
+}
+
+float calcCubeShadow(samplerCube shadowMap, vec3 fragPos, vec3 lightPos) {
+    vec3 fragToLight = fragPos - lightPos;
+    float closestDepth = texture(shadowMap, fragToLight).r;
+    closestDepth *= 25.0;
+    float currentDepth = length(fragToLight) - shadowUniform.bias;
+    float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
 
     return shadow;
 }
@@ -117,8 +127,8 @@ void main() {
         vec3 lightIntensity = dirLight[i].intensity * dirLight[i].color;
 
         vec4 fragPosLightSpace = dirLight[i].lightSpace * vec4(fragPos, 1.0);
+        float shadow = calcDirShadow(dirLightShadowMaps[nonuniformEXT(i)], fragPosLightSpace);
 
-        float shadow = calcShadow(dirLightShadowMaps[nonuniformEXT(i)], fragPosLightSpace);
         result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
     }
     
@@ -128,7 +138,10 @@ void main() {
         float distance = length(light.position - fragPos);
         float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
         vec3 lightIntensity = light.color * light.intensity * attenuation;
-        result += calcLight(state, viewDir, lightDir, lightIntensity, 1.0);    
+        
+        float shadow = calcCubeShadow(pointLightShadowMaps[nonuniformEXT(i)], fragPos, light.position);
+
+        result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
     }
 
     int numSamples = 64;
