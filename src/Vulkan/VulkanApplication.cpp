@@ -86,6 +86,7 @@ void VulkanApplication::loadScene(const char* filename)
 
     scene->addDirLight("light1", { -0.029, -1.00, 0.2 }, glm::vec3{ 1.0f }, { 3.0f });
     scene->addPointLight("light0", { 0.f, 0.f, 10.f }, { 1.0f, 1.f, 1.f });
+    scene->addPointLight("light1", { 0.f, 10.f, 0.0f }, { 1.0f, 1.f, 1.f });
 
     VkSampler sampler = resManager->createSampler();
     for (const auto& [name, model] : scene->getModelMap()) {
