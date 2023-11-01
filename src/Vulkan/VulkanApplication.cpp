@@ -288,6 +288,11 @@ void VulkanApplication::mainLoop()
             changed |= ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
         }
 
+        if (ImGui::CollapsingHeader("Shadow"))
+        {
+            ImGui::SliderFloat("Bias", &graphicBuilder->getShadowData().bias, 0.0f, 0.005f, "%.4f");
+        }
+
         if (rtSupport)
         {
             if (ImGui::CollapsingHeader("Ray Tracing", ImGuiTreeNodeFlags_DefaultOpen))

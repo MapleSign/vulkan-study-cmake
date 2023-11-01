@@ -62,7 +62,7 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     }
 
     dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, 2);
-    pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ 1024, 1024 }, shaderResources, 2);
+    pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, 2);
     skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, shaderResources, *renderPass);
 
     // create SceneData
@@ -104,7 +104,7 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
         {
             {0, {device.getGPU().pad_uniform_buffer_size(sizeof(DirLight) * 16), 1}},
             {1, {device.getGPU().pad_uniform_buffer_size(sizeof(PointLight) * 16), 1}},
-            {2, {device.getGPU().pad_uniform_buffer_size(sizeof(DirShadowRenderPass::ShadowData)), 1}},
+            {2, {device.getGPU().pad_uniform_buffer_size(sizeof(ShadowRenderPass::ShadowData)), 1}},
         }
     );
 
@@ -208,10 +208,6 @@ void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
     }
     lightData.updateData(currentImage, 1, pointLights.data(), sizeof(PointLight) * pointLights.size());
 
-    //auto lightProj = glm::ortho(-20.f, 20.f, -20.f, 20.f, 0.1f, 60.f);
-    //lightProj[1][1] *= -1;
-    //auto lightView = glm::lookAt(dirLight->direction * -50.f, glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));
-    DirShadowRenderPass::ShadowData shadowData{ /*lightProj * lightView*/ };
     lightData.updateData(currentImage, 2, &shadowData, sizeof(shadowData));
 
     pushConstants.dirLightNum = scene->getDirLightMap().size();

@@ -106,6 +106,9 @@ public:
     constexpr const SceneData& getGlobalData() const { return globalData; }
     constexpr const SceneData& getLightData() const { return lightData; }
 
+
+    ShadowRenderPass::ShadowData& getShadowData() { return shadowData; }
+
 private:
     const VulkanDevice& device;
     VulkanResourceManager& resManager;
@@ -123,6 +126,7 @@ private:
     SceneData lightData;
 
     PushConstantRaster pushConstants{};
+    ShadowRenderPass::ShadowData shadowData{};
 
     std::unique_ptr<DirShadowRenderPass> dirShadowPass;
     std::unique_ptr<PointShadowRenderPass> pointShadowPass;

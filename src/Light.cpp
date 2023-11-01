@@ -13,7 +13,7 @@ void DirLight::update()
 void PointLight::update()
 {
     float aspect = 1.0;
-    float near = 1.0f;
+    float near = 0.0f;
     float far = 25.0f;
     glm::mat4 lightProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
 
