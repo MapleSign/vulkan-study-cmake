@@ -60,26 +60,30 @@ vec3 pathtrace(Ray r,int maxDepth)
         // return vec3(state.mat.transmission);
         // return state.mat.emission;
 
-        int lightType = 1;
-        int lightIdx = int(randFloat(prd.seed, 0, pcRay.dirLightNum + pcRay.pointLightNum));
-        if (lightIdx >= pcRay.dirLightNum) {
-            lightIdx -= pcRay.dirLightNum;
-            lightType = 0;
-        }
-        vec3  L; // Vector toward the light
+        vec3  L = vec3(0); // Vector toward the light
         float lightIntensity = 0.0;
         float lightDistance = 100000.0;
         float lightPdf = 1;
-        // Point light
-        if (lightType == 0) {
-            vec3 lDir = pointLights[lightIdx].position - state.position;
-            lightDistance = length(lDir);
-            lightIntensity = pointLights[lightIdx].intensity / (lightDistance * lightDistance * 0.2);
-            L = normalize(-lDir);
-        }
-        else { // Directional light
-            lightIntensity = dirLights[lightIdx].intensity;
-            L = normalize(dirLights[lightIdx].direction);
+
+        if (pcRay.dirLightNum + pcRay.pointLightNum > 0) {
+            int lightType = 1;
+            int lightIdx = int(randFloat(prd.seed, 0, pcRay.dirLightNum + pcRay.pointLightNum));
+            if (lightIdx >= pcRay.dirLightNum) {
+                lightIdx -= pcRay.dirLightNum;
+                lightType = 0;
+            }
+
+            // Point light
+            if (lightType == 0) {
+                vec3 lDir = pointLights[lightIdx].position - state.position;
+                lightDistance = length(lDir);
+                lightIntensity = pointLights[lightIdx].intensity / (lightDistance * lightDistance * 0.2);
+                L = normalize(-lDir);
+            }
+            else { // Directional light
+                lightIntensity = dirLights[lightIdx].intensity;
+                L = normalize(dirLights[lightIdx].direction);
+            }
         }
 
         // Reset absorption when ray is going out of surface

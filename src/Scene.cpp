@@ -267,7 +267,11 @@ DirLight* Scene::addDirLight(const char* name, glm::vec3 dir, glm::vec3 color, f
 	light->intensity = intensity;
 	light->update();
 
-	dirLightMap.emplace(name, light);
+	std::string key = name;
+	while (dirLightMap.find(key) != dirLightMap.end()) {
+		key += "_1";
+	}
+	dirLightMap.emplace(key, light);
 
 	return light;
 }
@@ -275,6 +279,11 @@ DirLight* Scene::addDirLight(const char* name, glm::vec3 dir, glm::vec3 color, f
 DirLight* Scene::getDirLight(const char* name)
 {
 	return dirLightMap[name].get();
+}
+
+void Scene::removeDirLight(const char* name)
+{
+	dirLightMap.erase(name);
 }
 
 std::unordered_map<std::string, std::unique_ptr<DirLight>>& Scene::getDirLightMap()
@@ -300,7 +309,11 @@ PointLight* Scene::addPointLight(const char* name, glm::vec3 pos, glm::vec3 colo
 
 	light->update();
 
-	pointLightMap.emplace(name, light);
+	std::string key = name;
+	while (pointLightMap.find(key) != pointLightMap.end()) {
+		key += "_1";
+	}
+	pointLightMap.emplace(key, light);
 
 	return light;
 }
@@ -308,6 +321,11 @@ PointLight* Scene::addPointLight(const char* name, glm::vec3 pos, glm::vec3 colo
 PointLight* Scene::getPointLight(const char* name)
 {
 	return pointLightMap[name].get();
+}
+
+void Scene::removePointLight(const char* name)
+{
+	pointLightMap.erase(name);
 }
 
 std::unordered_map<std::string, std::unique_ptr<PointLight>>& Scene::getPointLightMap()

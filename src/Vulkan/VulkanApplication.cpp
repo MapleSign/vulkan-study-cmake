@@ -278,15 +278,81 @@ void VulkanApplication::mainLoop()
 
         if (ImGui::CollapsingHeader("Light"))
         {
-            changed |= ImGui::RadioButton("Point", &pcRay.lightType, 0);
-            ImGui::SameLine();
-            changed |= ImGui::RadioButton("Infinite", &pcRay.lightType, 1);
+            {
+                static std::string itemSelected = "";
+                std::vector<std::string> deleteList{};
+                if (ImGui::BeginListBox("Dir Lights")) {
+                    for (auto& [name, light] : scene->getDirLightMap()) {
+                        if (ImGui::Selectable(name.c_str(), itemSelected == name)) {
+                            itemSelected = name;
+                        }
+                        if (ImGui::BeginPopupContextItem()) {
+                            itemSelected = name;
+                            if (ImGui::Button("Delete")) {
+                                changed |= true;
+                                deleteList.push_back(name);
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::EndPopup();
+                        }
 
-            if (pcRay.lightType == 0)
-                changed |= ImGui::SliderFloat3("Position", &pcRay.lightPosition.x, -20.f, 20.f);
-            else if (pcRay.lightType == 1)
-                changed |= ImGui::SliderFloat3("Direction", &pcRay.lightPosition.x, -1.f, 1.f);
-            changed |= ImGui::SliderFloat("Intensity", &pcRay.lightIntensity, 0.f, 150.f);
+                        if (itemSelected == name) {
+                            changed |= ImGui::SliderFloat3("Direction", &light->direction.x, -1.f, 1.f);
+                            changed |= ImGui::SliderFloat("Intensity", &light->intensity, 0.f, 100.f);
+
+                            light->update();
+                        }
+                    }
+
+                    ImGui::EndListBox();
+                }
+                if (ImGui::Button("+ Dir Light")) {
+                    changed |= true;
+                    scene->addDirLight("light");
+                }
+                for (auto& name : deleteList) {
+                    scene->removeDirLight(name.c_str());
+                }
+            }
+
+            ImGui::Spacing();
+
+            {
+                static std::string itemSelected = "";
+                std::vector<std::string> deleteList{};
+                if (ImGui::BeginListBox("Point Lights")) {
+                    for (auto& [name, light] : scene->getPointLightMap()) {
+                        if (ImGui::Selectable(name.c_str(), itemSelected == name)) {
+                            itemSelected = name;
+                        }
+                        if (ImGui::BeginPopupContextItem()) {
+                            itemSelected = name;
+                            if (ImGui::Button("Delete")) {
+                                changed |= true;
+                                deleteList.push_back(name);
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::EndPopup();
+                        }
+
+                        if (itemSelected == name) {
+                            changed |= ImGui::SliderFloat3("Position", &light->position.x, -20.f, 20.f);
+                            changed |= ImGui::SliderFloat("Intensity", &light->intensity, 0.f, 100.f);
+
+                            light->update();
+                        }
+                    }
+
+                    ImGui::EndListBox();
+                }
+                if (ImGui::Button("+ Point Light")) {
+                    changed |= true;
+                    scene->addPointLight("light");
+                }
+                for (auto& name : deleteList) {
+                    scene->removePointLight(name.c_str());
+                }
+            }
         }
 
         if (ImGui::CollapsingHeader("Shadow"))
@@ -348,26 +414,6 @@ void VulkanApplication::mainLoop()
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::Text("Frame index %d", pcRay.frame);
         ImGui::End();
-
-
-        auto dirLight = scene->getDirLight("light0");
-        dirLight->direction = pcRay.lightPosition;
-
-        auto ptLight = scene->getPointLight("light0");
-        ptLight->position = pcRay.lightPosition;
-
-        if (pcRay.lightType == 0) {
-            ptLight->intensity = pcRay.lightIntensity;
-
-            dirLight->intensity = 0.f;
-        }
-        else {
-            dirLight->intensity = pcRay.lightIntensity;
-
-            ptLight->intensity = 0.f;
-        }
-        dirLight->update();
-        ptLight->update();
 
         drawFrame();
 
