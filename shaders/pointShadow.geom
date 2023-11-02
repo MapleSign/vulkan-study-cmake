@@ -25,7 +25,7 @@ layout(location = 0) out vec2 fragCoord;
 layout(location = 1) out vec3 fragPos;
 
 void main() {
-    for (int lightIdx = 0; lightIdx < constants.dirLightNum; ++lightIdx) {
+    for (int lightIdx = 0; lightIdx < constants.pointLightNum; ++lightIdx) {
         for (int face = 0; face < 6; ++face) {
             gl_Layer = lightIdx * 6 + face;
             for (int i = 0; i < 3; ++i) {

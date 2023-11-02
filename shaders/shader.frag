@@ -87,12 +87,31 @@ float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
     return shadow;
 }
 
-float calcCubeShadow(samplerCube shadowMap, vec3 fragPos, vec3 lightPos) {
+const vec3 sampleOffsetDirections[20] = vec3[]
+(
+   vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
+   vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
+   vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
+   vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
+   vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
+);
+
+float calcCubeShadow(samplerCube shadowMap, vec3 fragPos, vec3 lightPos, vec3 viewPos) {
+    int samples = 20;
+    float farPlane = 25.0;
+    float viewDistance = length(viewPos - fragPos);
+    float diskRadius = (1.0 + (viewDistance / farPlane)) / 500.0;
+
     vec3 fragToLight = fragPos - lightPos;
-    float closestDepth = texture(shadowMap, fragToLight).r;
-    closestDepth *= 25.0;
     float currentDepth = length(fragToLight) - shadowUniform.bias;
-    float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+    float shadow = 0.0;
+
+    for (int i = 0; i < samples; ++i) {
+        float closestDepth = texture(shadowMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
+        closestDepth *= farPlane;
+        shadow += currentDepth > closestDepth ? 1.0 : 0.0;
+    }
+    shadow /= float(samples);
 
     return shadow;
 }
@@ -139,7 +158,8 @@ void main() {
         float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
         vec3 lightIntensity = light.color * light.intensity * attenuation;
         
-        float shadow = i < shadowUniform.maxPointShadowNum ? calcCubeShadow(pointLightShadowMaps[nonuniformEXT(i)], fragPos, light.position) : 0.0;
+        float shadow = i < shadowUniform.maxPointShadowNum ? 
+            calcCubeShadow(pointLightShadowMaps[nonuniformEXT(i)], fragPos, light.position, constants.viewPos) : 0.0;
 
         result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
     }
