@@ -61,8 +61,8 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
         shaderResources.insert(shaderResources.end(), descShaderRes.begin(), descShaderRes.end());
     }
 
-    dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, 2);
-    pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, 2);
+    dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxDirShadowNum);
+    pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxPointShadowNum);
     skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, shaderResources, *renderPass);
 
     // create SceneData

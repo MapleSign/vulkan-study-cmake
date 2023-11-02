@@ -56,7 +56,10 @@ class ShadowRenderPass : public GraphicsRenderPass
 public:
     struct ShadowData {
         glm::mat4 lightSpace;
+
         float bias = 0.0001;
+        int maxDirShadowNum = 2;
+        int maxPointShadowNum = 2;
     };
 
     ShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,

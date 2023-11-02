@@ -127,7 +127,7 @@ void main() {
         vec3 lightIntensity = dirLight[i].intensity * dirLight[i].color;
 
         vec4 fragPosLightSpace = dirLight[i].lightSpace * vec4(fragPos, 1.0);
-        float shadow = calcDirShadow(dirLightShadowMaps[nonuniformEXT(i)], fragPosLightSpace);
+        float shadow = i < shadowUniform.maxDirShadowNum ? calcDirShadow(dirLightShadowMaps[nonuniformEXT(i)], fragPosLightSpace) : 0.0;
 
         result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
     }
@@ -139,7 +139,7 @@ void main() {
         float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
         vec3 lightIntensity = light.color * light.intensity * attenuation;
         
-        float shadow = calcCubeShadow(pointLightShadowMaps[nonuniformEXT(i)], fragPos, light.position);
+        float shadow = i < shadowUniform.maxPointShadowNum ? calcCubeShadow(pointLightShadowMaps[nonuniformEXT(i)], fragPos, light.position) : 0.0;
 
         result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
     }

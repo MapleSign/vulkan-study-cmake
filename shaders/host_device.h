@@ -80,7 +80,10 @@ struct ObjectData {
 
 struct ShadowData {
     mat4 lightSpace;
+
     float bias;
+    int maxDirShadowNum;
+    int maxPointShadowNum;
 };
 
 // Push constant structure for the raster
