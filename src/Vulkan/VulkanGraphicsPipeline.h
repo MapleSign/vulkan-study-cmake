@@ -17,6 +17,12 @@ struct DepthStencilState
     VkBool32 depth_write_enable{ VK_TRUE };
 };
 
+struct ColorBlendAttachmentState
+{
+    VkColorComponentFlags colorWriteMask = 
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+};
+
 struct VulkanPipelineState {
     const VulkanPipelineLayout* pipelineLayout;
     const VulkanRenderPass* renderPass;
@@ -31,6 +37,7 @@ struct VulkanPipelineState {
     VkCullModeFlags cullMode{ VK_CULL_MODE_BACK_BIT };
 
     DepthStencilState depthStencilState{};
+    std::vector<ColorBlendAttachmentState> colorBlendAttachmentStates{ 1 };
 };
 
 class VulkanGraphicsPipeline : public VulkanPipeline

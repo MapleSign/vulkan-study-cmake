@@ -29,8 +29,10 @@ file(GLOB_RECURSE GLSL_INCLUDE_FILES
     )
 
 set(GLSL_SOURCE_FILES 
-    "${PROJECT_SOURCE_DIR}/shaders/shader.frag"
     "${PROJECT_SOURCE_DIR}/shaders/shader.vert"
+    "${PROJECT_SOURCE_DIR}/shaders/shader.frag"
+
+    "${PROJECT_SOURCE_DIR}/shaders/lighting.frag"
 
     "${PROJECT_SOURCE_DIR}/shaders/passthrough.vert"
     "${PROJECT_SOURCE_DIR}/shaders/post.frag"

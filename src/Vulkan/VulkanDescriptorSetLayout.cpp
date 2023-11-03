@@ -9,6 +9,9 @@ VkDescriptorType findDescriptorType(ShaderResourceType type)
 {
     switch (type)
     {
+    case ShaderResourceType::Input:
+        return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+        break;
     case ShaderResourceType::Sampler:
         return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         break;

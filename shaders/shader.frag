@@ -1,4 +1,4 @@
-#version 450
+#version 460
 
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier : enable
@@ -8,30 +8,12 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_buffer_reference2 : require
 
-#extension GL_ARB_shader_clock : enable
-
 #include "raycommon.glsl"
-#include "random.glsl"
 #include "host_device.h"
 
 layout(push_constant) uniform PushConstants {
     PushConstantRaster constants;
 };
-
-layout(set = 1, binding = 0) buffer DirLightInfo {
-    DirLight dirLight[];
-};
-
-layout(set = 1, binding = 1) buffer PointLightInfo {
-    PointLight pointLights[];
-};
-
-layout(set = 1, binding = 2) uniform _ShadowUniform {
-    ShadowData shadowUniform;
-};
-
-layout(set = 1, binding = 3) uniform sampler2D[] dirLightShadowMaps;
-layout(set = 1, binding = 4) uniform samplerCube[] pointLightShadowMaps;
 
 layout(buffer_reference, scalar) buffer Vertices { Vertex v[]; }; // Positions of an object
 layout(buffer_reference, scalar) buffer Indices { ivec3 i[]; }; // Triangle indices
@@ -41,7 +23,6 @@ layout(buffer_reference, scalar) buffer MatIndices { int i[]; }; // Material ID 
 layout(set = 0, binding = eObjDescs, scalar) buffer ObjDescBuffer { ObjDesc i[]; } objDesc;
 
 layout(set = 0, binding = eTextures) uniform sampler2D[] textureSampler;
-layout(set = 0, binding = eEnvTexture) uniform samplerCube envSampler;
 
 layout(location = 0) in vec3 fragNormal;
 layout(location = 1) in vec2 fragTexCoord;
@@ -49,72 +30,13 @@ layout(location = 2) in vec3 fragPos;
 layout(location = 3) in vec3 fragTangent;
 layout(location = 4) in vec3 fragBitangent;
 
-layout(location = 0) out vec4 outColor;
+layout(location = eSceneColor) out vec4 outSceneColor;
+layout(location = ePosition) out vec3 outPos;
+layout(location = eNormal) out vec3 outNormal;
+layout(location = eAlbedo) out vec4 outAlbedo;
+layout(location = eMetalRough) out vec2 outMetalRough;
 
 #include "gltf_material.glsl"
-#include "pbr.glsl"
-
-vec3 calcLight(inout State state, vec3 V, vec3 L, vec3 lightIntensity, float lightPdf) {
-    vec3 Li = vec3(0);
-    if (dot(state.ffnormal, L) > 0) {
-        BsdfSampleRec directBsdf;
-        directBsdf.f = PbrEval(state, V, state.ffnormal, L, directBsdf.pdf);
-        float misWeightBsdf = max(0, powerHeuristic(directBsdf.pdf, lightPdf)); // multi importance sampling weight
-        Li = misWeightBsdf * directBsdf.f * abs(dot(L, state.ffnormal)) * lightIntensity / directBsdf.pdf;
-    }
-    return Li;
-}
-
-float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    projCoords.xy = projCoords.xy * 0.5 + 0.5;
-
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
-    float currentDepth = projCoords.z - shadowUniform.bias;
-    float shadow = 0.0;
-
-    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-    for(int x = -1; x <= 1; ++x)
-    {
-        for(int y = -1; y <= 1; ++y)
-        {
-            float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth > pcfDepth ? 1.0 : 0.0;
-        }
-    }
-    shadow /= 9.0;
-
-    return shadow;
-}
-
-const vec3 sampleOffsetDirections[20] = vec3[]
-(
-   vec3( 1,  1,  1), vec3( 1, -1,  1), vec3(-1, -1,  1), vec3(-1,  1,  1), 
-   vec3( 1,  1, -1), vec3( 1, -1, -1), vec3(-1, -1, -1), vec3(-1,  1, -1),
-   vec3( 1,  1,  0), vec3( 1, -1,  0), vec3(-1, -1,  0), vec3(-1,  1,  0),
-   vec3( 1,  0,  1), vec3(-1,  0,  1), vec3( 1,  0, -1), vec3(-1,  0, -1),
-   vec3( 0,  1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0,  1, -1)
-);
-
-float calcCubeShadow(samplerCube shadowMap, vec3 fragPos, vec3 lightPos, vec3 viewPos) {
-    int samples = 20;
-    float farPlane = 25.0;
-    float viewDistance = length(viewPos - fragPos);
-    float diskRadius = (1.0 + (viewDistance / farPlane)) / 500.0;
-
-    vec3 fragToLight = fragPos - lightPos;
-    float currentDepth = length(fragToLight) - shadowUniform.bias;
-    float shadow = 0.0;
-
-    for (int i = 0; i < samples; ++i) {
-        float closestDepth = texture(shadowMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
-        closestDepth *= farPlane;
-        shadow += currentDepth > closestDepth ? 1.0 : 0.0;
-    }
-    shadow /= float(samples);
-
-    return shadow;
-}
 
 void main() {
     ObjDesc objResource = objDesc.i[constants.objId];
@@ -136,49 +58,9 @@ void main() {
         discard;
     }
 
-    vec3 viewDir = normalize(constants.viewPos - fragPos);
-    state.ffnormal = dot(state.normal, viewDir) >= 0.0 ? state.normal : -state.normal;
-    createCoordinateSystem(state.ffnormal, state.tangent, state.bitangent);
-    
-    vec3 result = vec3(0.0);
-    for (int i = 0; i < constants.dirLightNum; ++i) {
-        vec3 lightDir = -normalize(dirLight[i].direction);
-        vec3 lightIntensity = dirLight[i].intensity * dirLight[i].color;
-
-        vec4 fragPosLightSpace = dirLight[i].lightSpace * vec4(fragPos, 1.0);
-        float shadow = i < shadowUniform.maxDirShadowNum ? calcDirShadow(dirLightShadowMaps[nonuniformEXT(i)], fragPosLightSpace) : 0.0;
-
-        result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
-    }
-    
-    for (int i = 0; i < constants.pointLightNum; ++i) {
-        PointLight light = pointLights[i];
-        vec3 lightDir = normalize(light.position - fragPos);
-        float distance = length(light.position - fragPos);
-        float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
-        vec3 lightIntensity = light.color * light.intensity * attenuation;
-        
-        float shadow = i < shadowUniform.maxPointShadowNum ? 
-            calcCubeShadow(pointLightShadowMaps[nonuniformEXT(i)], fragPos, light.position, constants.viewPos) : 0.0;
-
-        result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
-    }
-
-    int numSamples = 64;
-    BsdfSampleRec indirectBsdf;
-    uint seed = constants.objId;
-    vec3 sampleColor = vec3(0);
-    for (int i = 0; i < numSamples; ++i) {
-        indirectBsdf.f = PbrSample(state, viewDir, state.ffnormal, indirectBsdf.L, indirectBsdf.pdf, seed);
-        vec3 sampleLight = texture(envSampler, indirectBsdf.L).rgb;
-        sampleColor += indirectBsdf.f * sampleLight * abs(dot(state.ffnormal, indirectBsdf.L)) / indirectBsdf.pdf;
-    }
-    sampleColor /= numSamples;
-    result += sampleColor * 0.05;
-
-    outColor = vec4(result + state.mat.emission, 1.0);
-    // outColor = vec4(vec3(shadow), 1.0);
-    // outColor = vec4((state.normal + vec3(1)) * 0.5, 1.0);
-    // outColor = vec4(state.texCoord, 0, 1);
-    // outColor = vec4(1.0);
+    outSceneColor = vec4(state.mat.emission, 1.0);
+    outPos = fragPos;
+    outNormal = state.normal * 0.5 + 0.5;
+    outAlbedo = vec4(state.mat.albedo, state.mat.alpha);
+    outMetalRough = vec2(state.mat.metallic, state.mat.roughness);
 }

@@ -7,11 +7,14 @@
 
 enum class ShaderResourceType
 {
+    Input,
+
 	Sampler,
 	Uniform,
     PushConstant,
     StorageBuffer,
     StorageImage,
+
     AccelerationStructure
 };
 

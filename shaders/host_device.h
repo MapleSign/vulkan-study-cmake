@@ -34,6 +34,15 @@ eOutImage = 1   // Ray tracer output image
 END_BINDING();
 // clang-format on
 
+START_BINDING(GBufferType)
+    eSceneColor = 0,
+    ePosition = 1,
+    eNormal = 2,
+    eAlbedo = 3,
+    eMetalRough = 4,
+    eCount = 5
+END_BINDING();
+
 struct DirLight {
 	vec3 direction;
 

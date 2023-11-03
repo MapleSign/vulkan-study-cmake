@@ -16,6 +16,16 @@ struct PushConstantRaster {
     int pointLightNum;
 };
 
+enum GBufferType {
+    SceneColor = 0,
+    Position,
+    Albedo,
+    Normal,
+    MetalRough,
+
+    Count
+};
+
 class GraphicsRenderPass
 {
 public:
@@ -42,13 +52,31 @@ class SkyboxRenderPass : GraphicsRenderPass
 {
 public:
     SkyboxRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
-        const std::vector<VulkanShaderResource> shaderRes, const VulkanRenderPass& graphicsRenderPass);
+        const std::vector<VulkanShaderResource> shaderRes, const VulkanRenderPass& graphicsRenderPass, uint32_t subpass);
 
     void update(float deltaTime, const Scene* scene) override;
     void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
 
 private:
     const VulkanRenderPass& graphicsRenderPass;
+};
+
+class LightingRenderPass : GraphicsRenderPass 
+{
+public:
+    LightingRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
+        const std::vector<VulkanShaderResource> shaderRes, const VulkanRenderPass& graphicsRenderPass, uint32_t subpass, 
+        const std::vector<const VulkanImageView*>& gBuffer);
+
+    void update(float deltaTime, const Scene* scene) override;
+    void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
+
+private:
+    const VulkanRenderPass& graphicsRenderPass;
+
+    SceneData defferedData;
+
+    PushConstantRaster pushConstants{};
 };
 
 class ShadowRenderPass : public GraphicsRenderPass
@@ -113,10 +141,13 @@ public:
     ShadowRenderPass::ShadowData& getShadowData() { return shadowData; }
 
 private:
+    void createRenderTarget();
+
     const VulkanDevice& device;
     VulkanResourceManager& resManager;
     VkExtent2D extent;
 
+    std::vector<const VulkanImageView*> gBuffer;
     const VulkanImageView* offscreenColor;
     const VulkanImageView* offscreenDepth;
 
@@ -134,4 +165,5 @@ private:
     std::unique_ptr<DirShadowRenderPass> dirShadowPass;
     std::unique_ptr<PointShadowRenderPass> pointShadowPass;
     std::unique_ptr<SkyboxRenderPass> skyboxPass;
+    std::unique_ptr<LightingRenderPass> lightingPass;
 };

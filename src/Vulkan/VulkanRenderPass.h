@@ -13,12 +13,20 @@ struct LoadStoreInfo
     VkAttachmentStoreOp store_op = VK_ATTACHMENT_STORE_OP_STORE;
 };
 
+struct SubpassInfo
+{
+    std::vector<uint32_t> output{};
+    std::vector<uint32_t> input{};
+    std::vector<VkSubpassDependency> dependencies{};
+};
+
 class VulkanRenderPass
 {
 public:
     VulkanRenderPass(const VulkanDevice& device, 
         const std::vector<VulkanAttatchment>& attachments, 
-        const std::vector<LoadStoreInfo>& loadStoreInfos);
+        const std::vector<LoadStoreInfo>& loadStoreInfos, 
+        const std::vector<SubpassInfo>& subpasses = {});
 
     ~VulkanRenderPass();
 
