@@ -50,9 +50,10 @@ vec3 pathtrace(Ray r,int maxDepth)
         /* Hit */
         State state;
         getShadeState(state, prd);
-        state.ffnormal = dot(state.normal, r.direction) <= 0.0 ? state.normal : -state.normal;
+        bool isInside = dot(state.normal, r.direction) > 0.0;
+        state.ffnormal = isInside ? -state.normal : state.normal;
         createCoordinateSystem(state.ffnormal, state.tangent, state.bitangent);
-        state.eta = dot(state.normal, state.ffnormal) > 0.0 ? (1.0 / state.mat.ior) : state.mat.ior;
+        state.eta = isInside ? state.mat.ior : (1.0 / state.mat.ior);
         // return (state.normal + vec3(1)) * 0.5;
         // return vec3(state.mat.roughness);
         // return vec3(state.mat.metallic);
@@ -87,7 +88,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         }
 
         // Reset absorption when ray is going out of surface
-        if(dot(state.normal, state.ffnormal) > 0.0) {
+        if(!isInside) {
             absorption = vec3(0.0);
         }
         
@@ -98,7 +99,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         // weight *= exp(-absorption * prd.hitT);
 
         vec3 Li = vec3(0);
-        if (dot(state.ffnormal, L) < 0) {
+        if (state.mat.transmission > 0.0 && isInside || dot(state.ffnormal, L) < 0) {
             BsdfSampleRec directBsdf;
             directBsdf.f = PbrEval(state, -r.direction, state.ffnormal, -L, directBsdf.pdf);
             float misWeightBsdf = max(0, powerHeuristic(directBsdf.pdf, lightPdf)); // multi importance sampling weight
@@ -115,7 +116,7 @@ vec3 pathtrace(Ray r,int maxDepth)
         weight *= bsdf.f * abs(dot(state.ffnormal, bsdf.L)) / bsdf.pdf;
 
         // Direct light
-        if (dot(state.ffnormal, L) < 0) {
+        if (state.mat.transmission > 0.0 && isInside || dot(state.ffnormal, L) < 0) {
             shadow_prd.isShadowed = true; // Asume hit, will be set to false if hit nothing (miss shader)
             uint rayFlags = 
                 gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT | gl_RayFlagsCullBackFacingTrianglesEXT;
@@ -127,7 +128,7 @@ vec3 pathtrace(Ray r,int maxDepth)
                         0,            // sbtRecordStride
                         1,            // missIndex
                         state.position,     // ray origin
-                        0.01,          // ray min range
+                        0.0,          // ray min range
                         -L,            // ray direction
                         lightDistance,         // ray max range
                         1             // payload layout(location = 1)

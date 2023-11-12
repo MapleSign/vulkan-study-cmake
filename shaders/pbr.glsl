@@ -28,29 +28,51 @@ vec3 F_Schlick(vec3 f0, float VdotH) {
     return f0 + (vec3(f90) - f0) * pow(1 - abs(VdotH), 5);
 }
 
+float FrDielectric(float cosTheta_i, float eta) {
+    float sinTheta2_i = 1 - cosTheta_i * cosTheta_i;
+    float sinTheta2_t = sinTheta2_i / (eta * eta);
+    if (sinTheta2_t >= 1.0)
+        return 1.0;
+    float cosTheta_t = sqrt(1 - sinTheta2_t);
+
+    float r_parl = (eta * cosTheta_i - cosTheta_t) / 
+        (eta * cosTheta_i + cosTheta_t);
+    float r_perp = (cosTheta_i - eta * cosTheta_t) / 
+        (cosTheta_i + eta * cosTheta_t);
+    return (r_parl * r_parl + r_perp * r_perp) / 2;
+}
+
+float Lambda(float alpha, float cosTheta) {
+    float cosTheta2 = cosTheta * cosTheta;
+    float tanTheta2 = (1.0 - cosTheta2) / cosTheta2;
+    return (sqrt(1 + alpha * alpha * tanTheta2) - 1) * 0.5;
+}
+
 float GgxD(float alpha, float NdotH) {
     float alpha2 = alpha * alpha;
     float f = NdotH * NdotH * (alpha2 - 1) + 1;
     return alpha2 / (M_PI * f * f);
+}
 
-    // float tan2Theta = Tan2Theta(wh);
-    // if (isinf(tan2Theta))
-    //     return 0;
-    // const Float cos4Theta = Cos2Theta(wh) * Cos2Theta(wh);
-    // float e = (Cos2Phi(wh) / (alphax * alphax) + Sin2Phi(wh) / (alphay * alphay)) * tan2Theta;
-    // return 1 / (Pi * alphax * alphay * cos4Theta * (1 + e) * (1 + e));
+float GgxD_w(float alpha, float NdotV, float NdotH, float VdotH) {
+    float G1 = 1 / (1 + Lambda(alpha, NdotV));
+    float D = GgxD(alpha, NdotH);
+    return G1 / abs(NdotV) * D * abs(VdotH);
+}
+
+float GgxG(float alpha, float NdotL, float NdotV) {
+    float Lambda_L = Lambda(alpha, NdotL);
+    float Lambda_V = Lambda(alpha, NdotV);
+    return 1 / (1 + Lambda_L + Lambda_V);
 }
 
 // V = G / (4 * NdotL * NdotV)
 float GgxV(float alpha, float NdotL, float NdotV) {
-    float k = alpha / 2;
-    float G1_L = NdotL / (NdotL * (1 - k) + k);
-    float G1_V = NdotV / (NdotV * (1 - k) + k);
-    float G = G1_L * G1_V;
+    float Lambda_L = Lambda(alpha, NdotL);
+    float Lambda_V = Lambda(alpha, NdotV);
+    float G = GgxG(alpha, NdotL, NdotV);
     
-    if (G > 0.0)
-        return G / (4 * NdotL * NdotV);
-    else return 0.0;
+    return G / (4 * NdotL * NdotV);
 }
 
 vec3 GgxSample(float alpha, float r1, float r2) {
@@ -79,25 +101,40 @@ vec3 GgxEvalReflect(vec3 f0, float alpha, float roughness, vec3 V, vec3 N, vec3 
     return D * F * GGX_V;
 }
 
-vec3 GgxEvalRefract(vec3 f0, float alpha, float roughness, float eta, vec3 V, vec3 N, vec3 L, vec3 H, inout float pdf) {
+float GgxEvalDielectricReflect(float Fr, float alpha, float roughness, vec3 V, vec3 N, vec3 L, vec3 H, inout float pdf) {
     float NdotH = clamp(dot(N, H), 0, 1);
     float LdotH = clamp(dot(L, H), 0, 1);
     float D = GgxD(alpha, NdotH);
 
-    pdf = D * NdotH / (4 * LdotH);
-
+    float VdotH = dot(V, H);
     float NdotL = clamp(dot(N, L), 0, 1);
     float NdotV = clamp(dot(N, V), 0, 1);
+
+    pdf = GgxD_w(alpha, NdotV, NdotH, VdotH) / (4 * abs(VdotH));
     
     float GGX_V = GgxV(alpha, NdotL, NdotV);
+
+    return D * Fr * GGX_V;
+}
+
+float GgxEvalDielectricRefract(float Ft, float alpha, float roughness, float eta, vec3 V, vec3 N, vec3 L, vec3 H, inout float pdf) {
+    float NdotH = dot(N, H);
+    float LdotH = dot(L, H);
+    float D = GgxD(alpha, NdotH);
+
+    float NdotL = dot(N, L);
+    float NdotV = dot(N, V);
     
-    float VdotH = clamp(dot(V, H), 0, 1);
-    float sqrtDenom = VdotH + eta * LdotH;
-    float factor = 1 / eta;
-    vec3 F = F_Schlick(f0, VdotH);
-    return (vec3(1.f) - F) *
-                abs(D * GGX_V * 4 * eta * eta * LdotH * VdotH * factor * factor /
-                        (sqrtDenom * sqrtDenom));
+    float G = GgxG(alpha, NdotL, NdotV);
+    
+    float VdotH = dot(V, H);
+    float denom = VdotH * eta + LdotH;
+    denom *= denom;
+
+    float dwm_dwi = abs(LdotH) / denom;
+    pdf = GgxD_w(alpha, NdotV, NdotH, VdotH) * dwm_dwi;
+
+    return Ft * abs(D * G * LdotH * VdotH / (denom * NdotL * NdotV));
 }
 
 // refer to pbrt & "Real Shading in Unreal Engine 4"
@@ -142,15 +179,22 @@ vec3 PbrSample(inout State state, vec3 V, vec3 N, inout vec3 L, inout float pdf,
         if (rnd(seed) < diffuseRatio) {
             if (rnd(seed) < transmissionWeight) { // refract
                 float VdotH = dot(V, H);
-                float discriminat = 1.0 - eta * eta * (1.0 - VdotH * VdotH);  // total internal reflection
-                if (discriminat > 0) { // refract
-                    L = normalize(refract(-V, H, eta));
-                }
-                else { // total internal reflect
+                float Fr = FrDielectric(VdotH, eta);
+
+                if (rnd(seed) < Fr) { // total internal reflect or reflect
                     L = normalize(reflect(-V, H));
+                    brdf = state.mat.albedo * GgxEvalDielectricReflect(Fr, alpha, roughness, V, N, L, H, pdf);
+                    pdf *= Fr;
                 }
-                brdf = state.mat.albedo;
-                pdf = abs(dot(N, L));
+                else { // refract
+                    L = normalize(refract(-V, H, eta));
+                    brdf = state.mat.albedo * GgxEvalDielectricRefract(1.0 - Fr, alpha, roughness, eta, V, N, L, H, pdf);
+                    pdf *- 1 - Fr;
+                    // brdf = state.mat.albedo;
+                    // pdf = abs(dot(N, L));
+                }
+                // brdf = state.mat.albedo;
+                // pdf = abs(dot(N, L));
             }
             else { // Lambertien reflect
                 L = CosineSampleHemisphere(r1, r2); // sample diffuse light direction
@@ -180,6 +224,9 @@ vec3 PbrEval(inout State state, vec3 V, vec3 N, vec3 L, inout float pdf) {
     float specularRatio = 1 - diffuseRatio;
     float transmissionWeight = (1.0 - state.mat.metallic) * state.mat.transmission; // only dielectric will transmission
 
+    float roughness = state.mat.roughness;
+    float alpha = max(roughness * roughness, 0.001);
+
     vec3 bsdf = vec3(0);
     float bsdfPdf = 1;
     vec3 brdf = vec3(0);
@@ -187,12 +234,36 @@ vec3 PbrEval(inout State state, vec3 V, vec3 N, vec3 L, inout float pdf) {
 
     pdf = 0;
 
-    if (transmissionWeight < 1) {
+    float NdotL = dot(N, L);
+    if (transmissionWeight > 0.0) {
+        float eta = state.eta;
+        if (NdotL > 0.0) { // reflect
+            float Fr = FrDielectric(dot(V, H), eta);
+            bsdf = state.mat.albedo * GgxEvalDielectricReflect(Fr, alpha, roughness, V, N, L, H, bsdfPdf);
+            bsdfPdf *= Fr;
+            // if (all(lessThan(bsdf, vec3(0.000001))) && all(greaterThan(bsdf, vec3(-0.000001))) || bsdfPdf == 0.0) {
+            //     bsdf = vec3(0.0, 100.0, 0.0);
+            //     bsdfPdf = 1.0;
+            // }
+        }
+        else { // refract
+            vec3 refractH = normalize(L + V * eta);
+            if(dot(N, refractH) < 0.0)
+                refractH = -refractH;
+            float Fr = FrDielectric(dot(V, refractH), eta);
+            bsdf = state.mat.albedo * GgxEvalDielectricRefract(1 - Fr, alpha, roughness, eta, V, N, L, refractH, bsdfPdf);
+            bsdfPdf *= 1 - Fr;
+            // if (all(lessThan(bsdf, vec3(0.000001))) && all(greaterThan(bsdf, vec3(-0.000001))) || bsdfPdf > 0.9) {
+            //     bsdf = vec3(100.0, 0.0, 0.0);
+            //     bsdfPdf = 1.0;
+            // }
+        }
+    }
+
+    if (transmissionWeight < 1.0 && NdotL > 0.0) {
         brdf += state.mat.albedo / M_PI * (1.0 - state.mat.metallic);
         brdfPdf += dot(L, N) / M_PI;
 
-        float roughness = state.mat.roughness;
-        float alpha = max(roughness * roughness, 0.001);
         float specPdf;
         brdf += GgxEvalReflect(state.mat.albedo, alpha, roughness, V, N, L, H, specPdf);
         brdfPdf += specPdf;
