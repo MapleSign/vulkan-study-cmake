@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <memory>
 
 #include "VulkanCommon.h"
 #include "VulkanPhysicalDevice.h"

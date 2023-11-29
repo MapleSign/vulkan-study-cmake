@@ -80,9 +80,9 @@ void createTangents(
 		if (otangent == glm::vec3(0, 0, 0))
 		{
 			if (abs(n.x) > abs(n.y))
-				otangent = glm::vec3(n.z, 0, -n.x) / sqrt(n.x * n.x + n.z * n.z);
+				otangent = glm::vec3(n.z, 0, -n.x) / sqrtf(n.x * n.x + n.z * n.z);
 			else
-				otangent = glm::vec3(0, -n.z, n.y) / sqrt(n.y * n.y + n.z * n.z);
+				otangent = glm::vec3(0, -n.z, n.y) / sqrtf(n.y * n.y + n.z * n.z);
 		}
 
 		// Calculate handedness

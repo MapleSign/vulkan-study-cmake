@@ -1,5 +1,7 @@
 #include "VulkanRayTracingBuilder.h"
 
+#include <cstring>
+
 VulkanRayTracingBuilder::VulkanRayTracingBuilder(
 	const VulkanDevice& device, VulkanResourceManager& resManager, const VulkanImageView& offscreenColor) :
 	device{ device }, resManager{ resManager }, offscreenColor{ &offscreenColor }

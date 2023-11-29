@@ -3,6 +3,7 @@
 #include "VulkanDescriptorPool.h"
 #include "VulkanDescriptorSet.h"
 
+#include <algorithm>
 
 VulkanDescriptorSet::VulkanDescriptorSet(
     const VulkanDevice& device,

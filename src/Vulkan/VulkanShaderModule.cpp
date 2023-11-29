@@ -2,6 +2,8 @@
 #include "VulkanDevice.h"
 #include "VulkanShaderModule.h"
 
+#include <algorithm>
+
 VulkanShaderModule::VulkanShaderModule(const VulkanDevice &device, const std::vector<char> &code, VkShaderStageFlagBits shaderStageFlag, const char *shaderStageName)
     : device{ device }, shaderModule{}, shaderStageInfo{}
 {

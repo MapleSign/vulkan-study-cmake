@@ -2,6 +2,8 @@
 #include "VulkanDevice.h"
 #include "VulkanBuffer.h"
 
+#include <cstring>
+
 VulkanBuffer::VulkanBuffer(const VulkanDevice &device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) : 
     device{device}, size{size}, usage{usage}, properties{properties}
 {

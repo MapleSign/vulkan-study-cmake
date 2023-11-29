@@ -3,6 +3,8 @@
 #include "VulkanQueue.h"
 #include "VulkanCommandPool.h"
 
+#include <cstring>
+
 VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurfaceKHR surface, 
     const std::vector<const char *> &requiredExtentions, const std::vector<const char *> &requiredLayers) :
     physicalDevice{physicalDevice}
