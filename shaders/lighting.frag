@@ -156,12 +156,16 @@ void main() {
 
     int numSamples = 64;
     BsdfSampleRec indirectBsdf;
-    uint seed = constants.objId;
+    uint seed = tea(int(gl_FragCoord.y + gl_FragCoord.x), int(clockARB()));
     vec3 sampleColor = vec3(0);
     for (int i = 0; i < numSamples; ++i) {
         indirectBsdf.f = PbrSample(state, viewDir, state.ffnormal, indirectBsdf.L, indirectBsdf.pdf, seed);
         vec3 sampleLight = texture(envSampler, indirectBsdf.L).rgb;
-        sampleColor += indirectBsdf.f * sampleLight * abs(dot(state.ffnormal, indirectBsdf.L)) / indirectBsdf.pdf;
+        vec3 indirectSample = indirectBsdf.f * sampleLight * abs(dot(state.ffnormal, indirectBsdf.L)) / indirectBsdf.pdf;
+        if (any(isnan(indirectSample)))
+            sampleColor += vec3(0.0);
+        else
+            sampleColor += indirectSample;
     }
     sampleColor /= numSamples;
     result += sampleColor * 0.05;

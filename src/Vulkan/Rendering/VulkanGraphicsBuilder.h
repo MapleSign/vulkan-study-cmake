@@ -9,6 +9,16 @@
 #include "VulkanRenderPass.h"
 #include "VulkanRenderPipeline.h"
 
+class GlobalSubpass;
+
+struct ShadowData {
+    glm::mat4 lightSpace;
+
+    float bias = 0.0001;
+    int maxDirShadowNum = 2;
+    int maxPointShadowNum = 2;
+};
+
 struct PushConstantRaster {
     glm::vec3 viewPos;
     int objId;
@@ -23,7 +33,10 @@ enum GBufferType {
     Normal,
     MetalRough,
 
-    Count
+    Count,
+
+    Color = Count,
+    Depth
 };
 
 class GraphicsRenderPass
@@ -82,14 +95,6 @@ private:
 class ShadowRenderPass : public GraphicsRenderPass
 {
 public:
-    struct ShadowData {
-        glm::mat4 lightSpace;
-
-        float bias = 0.0001;
-        int maxDirShadowNum = 2;
-        int maxPointShadowNum = 2;
-    };
-
     ShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
         const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum);
 
@@ -134,14 +139,15 @@ public:
     constexpr const VulkanImageView* getOffscreenColor() const { return offscreenColor; }
     constexpr const VulkanImageView* getOffscreenDepth() const { return offscreenDepth; }
 
-    constexpr const SceneData& getGlobalData() const { return globalData; }
-    constexpr const SceneData& getLightData() const { return lightData; }
+    constexpr const SceneData& getGlobalData() const;
+    constexpr const SceneData& getLightData() const;
 
 
-    ShadowRenderPass::ShadowData& getShadowData() { return shadowData; }
+    ShadowData& getShadowData() { return shadowData; }
 
 private:
     void createRenderTarget();
+    void createRenderPass();
 
     const VulkanDevice& device;
     VulkanResourceManager& resManager;
@@ -155,15 +161,12 @@ private:
     std::unique_ptr<VulkanRenderPass> renderPass;
     std::unique_ptr<VulkanFramebuffer> framebuffer;
 
-    std::unique_ptr<VulkanRenderPipeline> renderPipeline;
-    SceneData globalData;
-    SceneData lightData;
-
-    PushConstantRaster pushConstants{};
-    ShadowRenderPass::ShadowData shadowData{};
+    ShadowData shadowData{};
 
     std::unique_ptr<DirShadowRenderPass> dirShadowPass;
     std::unique_ptr<PointShadowRenderPass> pointShadowPass;
+
+    std::unique_ptr<GlobalSubpass> globalPass;
     std::unique_ptr<SkyboxRenderPass> skyboxPass;
     std::unique_ptr<LightingRenderPass> lightingPass;
 };
