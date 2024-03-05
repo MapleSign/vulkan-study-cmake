@@ -65,17 +65,23 @@ float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
     float closestDepth = texture(shadowMap, projCoords.xy).r;
     float currentDepth = projCoords.z - shadowUniform.bias;
     float shadow = 0.0;
-
-    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-    for(int x = -1; x <= 1; ++x)
-    {
-        for(int y = -1; y <= 1; ++y)
-        {
-            float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth > pcfDepth ? 1.0 : 0.0;
-        }
+    
+    if (shadowUniform.type == 0) {
+        shadow = currentDepth > closestDepth ? 1.0 : 0.0;
     }
-    shadow /= 9.0;
+    else {
+        int fltSize = shadowUniform.pcfFilterSize;
+        vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+        for(int x = -fltSize; x <= fltSize; ++x)
+        {
+            for(int y = -fltSize; y <= fltSize; ++y)
+            {
+                float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+                shadow += currentDepth > pcfDepth ? 1.0 : 0.0;
+            }
+        }
+        shadow /= (fltSize * 2 + 1) * (fltSize * 2 + 1);
+    }
 
     return shadow;
 }
@@ -99,12 +105,19 @@ float calcCubeShadow(samplerCube shadowMap, vec3 fragPos, vec3 lightPos, vec3 vi
     float currentDepth = length(fragToLight) - shadowUniform.bias;
     float shadow = 0.0;
 
-    for (int i = 0; i < samples; ++i) {
-        float closestDepth = texture(shadowMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
+    if (shadowUniform.type == 0) {
+        float closestDepth = texture(shadowMap, fragToLight * diskRadius).r;
         closestDepth *= farPlane;
         shadow += currentDepth > closestDepth ? 1.0 : 0.0;
     }
-    shadow /= float(samples);
+    else {
+        for (int i = 0; i < samples; ++i) {
+            float closestDepth = texture(shadowMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
+            closestDepth *= farPlane;
+            shadow += currentDepth > closestDepth ? 1.0 : 0.0;
+        }
+        shadow /= float(samples);
+    }
 
     return shadow;
 }
@@ -168,7 +181,7 @@ void main() {
             sampleColor += indirectSample;
     }
     sampleColor /= numSamples;
-    result += sampleColor * 0.05;
+    result += sampleColor;
 
     outColor = vec4(result + state.mat.emission, 1.0);
     // outColor = vec4(vec3(shadow), 1.0);

@@ -12,11 +12,15 @@
 class GlobalSubpass;
 
 struct ShadowData {
-    glm::mat4 lightSpace;
+    int shadowType = 1;
+    int pcfFilterSize = 8;
 
     float bias = 0.0001;
     int maxDirShadowNum = 2;
+
     int maxPointShadowNum = 2;
+
+    glm::vec3 padding;
 };
 
 struct PushConstantRaster {

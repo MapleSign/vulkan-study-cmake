@@ -252,6 +252,9 @@ void VulkanApplication::mainLoop()
     loadScene(sceneFilePath[sceneItem]);
 
     bool enablePostProcessing = false;
+
+    const char* shadowTypeNames[] = { "ShadowMap", "PCF"};
+    int shadowTypeNum = sizeof(shadowTypeNames) / sizeof(char*);
    
     while (!glfwWindowShouldClose(window->getHandle()))
     {
@@ -350,6 +353,8 @@ void VulkanApplication::mainLoop()
         if (ImGui::CollapsingHeader("Shadow"))
         {
             ImGui::SliderFloat("Bias", &graphicBuilder->getShadowData().bias, 0.0f, 0.005f, "%.4f");
+            ImGui::Combo("Shadow Type", &graphicBuilder->getShadowData().shadowType, shadowTypeNames, shadowTypeNum);
+            ImGui::SliderInt("PCF Filter Size", &graphicBuilder->getShadowData().pcfFilterSize, 1, 32);
         }
 
         if (rtSupport)

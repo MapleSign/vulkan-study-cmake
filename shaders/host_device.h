@@ -88,11 +88,15 @@ struct ObjectData {
 };
 
 struct ShadowData {
-    mat4 lightSpace;
+    int type;
+    int pcfFilterSize;
 
     float bias;
     int maxDirShadowNum;
+
     int maxPointShadowNum;
+
+    vec3 padding;
 };
 
 // Push constant structure for the raster
