@@ -13,5 +13,7 @@ public:
 	glm::vec4 rotate{ 1.0f, 0.0f, 0.0f, 0.0f }; // axis angle
 	glm::vec3 scale{ 1.0f };
 
+	glm::mat4 transform = glm::identity<glm::mat4>();
+
 	glm::mat4 getTransformMatrix() const;
 };

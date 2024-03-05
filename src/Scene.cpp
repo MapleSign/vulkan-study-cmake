@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "GLTF/GLTFHelper.h"
 
@@ -170,6 +171,9 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 					glm::dot(glm::vec3(0.f, 0.f, 1.f), axis)
 				);*/
 		}
+
+		if (!tNode.matrix.empty())
+			model->transComp.transform = glm::make_mat4(tNode.matrix.data());
 		models.push_back(model);
 	}
 

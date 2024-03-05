@@ -12,5 +12,5 @@ glm::mat4 TransformComponent::getTransformMatrix() const
 	auto rotateR = glm::angleAxis(glm::radians(rotate.w), glm::vec3(rotate));
 	model = model * glm::mat4_cast(rotateR);
 	model = glm::scale(model, scale);
-	return model;
+	return model * transform;
 }
