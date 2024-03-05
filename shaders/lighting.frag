@@ -58,6 +58,45 @@ vec3 calcLight(inout State state, vec3 V, vec3 L, vec3 lightIntensity, float lig
     return Li;
 }
 
+float findBlocker(sampler2D shadowMap, vec2 projCoords, float projDepth) {
+    int size = 2;
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    int cnt = 0;
+    float blockerDepth = 0.0;
+    for (int x = -size; x <= size; ++x) {
+        for (int y = -size; y <= size; ++y) {
+            float closestDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+            if (projDepth > closestDepth) {
+                blockerDepth += closestDepth;
+                cnt += 1;
+            }
+        }
+    }
+
+    if (cnt == 0)
+        blockerDepth = 1.0;
+    else
+        blockerDepth /= cnt;
+    
+    return blockerDepth;
+}
+
+float PCF(sampler2D shadowMap, int flterSize, vec2 projCoords, float projDepth) {
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    float shadow = 0.0;
+    for(int x = -flterSize; x <= flterSize; ++x)
+    {
+        for(int y = -flterSize; y <= flterSize; ++y)
+        {
+            float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += projDepth > pcfDepth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= (flterSize * 2 + 1) * (flterSize * 2 + 1);
+
+    return shadow;
+}
+
 float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
@@ -69,18 +108,14 @@ float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
     if (shadowUniform.type == 0) {
         shadow = currentDepth > closestDepth ? 1.0 : 0.0;
     }
+    else if (shadowUniform.type == 1) {
+        shadow = PCF(shadowMap, shadowUniform.pcfFilterSize, projCoords.xy, currentDepth);
+    }
     else {
-        int fltSize = shadowUniform.pcfFilterSize;
-        vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-        for(int x = -fltSize; x <= fltSize; ++x)
-        {
-            for(int y = -fltSize; y <= fltSize; ++y)
-            {
-                float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
-                shadow += currentDepth > pcfDepth ? 1.0 : 0.0;
-            }
-        }
-        shadow /= (fltSize * 2 + 1) * (fltSize * 2 + 1);
+        float lightWidth = 50.0;
+        float blockerDepth = findBlocker(shadowMap, projCoords.xy, currentDepth);
+        float penumbraSize = max(currentDepth - blockerDepth, 0.0) / blockerDepth * lightWidth;
+        shadow = PCF(shadowMap, int(penumbraSize/2), projCoords.xy, currentDepth);
     }
 
     return shadow;

@@ -253,7 +253,7 @@ void VulkanApplication::mainLoop()
 
     bool enablePostProcessing = false;
 
-    const char* shadowTypeNames[] = { "ShadowMap", "PCF"};
+    const char* shadowTypeNames[] = { "ShadowMap", "PCF", "PCSS"};
     int shadowTypeNum = sizeof(shadowTypeNames) / sizeof(char*);
    
     while (!glfwWindowShouldClose(window->getHandle()))
