@@ -156,7 +156,7 @@ void GlobalSubpass::update(float deltaTime, const Scene* scene, ShadowData shado
     lightData.updateData(currentImage, 2, &shadowData, sizeof(shadowData));
 }
 
-void GlobalSubpass::draw(VulkanCommandBuffer& cmdBuf, const std::vector<VulkanDescriptorSet>& globalSets)
+void GlobalSubpass::draw(VulkanCommandBuffer& cmdBuf, const std::vector<VulkanDescriptorSet*>& globalSets)
 {
     cmdBuf.bindPipeline(renderPipeline->getGraphicsPipeline());
 

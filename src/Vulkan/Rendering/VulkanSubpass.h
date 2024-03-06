@@ -18,7 +18,7 @@ public:
 
     virtual void prepare() {};
     virtual void update(float deltaTime, const Scene* scene) = 0;
-    virtual void draw(VulkanCommandBuffer& cmdBuf, const std::vector<VulkanDescriptorSet>& globalSets) = 0;
+    virtual void draw(VulkanCommandBuffer& cmdBuf, const std::vector<VulkanDescriptorSet*>& globalSets) = 0;
 
     virtual const VulkanRenderPipeline& getRenderPipeline() const { return *renderPipeline; }
     virtual void recreatePipeline(const VkExtent2D extent, const VulkanRenderPass& renderPass) 

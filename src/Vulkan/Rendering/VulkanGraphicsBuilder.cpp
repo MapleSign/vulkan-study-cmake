@@ -1,6 +1,7 @@
 #include "VulkanGraphicsBuilder.h"
 
 #include "Subpasses/GlobalSubpass.h"
+#include "Subpasses/LightingSubpass.h"
 
 VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent) :
@@ -17,12 +18,13 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     std::vector<VulkanShaderResource> shaderResources = globalPass->getShaderResources();
 
     skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, shaderResources, *renderPass, 0);
-    lightingPass = std::make_unique<LightingRenderPass>(device, resManager, extent, shaderResources, *renderPass, 2, gBuffer);
+    lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 2);
 
     dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxDirShadowNum);
     pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxPointShadowNum);
 
     globalPass->prepare(dirShadowPass->getShadowDepths(), pointShadowPass->getShadowDepths());
+    lightingPass->prepare(gBuffer);
 }
 
 VulkanGraphicsBuilder::~VulkanGraphicsBuilder()
@@ -52,7 +54,7 @@ void VulkanGraphicsBuilder::recreateGraphicsBuilder(const VkExtent2D extent)
 
     std::vector<VulkanShaderResource> shaderResources = globalPass->getShaderResources();
     skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, shaderResources, *renderPass, 0);
-    lightingPass = std::make_unique<LightingRenderPass>(device, resManager, extent, shaderResources, *renderPass, 2, gBuffer);
+    lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 2);
 }
 
 void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
@@ -76,7 +78,7 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
     clearValues[GBufferType::Depth].depthStencil = { 1.0f, 0 };
     cmdBuf.beginRenderPass(*renderTarget, *renderPass, *framebuffer, clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
-
+    std::vector<VulkanDescriptorSet*> globalSets = { getGlobalData().descriptorSets[0], getLightData().descriptorSets[0] };
     skyboxPass->draw(cmdBuf, *(getGlobalData().descriptorSets[0]), *(getLightData().descriptorSets[0]));
 
     vkCmdNextSubpass(cmdBuf.getHandle(), VK_SUBPASS_CONTENTS_INLINE);
@@ -85,7 +87,7 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
 
     vkCmdNextSubpass(cmdBuf.getHandle(), VK_SUBPASS_CONTENTS_INLINE);
 
-    lightingPass->draw(cmdBuf, *(getGlobalData().descriptorSets[0]), *(getLightData().descriptorSets[0]));
+    lightingPass->draw(cmdBuf, globalSets);
 
     cmdBuf.endRenderPass();
 }

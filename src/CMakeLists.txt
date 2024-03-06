@@ -94,8 +94,14 @@ set(RENDERING_FILES
 
 set(SUBPASSES_FILES
     ./Vulkan/Rendering/Subpasses/GlobalSubpass.h
-
+    ./Vulkan/Rendering/Subpasses/LightingSubpass.h
+    ./Vulkan/Rendering/Subpasses/SkyboxSubpass.h
+    ./Vulkan/Rendering/Subpasses/SSAOSubpass.h
+    
     ./Vulkan/Rendering/Subpasses/GlobalSubpass.cpp
+    ./Vulkan/Rendering/Subpasses/LightingSubpass.cpp
+    ./Vulkan/Rendering/Subpasses/SkyboxSubpass.cpp
+    ./Vulkan/Rendering/Subpasses/SSAOSubpass.cpp
 )
 
 set(PLATFORM_FILES 

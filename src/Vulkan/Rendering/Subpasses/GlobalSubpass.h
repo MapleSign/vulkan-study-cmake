@@ -17,7 +17,7 @@ public:
 
     void update(float deltaTime, const Scene* scene) override;
     void update(float deltaTime, const Scene* scene, ShadowData shadowData);
-    void draw(VulkanCommandBuffer& cmdBuf, const std::vector<VulkanDescriptorSet>& globalSets) override;
+    void draw(VulkanCommandBuffer& cmdBuf, const std::vector<VulkanDescriptorSet*>& globalSets) override;
 
     constexpr const SceneData& getGlobalData() const { return globalData; }
     constexpr const SceneData& getLightData() const { return lightData; }

@@ -10,6 +10,7 @@
 #include "VulkanRenderPipeline.h"
 
 class GlobalSubpass;
+class LightingSubpass;
 
 struct ShadowData {
     int shadowType = 1;
@@ -172,5 +173,5 @@ private:
 
     std::unique_ptr<GlobalSubpass> globalPass;
     std::unique_ptr<SkyboxRenderPass> skyboxPass;
-    std::unique_ptr<LightingRenderPass> lightingPass;
+    std::unique_ptr<LightingSubpass> lightingPass;
 };
