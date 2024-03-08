@@ -2,6 +2,7 @@
 
 #include "Subpasses/GlobalSubpass.h"
 #include "Subpasses/LightingSubpass.h"
+#include "Subpasses/SkyboxSubpass.h"
 
 VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent) :
@@ -17,7 +18,7 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
 
     std::vector<VulkanShaderResource> shaderResources = globalPass->getShaderResources();
 
-    skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, shaderResources, *renderPass, 0);
+    skyboxPass = std::make_unique<SkyboxSubpass>(device, resManager, extent, shaderResources, *renderPass, 0);
     lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 2);
 
     dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxDirShadowNum);
@@ -25,6 +26,7 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
 
     globalPass->prepare(dirShadowPass->getShadowDepths(), pointShadowPass->getShadowDepths());
     lightingPass->prepare(gBuffer);
+    skyboxPass->prepare();
 }
 
 VulkanGraphicsBuilder::~VulkanGraphicsBuilder()
@@ -53,7 +55,7 @@ void VulkanGraphicsBuilder::recreateGraphicsBuilder(const VkExtent2D extent)
     globalPass->recreatePipeline(extent, *renderPass);
 
     std::vector<VulkanShaderResource> shaderResources = globalPass->getShaderResources();
-    skyboxPass = std::make_unique<SkyboxRenderPass>(device, resManager, extent, shaderResources, *renderPass, 0);
+    skyboxPass = std::make_unique<SkyboxSubpass>(device, resManager, extent, shaderResources, *renderPass, 0);
     lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 2);
 }
 
@@ -79,7 +81,8 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
     cmdBuf.beginRenderPass(*renderTarget, *renderPass, *framebuffer, clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
     std::vector<VulkanDescriptorSet*> globalSets = { getGlobalData().descriptorSets[0], getLightData().descriptorSets[0] };
-    skyboxPass->draw(cmdBuf, *(getGlobalData().descriptorSets[0]), *(getLightData().descriptorSets[0]));
+
+    skyboxPass->draw(cmdBuf, globalSets);
 
     vkCmdNextSubpass(cmdBuf.getHandle(), VK_SUBPASS_CONTENTS_INLINE);
     

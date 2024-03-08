@@ -11,6 +11,7 @@
 
 class GlobalSubpass;
 class LightingSubpass;
+class SkyboxSubpass;
 
 struct ShadowData {
     int shadowType = 1;
@@ -172,6 +173,6 @@ private:
     std::unique_ptr<PointShadowRenderPass> pointShadowPass;
 
     std::unique_ptr<GlobalSubpass> globalPass;
-    std::unique_ptr<SkyboxRenderPass> skyboxPass;
+    std::unique_ptr<SkyboxSubpass> skyboxPass;
     std::unique_ptr<LightingSubpass> lightingPass;
 };
