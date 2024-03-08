@@ -67,37 +67,6 @@ protected:
     std::unique_ptr<VulkanRenderPipeline> renderPipeline;
 };
 
-class SkyboxRenderPass : GraphicsRenderPass
-{
-public:
-    SkyboxRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
-        const std::vector<VulkanShaderResource> shaderRes, const VulkanRenderPass& graphicsRenderPass, uint32_t subpass);
-
-    void update(float deltaTime, const Scene* scene) override;
-    void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
-
-private:
-    const VulkanRenderPass& graphicsRenderPass;
-};
-
-class LightingRenderPass : GraphicsRenderPass 
-{
-public:
-    LightingRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
-        const std::vector<VulkanShaderResource> shaderRes, const VulkanRenderPass& graphicsRenderPass, uint32_t subpass, 
-        const std::vector<const VulkanImageView*>& gBuffer);
-
-    void update(float deltaTime, const Scene* scene) override;
-    void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
-
-private:
-    const VulkanRenderPass& graphicsRenderPass;
-
-    SceneData defferedData;
-
-    PushConstantRaster pushConstants{};
-};
-
 class ShadowRenderPass : public GraphicsRenderPass
 {
 public:
