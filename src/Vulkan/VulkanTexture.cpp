@@ -10,9 +10,37 @@
 #include "VulkanTexture.h"
 
 VulkanTexture::VulkanTexture(
+    const VulkanDevice& device, const void* data, size_t size, VkExtent3D extent, VkFormat format, VkSampler sampler,
+    const VulkanCommandPool& commandPool, const VulkanQueue& queue) :
+    device{ device }, sampler{ sampler }, mipLevels{ 1 }, arrayLayers{ 1 }
+{
+    image = std::make_unique<VulkanImage>(
+        device, extent,
+        format, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        0,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mipLevels
+    );
+
+    imageView = std::make_unique<VulkanImageView>(*image);
+
+    if (data != nullptr) {
+        return;
+    }
+
+    VulkanBuffer stagingBuffer{ device, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
+    stagingBuffer.update(data, size);
+
+    commandPool.transitionImageLayout(*image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, queue);
+    commandPool.copyBufferToImage(stagingBuffer, *image, queue);
+    //commandPool.transitionImageLayout(*image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, queue);
+}
+
+VulkanTexture::VulkanTexture(
     const VulkanDevice& device, const char* filename, VkSampler sampler,
     const VulkanCommandPool& commandPool, const VulkanQueue& queue) :
-    device{ device }, sampler{ sampler }, mipLevels{ 1 }
+    device{ device }, sampler{ sampler }, mipLevels{ 1 }, arrayLayers{ 1 }
 {
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load(filename, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);

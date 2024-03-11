@@ -12,6 +12,17 @@ class VulkanTexture
 {
 public:
     VulkanTexture(
+        const VulkanDevice& device,
+        const void* data,
+        size_t size,
+        VkExtent3D extent,
+        VkFormat format,
+        VkSampler sampler,
+        const VulkanCommandPool& commandPool,
+        const VulkanQueue& queue
+    );
+
+    VulkanTexture(
         const VulkanDevice& device, 
         const char* filename, 
         VkSampler sampler, 

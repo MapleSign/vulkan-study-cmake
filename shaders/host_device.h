@@ -40,7 +40,8 @@ START_BINDING(GBufferType)
     eNormal = 2,
     eAlbedo = 3,
     eMetalRough = 4,
-    eCount = 5
+    eSSAO = 5,
+    eCount = 6
 END_BINDING();
 
 struct DirLight {
@@ -98,6 +99,22 @@ struct ShadowData {
 
     vec3 padding;
 };
+
+struct SSAOData
+{
+    mat4 view;
+    mat4 projection;
+
+    vec4 samples[64];
+
+    vec2 windowSize;
+    int kernelSize;
+    float radius;
+    
+    float bias;
+    vec3 padding;
+};
+
 
 // Push constant structure for the raster
 struct PushConstantRaster

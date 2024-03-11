@@ -12,6 +12,7 @@
 class GlobalSubpass;
 class LightingSubpass;
 class SkyboxSubpass;
+class SSAOSubpass;
 
 struct ShadowData {
     int shadowType = 1;
@@ -35,9 +36,10 @@ struct PushConstantRaster {
 enum GBufferType {
     SceneColor = 0,
     Position,
-    Albedo,
     Normal,
+    Albedo,
     MetalRough,
+    SSAO,
 
     Count,
 
@@ -144,4 +146,6 @@ private:
     std::unique_ptr<GlobalSubpass> globalPass;
     std::unique_ptr<SkyboxSubpass> skyboxPass;
     std::unique_ptr<LightingSubpass> lightingPass;
+
+    std::unique_ptr<SSAOSubpass> ssaoPass;
 };

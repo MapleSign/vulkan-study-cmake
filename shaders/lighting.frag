@@ -40,6 +40,7 @@ layout(input_attachment_index = ePosition, set = 2, binding = ePosition) uniform
 layout(input_attachment_index = eNormal, set = 2, binding = eNormal) uniform subpassInput inputNormal;
 layout(input_attachment_index = eAlbedo, set = 2, binding = eAlbedo) uniform subpassInput inputAlbedo;
 layout(input_attachment_index = eMetalRough, set = 2, binding = eMetalRough) uniform subpassInput inputMetalRough;
+layout(input_attachment_index = eSSAO, set = 2, binding = eSSAO) uniform subpassInput inputSSAO;
 
 layout(location = 0) in vec2 inUV;
 
@@ -216,7 +217,9 @@ void main() {
             sampleColor += indirectSample;
     }
     sampleColor /= numSamples;
-    result += sampleColor;
+    
+    float ao = subpassLoad(inputSSAO).r;
+    result += sampleColor * ao;
 
     outColor = vec4(result + state.mat.emission, 1.0);
     // outColor = vec4(vec3(shadow), 1.0);

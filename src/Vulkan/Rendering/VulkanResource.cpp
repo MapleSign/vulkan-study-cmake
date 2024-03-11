@@ -319,6 +319,13 @@ VulkanTexture& VulkanResourceManager::requireTexture(const char* filename, VkSam
     return *texture;
 }
 
+VulkanTexture& VulkanResourceManager::requireTexture(const void* data, size_t size, VkExtent3D extent, VkFormat format, VkSampler sampler)
+{
+    auto texture = new VulkanTexture(device, data, size, extent, format, sampler, commandPool, device.getGraphicsQueue());
+    textureMap.emplace_back(texture);
+    return *texture;
+}
+
 VulkanTexture& VulkanResourceManager::requireCubeMapTexture(const std::vector<std::string>& filenames, VkSampler sampler)
 {
     auto texture = new VulkanTexture(device, filenames, sampler, commandPool, device.getGraphicsQueue());
@@ -326,30 +333,37 @@ VulkanTexture& VulkanResourceManager::requireCubeMapTexture(const std::vector<st
     return *texture;
 }
 
+VkSamplerCreateInfo VulkanResourceManager::getDefaultSamplerCreateInfo()
+{
+    const VkPhysicalDeviceProperties& properties = device.getGPU().getProperties();
+
+    VkSamplerCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    info.magFilter = VK_FILTER_LINEAR;
+    info.minFilter = VK_FILTER_LINEAR;
+    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.anisotropyEnable = VK_TRUE;
+    info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    info.unnormalizedCoordinates = VK_FALSE;
+    info.compareEnable = VK_FALSE;
+    info.compareOp = VK_COMPARE_OP_ALWAYS;
+    info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    info.mipLodBias = 0.0f;
+    info.minLod = 0.0f;
+    info.maxLod = 100.0f;
+
+    return info;
+}
+
 VkSampler VulkanResourceManager::createSampler(VkSamplerCreateInfo* createInfo)
 {
     VkSampler sampler;
 
 	if (createInfo == nullptr) {
-        const VkPhysicalDeviceProperties& properties = device.getGPU().getProperties();
-
-		VkSamplerCreateInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        info.magFilter = VK_FILTER_LINEAR;
-        info.minFilter = VK_FILTER_LINEAR;
-        info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        info.anisotropyEnable = VK_TRUE;
-        info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-        info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        info.unnormalizedCoordinates = VK_FALSE;
-        info.compareEnable = VK_FALSE;
-        info.compareOp = VK_COMPARE_OP_ALWAYS;
-        info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        info.mipLodBias = 0.0f;
-        info.minLod = 0.0f;
-        info.maxLod = 100.0f;
+        VkSamplerCreateInfo info = getDefaultSamplerCreateInfo();
 
         if (vkCreateSampler(device.getHandle(), &info, nullptr, &sampler) != VK_SUCCESS) {
             throw std::runtime_error("failed to create texture sampler!");

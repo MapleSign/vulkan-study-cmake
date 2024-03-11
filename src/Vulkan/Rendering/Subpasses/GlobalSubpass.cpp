@@ -35,7 +35,7 @@ GlobalSubpass::GlobalSubpass(const VulkanDevice& device, VulkanResourceManager& 
     renderPipeline->prepare();
     auto& state = renderPipeline->getPipelineState();
     state.subpass = subpass;
-    state.colorBlendAttachmentStates.resize(GBufferType::Count);
+    state.colorBlendAttachmentStates.resize(GBufferType::MetalRough + 1);
     renderPipeline->recreatePipeline(extent, renderPass);
 }
 

@@ -3,6 +3,7 @@
 #include "Subpasses/GlobalSubpass.h"
 #include "Subpasses/LightingSubpass.h"
 #include "Subpasses/SkyboxSubpass.h"
+#include "Subpasses/SSAOSubpass.h"
 
 VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent) :
@@ -19,12 +20,14 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     std::vector<VulkanShaderResource> shaderResources = globalPass->getShaderResources();
 
     skyboxPass = std::make_unique<SkyboxSubpass>(device, resManager, extent, shaderResources, *renderPass, 0);
-    lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 2);
+    ssaoPass = std::make_unique<SSAOSubpass>(device, resManager, extent, shaderResources, *renderPass, 2);
+    lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 3);
 
     dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxDirShadowNum);
     pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxPointShadowNum);
 
     globalPass->prepare(dirShadowPass->getShadowDepths(), pointShadowPass->getShadowDepths());
+    ssaoPass->prepare(gBuffer);
     lightingPass->prepare(gBuffer);
     skyboxPass->prepare();
 }
@@ -33,7 +36,10 @@ VulkanGraphicsBuilder::~VulkanGraphicsBuilder()
 {
     dirShadowPass.reset();
     pointShadowPass.reset();
+
     skyboxPass.reset();
+    ssaoPass.reset();
+    lightingPass.reset();
 
     globalPass.reset();
 
@@ -56,7 +62,8 @@ void VulkanGraphicsBuilder::recreateGraphicsBuilder(const VkExtent2D extent)
 
     std::vector<VulkanShaderResource> shaderResources = globalPass->getShaderResources();
     skyboxPass = std::make_unique<SkyboxSubpass>(device, resManager, extent, shaderResources, *renderPass, 0);
-    lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 2);
+    ssaoPass = std::make_unique<SSAOSubpass>(device, resManager, extent, shaderResources, *renderPass, 2);
+    lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 3);
 }
 
 void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
@@ -66,6 +73,7 @@ void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
     dirShadowPass->update(deltaTime, scene);
     pointShadowPass->update(deltaTime, scene);
     skyboxPass->update(deltaTime, scene);
+    ssaoPass->update(deltaTime, scene);
     lightingPass->update(deltaTime, scene);
 }
 
@@ -74,7 +82,7 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
     dirShadowPass->draw(cmdBuf, *(getGlobalData().descriptorSets[0]), *(getLightData().descriptorSets[0]));
     pointShadowPass->draw(cmdBuf, *(getGlobalData().descriptorSets[0]), *(getLightData().descriptorSets[0]));
 
-    std::vector<VkClearValue> clearValues{ 7 };
+    std::vector<VkClearValue> clearValues{ 8 };
     //clearValues[0].color = {{0.2f, 0.3f, 0.3f, 1.0f}};
     clearValues[GBufferType::Color].color = { {clearColor.r, clearColor.g, clearColor.b, clearColor.a} };
     clearValues[GBufferType::Depth].depthStencil = { 1.0f, 0 };
@@ -87,6 +95,10 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
     vkCmdNextSubpass(cmdBuf.getHandle(), VK_SUBPASS_CONTENTS_INLINE);
     
     globalPass->draw(cmdBuf, {});
+
+    vkCmdNextSubpass(cmdBuf.getHandle(), VK_SUBPASS_CONTENTS_INLINE);
+
+    ssaoPass->draw(cmdBuf, globalSets);
 
     vkCmdNextSubpass(cmdBuf.getHandle(), VK_SUBPASS_CONTENTS_INLINE);
 
@@ -124,12 +136,12 @@ void VulkanGraphicsBuilder::createRenderTarget()
     VulkanImage gPositionImage{
         device, convert2Dto3D(extent),
         VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
     };
     VulkanImage gNormalImage{
         device, convert2Dto3D(extent),
         VK_FORMAT_A2R10G10B10_UNORM_PACK32, VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
     };
     VulkanImage gAlbedoImage{
         device, convert2Dto3D(extent),
@@ -142,12 +154,19 @@ void VulkanGraphicsBuilder::createRenderTarget()
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT
     };
 
+    VulkanImage ssaoImage{
+        device, convert2Dto3D(extent),
+        VK_FORMAT_R32_SFLOAT, VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+    };
+
     std::vector<VulkanImage> images{};
     images.push_back(std::move(gSceneColorImage));
     images.push_back(std::move(gPositionImage));
     images.push_back(std::move(gNormalImage));
     images.push_back(std::move(gAlbedoImage));
     images.push_back(std::move(gMetalRoughImage));
+    images.push_back(std::move(ssaoImage));
     images.push_back(std::move(offscreenColorImage));
     images.push_back(std::move(offscreenDepthImage));
 
@@ -167,25 +186,36 @@ void VulkanGraphicsBuilder::createRenderPass()
     attatchments[GBufferType::Color].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
     std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
     std::vector<SubpassInfo> subpassInfos = {
-        SubpassInfo{ {5} },
-        SubpassInfo{ {0, 1, 2, 3, 4, 6} },
-        SubpassInfo{ {5}, {0, 1, 2, 3, 4} }
+        SubpassInfo{ {GBufferType::Color} } , // Skybox
+        SubpassInfo{ 
+            {
+                GBufferType::SceneColor, 
+                GBufferType::Position, 
+                GBufferType::Normal, 
+                GBufferType::Albedo, 
+                GBufferType::MetalRough, 
+                GBufferType::Depth
+            } 
+        }, // Deffered
+        SubpassInfo{ {GBufferType::SSAO}, {GBufferType::Position, GBufferType::Normal} }, // SSAO
+        SubpassInfo{ 
+            {GBufferType::Color}, 
+            {
+                GBufferType::SceneColor,
+                GBufferType::Position,
+                GBufferType::Normal,
+                GBufferType::Albedo,
+                GBufferType::MetalRough,
+                GBufferType::SSAO
+            }
+        }, // Lighting
     };
 
     // Subpass dependencies
     {
         VkSubpassDependency dependency{};
 
-        // lighting pass -> skybox pass
-        dependency.srcSubpass = 0;
-        dependency.dstSubpass = 2;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        subpassInfos[2].dependencies.push_back(dependency);
-
-        // lighting pass -> deffered pass
+        // ssao pass -> deffered pass
         dependency.srcSubpass = 1;
         dependency.dstSubpass = 2;
         dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -193,6 +223,33 @@ void VulkanGraphicsBuilder::createRenderPass()
         dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         dependency.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
         subpassInfos[2].dependencies.push_back(dependency);
+
+        // lighting pass -> skybox pass
+        dependency.srcSubpass = 0;
+        dependency.dstSubpass = 3;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        subpassInfos[3].dependencies.push_back(dependency);
+
+        // lighting pass -> deffered pass
+        dependency.srcSubpass = 1;
+        dependency.dstSubpass = 3;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependency.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+        subpassInfos[3].dependencies.push_back(dependency);
+
+        // lighting pass -> ssao pass
+        dependency.srcSubpass = 2;
+        dependency.dstSubpass = 3;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependency.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+        subpassInfos[3].dependencies.push_back(dependency);
     }
 
     renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos, subpassInfos);
