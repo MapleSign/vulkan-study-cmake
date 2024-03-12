@@ -35,10 +35,14 @@ public:
         return shaderResources;
     }
 
+    uint32_t getSubpassIndex() const { return subpass; }
+
 protected:
     const VulkanDevice& device;
     VulkanResourceManager& resManager;
     VkExtent2D extent;
+
+    uint32_t subpass;
 
     const VulkanRenderPass& renderPass;
 

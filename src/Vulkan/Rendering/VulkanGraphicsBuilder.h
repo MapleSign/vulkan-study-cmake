@@ -13,6 +13,7 @@ class GlobalSubpass;
 class LightingSubpass;
 class SkyboxSubpass;
 class SSAOSubpass;
+class SSAOBlurSubpass;
 
 struct ShadowData {
     int shadowType = 1;
@@ -44,7 +45,11 @@ enum GBufferType {
     Count,
 
     Color = Count,
-    Depth
+    Depth,
+
+    Tmp,
+
+    Total
 };
 
 class GraphicsRenderPass
@@ -148,4 +153,5 @@ private:
     std::unique_ptr<LightingSubpass> lightingPass;
 
     std::unique_ptr<SSAOSubpass> ssaoPass;
+    std::unique_ptr<SSAOBlurSubpass> ssaoBlurPass;
 };

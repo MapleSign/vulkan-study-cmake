@@ -38,3 +38,22 @@ private:
 	std::unique_ptr<VulkanImage> noiseImage;
 	std::unique_ptr<VulkanImageView> noiseImageView;
 };
+
+class SSAOBlurSubpass : public VulkanSubpass
+{
+public:
+	SSAOBlurSubpass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
+		const std::vector<VulkanShaderResource> shaderRes, const VulkanRenderPass& renderPass, uint32_t subpass);
+	~SSAOBlurSubpass();
+
+	void prepare(const std::vector<VulkanImageView>& frameBufferImageViews);
+
+	void update(float deltaTime, const Scene* scene) override;
+
+	void draw(VulkanCommandBuffer& cmdBuf, const std::vector<VulkanDescriptorSet*>& globalSets) override;
+	
+private:
+	SceneData sceneData{};
+
+	// Í¨¹ý VulkanSubpass ¼Ì³Ð
+};

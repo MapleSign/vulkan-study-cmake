@@ -129,3 +129,61 @@ void SSAOSubpass::draw(VulkanCommandBuffer& cmdBuf, const std::vector<VulkanDesc
 
 	vkCmdDraw(cmdBuf.getHandle(), 3, 1, 0, 0);
 }
+
+SSAOBlurSubpass::SSAOBlurSubpass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
+	const std::vector<VulkanShaderResource> shaderRes, const VulkanRenderPass& renderPass, uint32_t subpass):
+	VulkanSubpass(device, resManager, extent, shaderRes, renderPass, subpass)
+{
+	auto vertShader = resManager.createShaderModule("shaders/spv/passthrough.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
+
+	auto fragShader = resManager.createShaderModule("shaders/spv/ssaoBlur.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
+	fragShader.addShaderResourceUniform(ShaderResourceType::Sampler, 0, 0);
+
+	renderPipeline = std::make_unique<VulkanRenderPipeline>(device, resManager, std::move(vertShader), std::move(fragShader));
+	renderPipeline->prepare();
+	auto& state = renderPipeline->getPipelineState();
+	state.subpass = subpass;
+	state.cullMode = VK_CULL_MODE_NONE;
+	state.depthStencilState.depth_test_enable = VK_FALSE;
+	state.depthStencilState.depth_write_enable = VK_FALSE;
+	state.vertexBindingDescriptions = {};
+	state.vertexAttributeDescriptions = {};
+	renderPipeline->recreatePipeline(extent, renderPass);
+}
+
+SSAOBlurSubpass::~SSAOBlurSubpass()
+{
+}
+
+void SSAOBlurSubpass::prepare(const std::vector<VulkanImageView>& frameBufferImageViews)
+{
+	sceneData = resManager.requireSceneData(*renderPipeline->getDescriptorSetLayouts()[0], 1, {});
+
+	VkSamplerCreateInfo samplerInfo = resManager.getDefaultSamplerCreateInfo();
+
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	VkSampler sampler = resManager.createSampler(&samplerInfo);
+
+	sceneData.descriptorSets[0]->addWrite(0,
+		VkDescriptorImageInfo{ sampler, frameBufferImageViews[GBufferType::Tmp].getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+	);
+	sceneData.update();
+}
+
+void SSAOBlurSubpass::update(float deltaTime, const Scene* scene)
+{
+}
+
+void SSAOBlurSubpass::draw(VulkanCommandBuffer& cmdBuf, const std::vector<VulkanDescriptorSet*>& globalSets)
+{
+	cmdBuf.bindPipeline(renderPipeline->getGraphicsPipeline());
+	std::vector<VkDescriptorSet> descSets = { sceneData.descriptorSets[0]->getHandle() };
+	vkCmdBindDescriptorSets(cmdBuf.getHandle(),
+		renderPipeline->getGraphicsPipeline().getBindPoint(),
+		renderPipeline->getPipelineLayout().getHandle(),
+		0, descSets.size(), descSets.data(), 0, nullptr);
+
+	vkCmdDraw(cmdBuf.getHandle(), 3, 1, 0, 0);
+}
