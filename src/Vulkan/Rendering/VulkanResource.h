@@ -208,6 +208,7 @@ public:
     VulkanTexture& requireCubeMapTexture(const std::vector<std::string>& filenames, VkSampler sampler);
 
     VkSamplerCreateInfo getDefaultSamplerCreateInfo();
+    VkSampler getDefaultSampler();
     VkSampler createSampler(VkSamplerCreateInfo* createInfo = nullptr);
     VulkanShaderModule createShaderModule(const char* filepath, VkShaderStageFlagBits stageFlag, const char* name);
 
@@ -242,6 +243,8 @@ private:
     std::vector<RenderMesh> meshes;
     std::vector<std::unique_ptr<VulkanTexture>> textureMap;
     std::vector<std::unique_ptr<VulkanTexture>> cubeMapTextureMap;
+
+    VkSampler defaultSampler;
     std::unordered_set<VkSampler> samplerSet;
 
     std::unordered_map<VulkanBuffer*, std::unique_ptr<VulkanBuffer>> bufferSet;

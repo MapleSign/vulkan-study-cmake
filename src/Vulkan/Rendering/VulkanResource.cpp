@@ -19,6 +19,8 @@ VulkanResourceManager::VulkanResourceManager(const VulkanDevice& device, VulkanC
         { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
     };
     requireDescriptorPool(poolSizes, 1000);
+
+    defaultSampler = createSampler();
 }
 
 VulkanResourceManager::~VulkanResourceManager()
@@ -356,6 +358,11 @@ VkSamplerCreateInfo VulkanResourceManager::getDefaultSamplerCreateInfo()
     info.maxLod = 100.0f;
 
     return info;
+}
+
+VkSampler VulkanResourceManager::getDefaultSampler()
+{
+    return defaultSampler;
 }
 
 VkSampler VulkanResourceManager::createSampler(VkSamplerCreateInfo* createInfo)

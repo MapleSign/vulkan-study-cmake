@@ -75,6 +75,7 @@ void VulkanApplication::loadScene(const char* filename)
     renderMeshes.clear();
 
     resManager = std::make_unique<VulkanResourceManager>(*device, device->getCommandPool());
+    resManager->requireTexture("assets/textures/black.jpg", resManager->getDefaultSampler());
 
     Model* model{ nullptr };
     scene = std::make_unique<Scene>();
