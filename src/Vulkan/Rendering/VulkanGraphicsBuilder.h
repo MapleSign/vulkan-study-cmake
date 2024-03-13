@@ -19,12 +19,13 @@ struct ShadowData {
     int shadowType = 1;
     int pcfFilterSize = 8;
 
+    int pcssBlockerSize = 2;
     float bias = 0.0001;
-    int maxDirShadowNum = 2;
 
+    int maxDirShadowNum = 2;
     int maxPointShadowNum = 2;
 
-    glm::vec3 padding;
+    glm::vec2 padding;
 };
 
 struct PushConstantRaster {

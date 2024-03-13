@@ -267,6 +267,7 @@ DirLight* Scene::addDirLight(const char* name, glm::vec3 dir, glm::vec3 color, f
 {
 	auto light = new DirLight();
 	light->direction = dir;
+	light->width = 5.0f;
 	light->color = color;
 	light->intensity = intensity;
 	light->update();
@@ -304,6 +305,8 @@ PointLight* Scene::addPointLight(const char* name, glm::vec3 pos, glm::vec3 colo
 {
 	auto light = new PointLight();
 	light->position = pos;
+	light->width = 5.0f;
+
 	light->color = color;
 	light->intensity = intensity;
 

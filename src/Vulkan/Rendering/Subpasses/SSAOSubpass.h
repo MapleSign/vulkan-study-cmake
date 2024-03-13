@@ -54,6 +54,4 @@ public:
 	
 private:
 	SceneData sceneData{};
-
-	// Í¨¹ý VulkanSubpass ¼Ì³Ð
 };

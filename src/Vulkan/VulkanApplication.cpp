@@ -295,6 +295,7 @@ void VulkanApplication::mainLoop()
                         if (itemSelected == name) {
                             changed |= ImGui::SliderFloat3("Direction", &light->direction.x, -1.f, 1.f);
                             changed |= ImGui::SliderFloat("Intensity", &light->intensity, 0.f, 100.f);
+                            changed |= ImGui::SliderFloat("Width", &light->width, 0.0f, 50.f);
 
                             light->update();
                         }
@@ -334,6 +335,7 @@ void VulkanApplication::mainLoop()
                         if (itemSelected == name) {
                             changed |= ImGui::SliderFloat3("Position", &light->position.x, -20.f, 20.f);
                             changed |= ImGui::SliderFloat("Intensity", &light->intensity, 0.f, 100.f);
+                            changed |= ImGui::SliderFloat("Width", &light->width, 0.0f, 50.f);
 
                             light->update();
                         }
@@ -355,7 +357,17 @@ void VulkanApplication::mainLoop()
         {
             ImGui::SliderFloat("Bias", &graphicBuilder->getShadowData().bias, 0.0f, 0.005f, "%.4f");
             ImGui::Combo("Shadow Type", &graphicBuilder->getShadowData().shadowType, shadowTypeNames, shadowTypeNum);
-            ImGui::SliderInt("PCF Filter Size", &graphicBuilder->getShadowData().pcfFilterSize, 1, 32);
+            switch (graphicBuilder->getShadowData().shadowType)
+            {
+            case 1:
+                ImGui::SliderInt("PCF Filter Size", &graphicBuilder->getShadowData().pcfFilterSize, 1, 32);
+                break;
+            case 2:
+                ImGui::SliderInt("PCSS Blocker Size", &graphicBuilder->getShadowData().pcssBlockerSize, 1, 32);
+                break;
+            default:
+                break;
+            }
         }
 
         if (rtSupport)

@@ -46,6 +46,7 @@ END_BINDING();
 
 struct DirLight {
 	vec3 direction;
+    float width;
 
 	vec3 color;
     float intensity;
@@ -57,6 +58,7 @@ struct PointLight {
     mat4 lightSpaces[6];
     
 	vec3 position;
+    float width;
 
 	vec3 color;
     float intensity;
@@ -92,12 +94,13 @@ struct ShadowData {
     int type;
     int pcfFilterSize;
 
+    int pcssBlockerSize;
     float bias;
-    int maxDirShadowNum;
 
+    int maxDirShadowNum;
     int maxPointShadowNum;
 
-    vec3 padding;
+    vec2 padding;
 };
 
 struct SSAOData

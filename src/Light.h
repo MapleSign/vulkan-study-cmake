@@ -4,7 +4,7 @@
 
 struct DirLight {
     glm::vec3 direction;
-    float pad;
+    float width;
 
     glm::vec3 color;
     float intensity;
@@ -18,7 +18,7 @@ struct PointLight {
     glm::mat4 lightSpaces[6];
 
     glm::vec3 position;
-    float padding0;
+    float width;
 
     glm::vec3 color;
     float intensity;
@@ -27,7 +27,7 @@ struct PointLight {
     float linear;
     float quadratic;
 
-    float padding1;
+    float padding;
 
     void update();
 };

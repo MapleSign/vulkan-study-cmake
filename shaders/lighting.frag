@@ -59,13 +59,12 @@ vec3 calcLight(inout State state, vec3 V, vec3 L, vec3 lightIntensity, float lig
     return Li;
 }
 
-float findBlocker(sampler2D shadowMap, vec2 projCoords, float projDepth) {
-    int size = 2;
+float findBlocker(sampler2D shadowMap, vec2 projCoords, float projDepth, int blockerSize) {
     vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
     int cnt = 0;
     float blockerDepth = 0.0;
-    for (int x = -size; x <= size; ++x) {
-        for (int y = -size; y <= size; ++y) {
+    for (int x = -blockerSize; x <= blockerSize; ++x) {
+        for (int y = -blockerSize; y <= blockerSize; ++y) {
             float closestDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
             if (projDepth > closestDepth) {
                 blockerDepth += closestDepth;
@@ -98,7 +97,7 @@ float PCF(sampler2D shadowMap, int flterSize, vec2 projCoords, float projDepth) 
     return shadow;
 }
 
-float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
+float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace, float lightWidth, int blockerSize) {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
 
@@ -113,8 +112,7 @@ float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace) {
         shadow = PCF(shadowMap, shadowUniform.pcfFilterSize, projCoords.xy, currentDepth);
     }
     else {
-        float lightWidth = 50.0;
-        float blockerDepth = findBlocker(shadowMap, projCoords.xy, currentDepth);
+        float blockerDepth = findBlocker(shadowMap, projCoords.xy, currentDepth, blockerSize);
         float penumbraSize = max(currentDepth - blockerDepth, 0.0) / blockerDepth * lightWidth;
         shadow = PCF(shadowMap, int(penumbraSize/2), projCoords.xy, currentDepth);
     }
@@ -185,7 +183,8 @@ void main() {
         vec3 lightIntensity = dirLight[i].intensity * dirLight[i].color;
 
         vec4 fragPosLightSpace = dirLight[i].lightSpace * vec4(fragPos, 1.0);
-        float shadow = i < shadowUniform.maxDirShadowNum ? calcDirShadow(dirLightShadowMaps[nonuniformEXT(i)], fragPosLightSpace) : 0.0;
+        float shadow = i < shadowUniform.maxDirShadowNum ? 
+            calcDirShadow(dirLightShadowMaps[nonuniformEXT(i)], fragPosLightSpace, dirLight[i].width, shadowUniform.pcssBlockerSize) : 0.0;
 
         result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
     }
@@ -217,7 +216,7 @@ void main() {
             sampleColor += indirectSample;
     }
     sampleColor /= numSamples;
-    
+
     float ao = subpassLoad(inputSSAO).r;
     result += sampleColor * ao;
 
