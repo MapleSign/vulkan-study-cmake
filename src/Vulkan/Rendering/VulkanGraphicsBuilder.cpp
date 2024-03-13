@@ -68,6 +68,11 @@ void VulkanGraphicsBuilder::recreateGraphicsBuilder(const VkExtent2D extent)
     ssaoPass = std::make_unique<SSAOSubpass>(device, resManager, extent, shaderResources, *renderPass, 2);
     ssaoBlurPass = std::make_unique<SSAOBlurSubpass>(device, resManager, extent, shaderResources, *renderPass, 3);
     lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 4);
+
+    ssaoPass->prepare(gBuffer);
+    ssaoBlurPass->prepare(renderTarget->getViews());
+    lightingPass->prepare(gBuffer);
+    skyboxPass->prepare();
 }
 
 void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)

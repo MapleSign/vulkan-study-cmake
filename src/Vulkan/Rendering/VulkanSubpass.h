@@ -22,7 +22,8 @@ public:
 
     virtual const VulkanRenderPipeline& getRenderPipeline() const { return *renderPipeline; }
     virtual void recreatePipeline(const VkExtent2D extent, const VulkanRenderPass& renderPass) 
-    { 
+    {
+        this->extent = extent;
         renderPipeline->recreatePipeline(extent, renderPass); 
     }
 
