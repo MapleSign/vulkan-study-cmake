@@ -24,7 +24,7 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     ssaoBlurPass = std::make_unique<SSAOBlurSubpass>(device, resManager, extent, shaderResources, *renderPass, 3);
     lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 4);
 
-    dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxDirShadowNum);
+    dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxDirShadowNum, MAX_CSM_LEVEL);
     pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxPointShadowNum);
 
     globalPass->prepare(dirShadowPass->getShadowDepths(), pointShadowPass->getShadowDepths());
@@ -357,8 +357,8 @@ void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorS
 
 DirShadowRenderPass::DirShadowRenderPass(
     const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
-    const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum) :
-    ShadowRenderPass(device, resManager, extent, shaderRes, maxLightNum)
+    const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, uint32_t maxCSMLevel) :
+    ShadowRenderPass(device, resManager, extent, shaderRes, maxLightNum), maxCSMLevel{ maxCSMLevel }
 {
     auto depthFormat = findDepthFormat(device.getGPU().getHandle());
     VulkanImage shadowDepthImage{
@@ -366,7 +366,7 @@ DirShadowRenderPass::DirShadowRenderPass(
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         0,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        1, maxLightNum
+        1, maxLightNum * maxCSMLevel
     };
     std::vector<VulkanImage> images{};
     images.push_back(std::move(shadowDepthImage));
@@ -374,7 +374,7 @@ DirShadowRenderPass::DirShadowRenderPass(
 
     const auto& shadowImage = renderTarget->getImages()[0];
     for (uint32_t i = 0; i < maxLightNum; ++i) {
-        shadowDepths.emplace_back(new VulkanImageView(shadowImage, VK_FORMAT_UNDEFINED, i, 1));
+        shadowDepths.emplace_back(new VulkanImageView(shadowImage, VK_FORMAT_UNDEFINED, i, maxCSMLevel));
     }
 
     auto attatchments = renderTarget->getAttatchments();

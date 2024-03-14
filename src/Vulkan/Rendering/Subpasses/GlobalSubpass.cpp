@@ -8,7 +8,7 @@ GlobalSubpass::GlobalSubpass(const VulkanDevice& device, VulkanResourceManager& 
     vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
 
     vertShader.addShaderResourceUniform(ShaderResourceType::Uniform, 0, 0, 1,
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT);
     vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 0, 1);
 
     vertShader.addShaderResourceUniform(ShaderResourceType::StorageBuffer, 1, 0, 1, VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR);
@@ -134,12 +134,14 @@ void GlobalSubpass::update(float deltaTime, const Scene* scene)
     // Light Data
     std::vector<DirLight> dirLights;
     for (const auto& [name, light] : scene->getDirLightMap()) {
+        light->update(*camera, (float)extent.width / (float)extent.height);
         dirLights.push_back(*light);
     }
     lightData.updateData(currentImage, 0, dirLights.data(), sizeof(DirLight) * dirLights.size());
 
     std::vector<PointLight> pointLights;
     for (const auto& [name, light] : scene->getPointLightMap()) {
+        light->update();
         pointLights.push_back(*light);
     }
     lightData.updateData(currentImage, 1, pointLights.data(), sizeof(PointLight) * pointLights.size());

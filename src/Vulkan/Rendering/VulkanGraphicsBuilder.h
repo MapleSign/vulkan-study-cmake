@@ -98,7 +98,9 @@ class DirShadowRenderPass : public ShadowRenderPass
 {
 public:
     DirShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
-        const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum);
+        const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, uint32_t maxCSMLevel);
+private:
+    uint32_t maxCSMLevel;
 };
 
 class PointShadowRenderPass : public ShadowRenderPass

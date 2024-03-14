@@ -25,12 +25,14 @@ layout(location = 0) out vec2 fragCoord;
 
 void main() {
     for (int lightIdx = 0; lightIdx < constants.dirLightNum; ++lightIdx) {
-        gl_Layer = lightIdx;
-        for (int i = 0; i < 3; ++i) {
-            gl_Position = dirLight[lightIdx].lightSpace * gl_in[i].gl_Position;
-            fragCoord = gs_in[i].fragCoord;
-            EmitVertex();
+        for (int level = 0; level < dirLight[lightIdx].csmLevel; ++level) {
+            gl_Layer = lightIdx * MAX_CSM_LEVEL + level;
+            for (int i = 0; i < 3; ++i) {
+                gl_Position = dirLight[lightIdx].lightSpaces[level] * gl_in[i].gl_Position;
+                fragCoord = gs_in[i].fragCoord;
+                EmitVertex();
+            }
+            EndPrimitive();
         }
-        EndPrimitive();
     }
 }

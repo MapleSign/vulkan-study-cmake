@@ -18,6 +18,10 @@ layout(push_constant) uniform PushConstants {
     PushConstantRaster constants;
 };
 
+layout(set = 0, binding = eGlobals, scalar) uniform GlobalUnifrom {
+    GlobalData global;
+};
+
 layout(set = 0, binding = eEnvTexture) uniform samplerCube envSampler;
 
 layout(set = 1, binding = 0) buffer DirLightInfo {
@@ -32,7 +36,7 @@ layout(set = 1, binding = 2) uniform _ShadowUniform {
     ShadowData shadowUniform;
 };
 
-layout(set = 1, binding = 3) uniform sampler2D[] dirLightShadowMaps;
+layout(set = 1, binding = 3) uniform sampler2DArray[] dirLightShadowMaps;
 layout(set = 1, binding = 4) uniform samplerCube[] pointLightShadowMaps;
 
 layout(input_attachment_index = eSceneColor, set = 2, binding = eSceneColor) uniform subpassInput inputSceneColor;
@@ -59,13 +63,13 @@ vec3 calcLight(inout State state, vec3 V, vec3 L, vec3 lightIntensity, float lig
     return Li;
 }
 
-float findBlocker(sampler2D shadowMap, vec2 projCoords, float projDepth, int blockerSize) {
-    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+float findBlocker(sampler2DArray shadowMap, int layer, vec2 projCoords, float projDepth, int blockerSize) {
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0).xy;
     int cnt = 0;
     float blockerDepth = 0.0;
     for (int x = -blockerSize; x <= blockerSize; ++x) {
         for (int y = -blockerSize; y <= blockerSize; ++y) {
-            float closestDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+            float closestDepth = texture(shadowMap, vec3(projCoords.xy + vec2(x, y) * texelSize, layer)).r;
             if (projDepth > closestDepth) {
                 blockerDepth += closestDepth;
                 cnt += 1;
@@ -81,14 +85,14 @@ float findBlocker(sampler2D shadowMap, vec2 projCoords, float projDepth, int blo
     return blockerDepth;
 }
 
-float PCF(sampler2D shadowMap, int flterSize, vec2 projCoords, float projDepth) {
-    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+float PCF(sampler2DArray shadowMap, int layer, int flterSize, vec2 projCoords, float projDepth) {
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0).xy;
     float shadow = 0.0;
     for(int x = -flterSize; x <= flterSize; ++x)
     {
         for(int y = -flterSize; y <= flterSize; ++y)
         {
-            float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+            float pcfDepth = texture(shadowMap, vec3(projCoords.xy + vec2(x, y) * texelSize, layer)).r;
             shadow += projDepth > pcfDepth ? 1.0 : 0.0;
         }
     }
@@ -97,11 +101,11 @@ float PCF(sampler2D shadowMap, int flterSize, vec2 projCoords, float projDepth) 
     return shadow;
 }
 
-float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace, float lightWidth, int blockerSize) {
+float calcDirShadow(sampler2DArray shadowMap, int layer, vec4 fragPosLightSpace, float lightWidth, int blockerSize) {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
 
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
+    float closestDepth = texture(shadowMap, vec3(projCoords.xy, layer)).r;
     float currentDepth = projCoords.z - shadowUniform.bias;
     float shadow = 0.0;
     
@@ -109,12 +113,12 @@ float calcDirShadow(sampler2D shadowMap, vec4 fragPosLightSpace, float lightWidt
         shadow = currentDepth > closestDepth ? 1.0 : 0.0;
     }
     else if (shadowUniform.type == 1) {
-        shadow = PCF(shadowMap, shadowUniform.pcfFilterSize, projCoords.xy, currentDepth);
+        shadow = PCF(shadowMap, layer, shadowUniform.pcfFilterSize, projCoords.xy, currentDepth);
     }
     else {
-        float blockerDepth = findBlocker(shadowMap, projCoords.xy, currentDepth, blockerSize);
+        float blockerDepth = findBlocker(shadowMap, layer, projCoords.xy, currentDepth, blockerSize);
         float penumbraSize = max(currentDepth - blockerDepth, 0.0) / blockerDepth * lightWidth;
-        shadow = PCF(shadowMap, int(penumbraSize/2), projCoords.xy, currentDepth);
+        shadow = PCF(shadowMap, layer, int(penumbraSize/2), projCoords.xy, currentDepth);
     }
 
     return shadow;
@@ -162,6 +166,7 @@ void main() {
     
     vec3 fragPos = subpassLoad(inputPos).rgb;
     vec3 viewDir = normalize(constants.viewPos - fragPos);
+    vec3 fragPosViewSpace = vec3(global.view * vec4(fragPos, 1.0));
 
     State state;
     state.position = fragPos;
@@ -178,13 +183,26 @@ void main() {
     state.mat.transmission = 0.0;
     
     vec3 result = vec3(0.0);
+    float fragDepthViewSpace = abs(fragPosViewSpace.z);
     for (int i = 0; i < constants.dirLightNum; ++i) {
         vec3 lightDir = -normalize(dirLight[i].direction);
         vec3 lightIntensity = dirLight[i].intensity * dirLight[i].color;
 
-        vec4 fragPosLightSpace = dirLight[i].lightSpace * vec4(fragPos, 1.0);
+        int layer = dirLight[i].csmLevel - 1;
+        for (int j = 0; j < dirLight[i].csmLevel; ++j) {
+            if (fragDepthViewSpace < dirLight[i].csmFarPlanes[j]) {
+                layer = j;
+                break;
+            }
+        }
+
+        vec4 fragPosLightSpace = dirLight[i].lightSpaces[layer] * vec4(fragPos, 1.0);
         float shadow = i < shadowUniform.maxDirShadowNum ? 
-            calcDirShadow(dirLightShadowMaps[nonuniformEXT(i)], fragPosLightSpace, dirLight[i].width, shadowUniform.pcssBlockerSize) : 0.0;
+            calcDirShadow(
+                dirLightShadowMaps[nonuniformEXT(i)], layer, 
+                fragPosLightSpace, dirLight[i].width, shadowUniform.pcssBlockerSize
+            ) 
+            : 0.0;
 
         result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
     }
@@ -220,9 +238,9 @@ void main() {
     float ao = subpassLoad(inputSSAO).r;
     result += sampleColor * ao;
 
-    outColor = vec4(result + state.mat.emission, 1.0);
+    outColor = vec4(result + state.mat.emission, fragPosViewSpace.z);
     // outColor = vec4(vec3(shadow), 1.0);
     // outColor = vec4((state.normal + vec3(1)) * 0.5, 1.0);
     // outColor = vec4(state.texCoord, 0, 1);
-    // outColor = vec4(1.0);
+    // outColor = vec4(layer);
 }

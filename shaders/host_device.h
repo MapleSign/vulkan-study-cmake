@@ -44,6 +44,7 @@ START_BINDING(GBufferType)
     eCount = 6
 END_BINDING();
 
+#define MAX_CSM_LEVEL 6
 struct DirLight {
 	vec3 direction;
     float width;
@@ -51,7 +52,12 @@ struct DirLight {
 	vec3 color;
     float intensity;
 
-    mat4 lightSpace;
+    mat4 lightSpaces[MAX_CSM_LEVEL];
+    
+    float csmFarPlanes[MAX_CSM_LEVEL];
+    int csmLevel;
+
+    float padding;
 };
 
 struct PointLight {

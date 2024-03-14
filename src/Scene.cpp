@@ -270,7 +270,6 @@ DirLight* Scene::addDirLight(const char* name, glm::vec3 dir, glm::vec3 color, f
 	light->width = 5.0f;
 	light->color = color;
 	light->intensity = intensity;
-	light->update();
 
 	std::string key = name;
 	while (dirLightMap.find(key) != dirLightMap.end()) {

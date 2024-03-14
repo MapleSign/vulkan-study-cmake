@@ -296,8 +296,6 @@ void VulkanApplication::mainLoop()
                             changed |= ImGui::SliderFloat3("Direction", &light->direction.x, -1.f, 1.f);
                             changed |= ImGui::SliderFloat("Intensity", &light->intensity, 0.f, 100.f);
                             changed |= ImGui::SliderFloat("Width", &light->width, 0.0f, 50.f);
-
-                            light->update();
                         }
                     }
 
@@ -336,8 +334,6 @@ void VulkanApplication::mainLoop()
                             changed |= ImGui::SliderFloat3("Position", &light->position.x, -20.f, 20.f);
                             changed |= ImGui::SliderFloat("Intensity", &light->intensity, 0.f, 100.f);
                             changed |= ImGui::SliderFloat("Width", &light->width, 0.0f, 50.f);
-
-                            light->update();
                         }
                     }
 
