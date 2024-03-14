@@ -75,10 +75,10 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(const VulkanDevice &device, const
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = pipelineState.depthStencilState.depth_test_enable;
     depthStencil.depthWriteEnable = pipelineState.depthStencilState.depth_write_enable;
-    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencil.depthCompareOp = pipelineState.depthStencilState.depthCompareOp;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
-    depthStencil.minDepthBounds = 0.0f; // Optional
-    depthStencil.maxDepthBounds = 1.0f; // Optional
+    depthStencil.minDepthBounds = pipelineState.depthStencilState.minDepthBounds; // Optional
+    depthStencil.maxDepthBounds = pipelineState.depthStencilState.maxDepthBounds; // Optional
     depthStencil.stencilTestEnable = VK_FALSE;
     depthStencil.front = {}; // Optional
     depthStencil.back = {}; // Optional

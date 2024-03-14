@@ -238,7 +238,7 @@ void main() {
     float ao = subpassLoad(inputSSAO).r;
     result += sampleColor * ao;
 
-    outColor = vec4(result + state.mat.emission, fragPosViewSpace.z);
+    outColor = vec4(result + state.mat.emission, 1.0);
     // outColor = vec4(vec3(shadow), 1.0);
     // outColor = vec4((state.normal + vec3(1)) * 0.5, 1.0);
     // outColor = vec4(state.texCoord, 0, 1);

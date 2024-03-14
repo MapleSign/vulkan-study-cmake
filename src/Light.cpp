@@ -74,7 +74,7 @@ void DirLight::update(const BaseCamera& camera, float aspect)
             maxZ *= zMult;
         }
 
-        glm::mat4 lightProj = glm::ortho(minX, maxX, maxY, minY, minZ, maxZ);
+        glm::mat4 lightProj = glm::orthoRH_ZO(minX, maxX, maxY, minY, minZ, maxZ);
 
         lightSpace[i] = lightProj * lightView;
     }

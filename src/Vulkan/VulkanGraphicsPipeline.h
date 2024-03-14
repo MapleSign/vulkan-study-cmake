@@ -15,6 +15,9 @@ struct DepthStencilState
 {
     VkBool32 depth_test_enable{ VK_TRUE };
     VkBool32 depth_write_enable{ VK_TRUE };
+    VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS;
+    float minDepthBounds = 0.0f;
+    float maxDepthBounds = 1.0f;
 };
 
 struct ColorBlendAttachmentState
