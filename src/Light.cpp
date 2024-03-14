@@ -56,7 +56,7 @@ void DirLight::update(const BaseCamera& camera, float aspect)
         }
 
         // Tune this parameter according to the scene
-        constexpr float zMult = 20.f;
+        constexpr float zMult = 10.f;
         if (minZ < 0)
         {
             minZ *= zMult;

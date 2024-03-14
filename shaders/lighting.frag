@@ -184,7 +184,7 @@ void main() {
     
     vec3 result = vec3(0.0);
     float fragDepthViewSpace = abs(fragPosViewSpace.z);
-    for (int i = 0; i < constants.dirLightNum; ++i) {
+    for (int i = 0; i < constants.dirLightNum && i < shadowUniform.maxDirShadowNum; ++i) {
         vec3 lightDir = -normalize(dirLight[i].direction);
         vec3 lightIntensity = dirLight[i].intensity * dirLight[i].color;
 
@@ -197,12 +197,11 @@ void main() {
         }
 
         vec4 fragPosLightSpace = dirLight[i].lightSpaces[layer] * vec4(fragPos, 1.0);
-        float shadow = i < shadowUniform.maxDirShadowNum ? 
+        float shadow = 
             calcDirShadow(
                 dirLightShadowMaps[nonuniformEXT(i)], layer, 
                 fragPosLightSpace, dirLight[i].width, shadowUniform.pcssBlockerSize
-            ) 
-            : 0.0;
+            );
 
         result += (1.0 - shadow) * calcLight(state, viewDir, lightDir, lightIntensity, 1.0);
     }

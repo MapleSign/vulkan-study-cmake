@@ -24,8 +24,9 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     ssaoBlurPass = std::make_unique<SSAOBlurSubpass>(device, resManager, extent, shaderResources, *renderPass, 3);
     lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 4);
 
-    dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxDirShadowNum, MAX_CSM_LEVEL);
-    pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ 2048, 2048 }, shaderResources, shadowData.maxPointShadowNum);
+    uint32_t shadowResolution = 4096;
+    dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ shadowResolution, shadowResolution }, shaderResources, shadowData.maxDirShadowNum, MAX_CSM_LEVEL);
+    pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ shadowResolution, shadowResolution }, shaderResources, shadowData.maxPointShadowNum);
 
     globalPass->prepare(dirShadowPass->getShadowDepths(), pointShadowPass->getShadowDepths());
     ssaoPass->prepare(gBuffer);
