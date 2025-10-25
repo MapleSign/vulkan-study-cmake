@@ -8,8 +8,6 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_buffer_reference2 : require
 
-#extension GL_ARB_shader_clock : enable
-
 #include "raycommon.glsl"
 #include "random.glsl"
 #include "host_device.h"
@@ -221,7 +219,7 @@ void main() {
 
     int numSamples = 64;
     BsdfSampleRec indirectBsdf;
-    uint seed = tea(int(gl_FragCoord.y + gl_FragCoord.x), int(clockARB()));
+    uint seed = tea(int(gl_FragCoord.y + gl_FragCoord.x), global.clock);
     vec3 sampleColor = vec3(0);
     for (int i = 0; i < numSamples; ++i) {
         indirectBsdf.f = PbrSample(state, viewDir, state.ffnormal, indirectBsdf.L, indirectBsdf.pdf, seed);

@@ -32,6 +32,11 @@ struct GlobalData {
     glm::mat4 proj;
     glm::mat4 viewInverse;
     glm::mat4 projInverse;
+
+    glm::vec2 timeParam; // t in sec, 1/t in sec
+    int clock;
+
+    float padding;
 };
 
 struct ObjectData {

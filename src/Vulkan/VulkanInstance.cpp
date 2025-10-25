@@ -26,6 +26,10 @@ VulkanInstance::VulkanInstance(std::vector<const char*> requiredExtensions, std:
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
+#ifdef __APPLE__
+    if (std::find(requiredExtensions.begin(), requiredExtensions.end(), VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) != requiredExtensions.end())
+        createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
 
     createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
     createInfo.ppEnabledExtensionNames = requiredExtensions.data();

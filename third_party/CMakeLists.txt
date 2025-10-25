@@ -1,5 +1,3 @@
-find_package(Vulkan REQUIRED)
-
 option(GLFW_BUILD_DOCS OFF)
 option(GLFW_BUILD_TESTS OFF)
 option(GLFW_BUILD_EXAMPLES OFF)

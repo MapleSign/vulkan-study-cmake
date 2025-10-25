@@ -90,6 +90,11 @@ struct GlobalData {
     mat4 proj;
     mat4 viewInverse;
     mat4 projInverse;
+
+    vec2 timeParam; // t in sec, 1/t in sec
+    int clock;
+
+    float padding;
 };
 
 struct ObjectData {

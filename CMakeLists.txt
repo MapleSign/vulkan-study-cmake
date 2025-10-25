@@ -12,7 +12,21 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(Vulkan REQUIRED)
+if (APPLE)
+    find_package(Vulkan REQUIRED COMPONENTS MoltenVK)
+    set(CMAKE_XCODE_GENERATE_SCHEME TRUE)
+    if (DEFINED ENV{VK_ICD_FILENAMES})
+        list(APPEND XCODE_ENV_VARS "VK_ICD_FILENAMES=$ENV{VK_ICD_FILENAMES}")
+    endif()
+    if (DEFINED ENV{VK_LAYER_PATH})
+        list(APPEND XCODE_ENV_VARS "VK_LAYER_PATH=$ENV{VK_LAYER_PATH}")
+    endif()
+    if (XCODE_ENV_VARS)
+        set(CMAKE_XCODE_SCHEME_ENVIRONMENT "${XCODE_ENV_VARS}")
+    endif()
+else()
+    find_package(Vulkan REQUIRED)
+endif()
 
 add_subdirectory(third_party)
 
