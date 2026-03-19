@@ -46,7 +46,11 @@ VkPhysicalDevice VulkanPhysicalDevice::getHandle() const { return physicalDevice
 
 const VkPhysicalDeviceProperties& VulkanPhysicalDevice::getProperties() const { return properties; }
 const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& VulkanPhysicalDevice::getRTProperties() const { return rtProperties; }
-const VkPhysicalDeviceFeatures VulkanPhysicalDevice::getFeatures() const { return features; }
+const VkPhysicalDeviceFeatures& VulkanPhysicalDevice::getFeatures() const { return features; }
+const VkPhysicalDeviceFeatures2& VulkanPhysicalDevice::getFeatures2() const { return features2; }
+const VkPhysicalDeviceShaderClockFeaturesKHR& VulkanPhysicalDevice::getClockFeatures() const { return clockFeatures; }
+const VkPhysicalDeviceRayTracingPipelineFeaturesKHR& VulkanPhysicalDevice::getRTPipelineFeatures() const {return rtPipelineFeatures; }
+const VkPhysicalDeviceAccelerationStructureFeaturesKHR& VulkanPhysicalDevice::getASFeatures() const {return asFeatures; }
 const std::vector<VkQueueFamilyProperties>& VulkanPhysicalDevice::getQueueFamalies() const { return queueFamilies; }
 const std::vector<VkExtensionProperties>& VulkanPhysicalDevice::getExtensions() const { return extensions; }
 
@@ -54,7 +58,7 @@ VkBool32 VulkanPhysicalDevice::isPresentSupported(VkSurfaceKHR surface, uint32_t
 	VkBool32 presentSupported{ VK_FALSE };
 
 	if (surface != VK_NULL_HANDLE) {
-		VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface, &presentSupported));
+		CHECK_VK_RESULT(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface, &presentSupported));
 	}
 
 	return presentSupported;

@@ -27,16 +27,16 @@ VulkanApplication::VulkanApplication() :
 
     if (enableValidationLayers) {
         try {
-            instance = std::make_unique<VulkanInstance>(getRequiredExtensions(), validationLayers);
+            instance = std::make_unique<VulkanInstance>(getRequiredInstanceExtensions(), validationLayers);
         }
         catch (const std::exception&) {
             // try without validation layers
             enableValidationLayers = false;
-            instance = std::make_unique<VulkanInstance>(getRequiredExtensions(), std::vector<const char*>());
+            instance = std::make_unique<VulkanInstance>(getRequiredInstanceExtensions(), std::vector<const char*>());
         }
     }
     else {
-        instance = std::make_unique<VulkanInstance>(getRequiredExtensions(), std::vector<const char*>());
+        instance = std::make_unique<VulkanInstance>(getRequiredInstanceExtensions(), std::vector<const char*>());
     }
 
     surface = window->createSurface(instance->getHandle());
@@ -695,7 +695,7 @@ void VulkanApplication::handleSurfaceChange()
     resetFrameCount();
 }
 
-std::vector<const char *> VulkanApplication::getRequiredExtensions()
+std::vector<const char *> VulkanApplication::getRequiredInstanceExtensions()
 {
     uint32_t glfwExtensionCount = 0;
     const char **glfwExtensions;

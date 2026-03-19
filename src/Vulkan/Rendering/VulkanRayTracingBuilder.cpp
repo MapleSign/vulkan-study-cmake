@@ -132,7 +132,7 @@ void VulkanRayTracingBuilder::createRtShaderBindingTable()
 	// Get the shader group handles
 	uint32_t dataSize = handleCount * handleSize;
 	std::vector<uint8_t> handles(dataSize);
-	VK_CHECK(vkGetRayTracingShaderGroupHandlesKHR(device.getHandle(), rtPipeline->getHandle(), 0, handleCount, dataSize, handles.data()));
+	CHECK_VK_RESULT(vkGetRayTracingShaderGroupHandlesKHR(device.getHandle(), rtPipeline->getHandle(), 0, handleCount, dataSize, handles.data()));
 
 	// Allocate a buffer for storing the SBT.
 	VkDeviceSize sbtSize = rgenRegion.size + missRegion.size + hitRegion.size + callRegion.size;

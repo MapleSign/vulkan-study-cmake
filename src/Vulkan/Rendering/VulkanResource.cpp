@@ -444,7 +444,7 @@ VulkanAccelerationStructure VulkanResourceManager::requireAS(VkAccelerationStruc
 
     info.buffer = as.buffer->getHandle();
 
-    VK_CHECK(vkCreateAccelerationStructureKHR(device.getHandle(), &info, nullptr, &as.handle));
+    CHECK_VK_RESULT(vkCreateAccelerationStructureKHR(device.getHandle(), &info, nullptr, &as.handle));
 
     return as;
 }

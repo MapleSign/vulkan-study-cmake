@@ -8,7 +8,9 @@
 #include <vector>
 #include <fstream>
 
-#define VK_CHECK(exp) if (exp != VK_SUCCESS) { throw std::runtime_error("failed on" #exp); }
+#define CHECK_VK_RESULT(exp) if (exp != VK_SUCCESS) { throw std::runtime_error("failed on" #exp); }
+#define VK_BOOL(exp) (exp ? VK_TRUE : VK_FALSE)
+#define CHECK_VK_BOOL(exp) (exp == VK_TRUE)
 
 template<typename T>
 constexpr uint32_t toU32(T a);

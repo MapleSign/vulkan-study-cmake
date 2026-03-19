@@ -28,7 +28,11 @@ public:
 
 	const VkPhysicalDeviceProperties& getProperties() const;
 	const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& getRTProperties() const;
-	const VkPhysicalDeviceFeatures getFeatures() const;
+	const VkPhysicalDeviceFeatures& getFeatures() const;
+    const VkPhysicalDeviceFeatures2& getFeatures2() const;
+    const VkPhysicalDeviceShaderClockFeaturesKHR& getClockFeatures() const;
+    const VkPhysicalDeviceRayTracingPipelineFeaturesKHR& getRTPipelineFeatures() const;
+    const VkPhysicalDeviceAccelerationStructureFeaturesKHR& getASFeatures() const;
 	const std::vector<VkQueueFamilyProperties>& getQueueFamalies() const;
 	const std::vector<VkExtensionProperties>& getExtensions() const;
 

@@ -5,10 +5,17 @@
 
 #include <cstring>
 
-VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurfaceKHR surface, 
+VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurfaceKHR surface,
     const std::vector<const char *> &requiredExtentions, const std::vector<const char *> &requiredLayers) :
     physicalDevice{physicalDevice}
 {
+    features.geometryShader = CHECK_VK_BOOL(physicalDevice.getFeatures2().features.geometryShader);
+    features.shaderClock = CHECK_VK_BOOL(physicalDevice.getClockFeatures().shaderDeviceClock) && CHECK_VK_BOOL(physicalDevice.getClockFeatures().shaderSubgroupClock);
+    features.rtPipeline = CHECK_VK_BOOL(physicalDevice.getRTPipelineFeatures().rayTracingPipeline);
+    features.accelerationStructure = CHECK_VK_BOOL(physicalDevice.getASFeatures().accelerationStructure);
+
+    std::vector<const char *> enabledExtensions(requiredExtentions.begin(), requiredExtentions.end());
+
     QueueFamilyIndices indices = physicalDevice.findQueueFamilies(surface);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -26,13 +33,13 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
 
     VkPhysicalDeviceFeatures2 deviceFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     deviceFeatures.features.samplerAnisotropy = VK_TRUE;
-    deviceFeatures.features.geometryShader = VK_TRUE;
+    deviceFeatures.features.geometryShader = VK_BOOL(features.geometryShader);
     deviceFeatures.features.shaderInt64 = VK_TRUE;
     deviceFeatures.features.imageCubeArray = VK_TRUE;
 
     VkPhysicalDeviceShaderClockFeaturesKHR clockFreature{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR };
-    if (std::find_if(requiredExtentions.begin(), requiredExtentions.end(), 
-        [](const char* ext) { return !strcmp(VK_KHR_SHADER_CLOCK_EXTENSION_NAME, ext); }) != requiredExtentions.end()) {
+    if (features.shaderClock) {
+        enabledExtensions.push_back(VK_KHR_SHADER_CLOCK_EXTENSION_NAME);
         clockFreature.shaderDeviceClock = VK_TRUE;
         clockFreature.shaderSubgroupClock = VK_TRUE;
     }
@@ -49,17 +56,19 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
 
     clockFreature.pNext = &features12;
 
-
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
-    if (std::find_if(requiredExtentions.begin(), requiredExtentions.end(), 
-        [](const char* ext) { return !strcmp(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, ext); }) != requiredExtentions.end()) {
+    if (features.rtPipeline) {
+        enabledExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
         rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
-        features12.pNext = &rtPipelineFeatures;
-
-        asFeatures.accelerationStructure = VK_TRUE;
-        rtPipelineFeatures.pNext = &asFeatures;
     }
+    features12.pNext = &rtPipelineFeatures;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+    if (features.accelerationStructure) {
+        enabledExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+        asFeatures.accelerationStructure = VK_TRUE;
+    }
+    rtPipelineFeatures.pNext = &asFeatures;
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -70,8 +79,8 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
     //createInfo.pEnabledFeatures = &deviceFeatures;
     createInfo.pNext = &deviceFeatures;
 
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtentions.size());
-    createInfo.ppEnabledExtensionNames = requiredExtentions.data();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+    createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
     if (!requiredLayers.empty()) {
         createInfo.enabledLayerCount = static_cast<uint32_t>(requiredLayers.size());
@@ -107,6 +116,7 @@ void VulkanDevice::waitIdle() const {
 VkDevice VulkanDevice::getHandle() const { return device; }
 
 const VulkanPhysicalDevice& VulkanDevice::getGPU() const { return physicalDevice; }
+const VulkanDeviceFeature& VulkanDevice::getFeatures() const { return features; }
 VulkanCommandPool& VulkanDevice::getCommandPool() const { return *commandPool; }
 VulkanQueue& VulkanDevice::getGraphicsQueue() const { return *graphicsQueue; }
 VulkanQueue& VulkanDevice::getPresentQueue() const { return *presentQueue; }

@@ -17,6 +17,13 @@
 class VulkanQueue;
 class VulkanCommandPool;
 
+struct VulkanDeviceFeature {
+    bool geometryShader;
+    bool shaderClock;
+    bool rtPipeline;
+    bool accelerationStructure;
+};
+
 class VulkanDevice {
 public:
     VulkanDevice(const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface,
@@ -29,6 +36,7 @@ public:
     VkDevice getHandle() const;
 
     const VulkanPhysicalDevice& getGPU() const;
+    const VulkanDeviceFeature& getFeatures() const;
     VulkanCommandPool& getCommandPool() const;
     VulkanQueue& getGraphicsQueue() const;
     VulkanQueue& getPresentQueue() const;
@@ -41,4 +49,6 @@ private:
     std::unique_ptr<VulkanQueue> presentQueue;
 
     std::unique_ptr<VulkanCommandPool> commandPool;
+    
+    VulkanDeviceFeature features{};
 };

@@ -28,7 +28,7 @@ GUI::GUI(const VulkanInstance& instance, const GlfwWindow& window, const VulkanD
         pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
         pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
         pool_info.pPoolSizes = pool_sizes;
-        VK_CHECK(vkCreateDescriptorPool(device.getHandle(), &pool_info, nullptr, &imguiDescriptorPool));
+        CHECK_VK_RESULT(vkCreateDescriptorPool(device.getHandle(), &pool_info, nullptr, &imguiDescriptorPool));
     }
 
     // Setup Dear ImGui context

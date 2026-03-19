@@ -108,7 +108,7 @@ private:
     PushConstantRayTracing pcRay{};
     PushConstantPost pcPost{ 0, 2, 1.0, 1.0, 1.0 };
 
-    std::vector<const char*> getRequiredExtensions();
+    std::vector<const char*> getRequiredInstanceExtensions();
     static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
     static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);

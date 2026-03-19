@@ -106,7 +106,7 @@ void VulkanRenderContext::handleSurfaceChange() {
 	
 	while (surface_properties.currentExtent.width == 0xFFFFFFFF)
 	{
-		VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.getGPU().getHandle(),
+		CHECK_VK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.getGPU().getHandle(),
 			swapChain->getSurface(), &surface_properties));
 	}
 

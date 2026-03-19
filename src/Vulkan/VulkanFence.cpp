@@ -33,7 +33,7 @@ void VulkanFence::wait() {
 }
 
 void VulkanFence::reset() {
-	VK_CHECK(vkResetFences(device.getHandle(), 1, &fence));
+	CHECK_VK_RESULT(vkResetFences(device.getHandle(), 1, &fence));
 }
 
 VkFence VulkanFence::getHandle() const { return fence; }

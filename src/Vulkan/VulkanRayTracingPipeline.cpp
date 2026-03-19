@@ -15,7 +15,7 @@ VulkanRayTracingPipeline::VulkanRayTracingPipeline(const VulkanDevice& device, c
 	rtPipelineCreateInfo.layout = pipelineState.pipelineLayout->getHandle();
 	rtPipelineCreateInfo.maxPipelineRayRecursionDepth = pipelineState.maxPipelineRayRecursionDepth;
 
-	VK_CHECK(vkCreateRayTracingPipelinesKHR(device.getHandle(), {}, {}, 1, &rtPipelineCreateInfo, nullptr, &pipeline));
+	CHECK_VK_RESULT(vkCreateRayTracingPipelinesKHR(device.getHandle(), {}, {}, 1, &rtPipelineCreateInfo, nullptr, &pipeline));
 }
 
 VulkanRayTracingPipeline::~VulkanRayTracingPipeline()

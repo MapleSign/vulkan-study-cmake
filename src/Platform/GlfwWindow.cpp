@@ -19,7 +19,7 @@ GlfwWindow::~GlfwWindow() {
 VkSurfaceKHR GlfwWindow::createSurface(VkInstance instance) {
 	VkSurfaceKHR surface;
 
-	VK_CHECK(glfwCreateWindowSurface(instance, window, nullptr, &surface))
+	CHECK_VK_RESULT(glfwCreateWindowSurface(instance, window, nullptr, &surface))
 
 	return surface;
 }
