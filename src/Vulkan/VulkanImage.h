@@ -3,9 +3,23 @@
 #include "VulkanCommon.h"
 #include "VulkanDevice.h"
 
+struct VulkanImageCreateInfo
+{
+    VkExtent3D extent;
+    VkFormat format;
+    VkImageTiling tiling;
+    VkImageUsageFlags usage;
+    VkImageCreateFlags flags = 0;
+    VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    uint32_t mipLevels = 1;
+    uint32_t arrayLayers = 1;
+};
+
 class VulkanImage
 {
 public:
+    VulkanImage(const VulkanDevice& device, const VulkanImageCreateInfo& createInfo);
+
     VulkanImage(const VulkanDevice& device, const VkExtent3D& extent, VkFormat format, VkImageTiling tiling,
         VkImageUsageFlags usage, VkImageCreateFlags flags = 0, VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
         uint32_t mipLevels = 1, uint32_t arrayLayers = 1);

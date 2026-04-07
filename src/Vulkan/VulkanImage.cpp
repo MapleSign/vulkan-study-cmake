@@ -2,6 +2,11 @@
 #include "VulkanDevice.h"
 #include "VulkanImage.h"
 
+VulkanImage::VulkanImage(const VulkanDevice &device, const VulkanImageCreateInfo &createInfo) : 
+    VulkanImage(device, createInfo.extent, createInfo.format, createInfo.tiling, createInfo.usage, createInfo.flags, createInfo.properties, createInfo.mipLevels, createInfo.arrayLayers)
+{
+}
+
 VulkanImage::VulkanImage(const VulkanDevice& device, const VkExtent3D& extent, VkFormat format, VkImageTiling tiling,
     VkImageUsageFlags usage, VkImageCreateFlags flags, VkMemoryPropertyFlags properties,
     uint32_t mipLevels, uint32_t arrayLayers) :
