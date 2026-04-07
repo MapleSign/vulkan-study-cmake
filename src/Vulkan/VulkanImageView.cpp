@@ -2,12 +2,13 @@
 #include "VulkanImage.h"
 #include "VulkanImageView.h"
 
-VulkanImageView::VulkanImageView(const VulkanImage &image, VkFormat format, uint32_t arrayLayer, uint32_t layerCount):
-    image{image}
+VulkanImageView::VulkanImageView(const VulkanImage &image, VkFormat format, uint32_t baseLayer, uint32_t layerCount):
+image{image}, baseLayer{baseLayer}, layerCount{layerCount}
 {
     if (format == VK_FORMAT_UNDEFINED) {
         format = image.getFormat();
     }
+    this->format = format;
 
     VkImageAspectFlags aspectFlags;
     if (isDepthStencilFormat(format)) {
@@ -35,7 +36,7 @@ VulkanImageView::VulkanImageView(const VulkanImage &image, VkFormat format, uint
     viewInfo.subresourceRange.aspectMask = aspectFlags;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = image.getMipLevels();
-    viewInfo.subresourceRange.baseArrayLayer = arrayLayer;
+    viewInfo.subresourceRange.baseArrayLayer = baseLayer;
     viewInfo.subresourceRange.layerCount = layerCount;
 
     if (vkCreateImageView(image.getDevice().getHandle(), &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
@@ -55,5 +56,3 @@ VulkanImageView::~VulkanImageView() {
         vkDestroyImageView(image.getDevice().getHandle(), imageView, nullptr);
     }
 }
-
-VkImageView VulkanImageView::getHandle() const { return imageView; }
