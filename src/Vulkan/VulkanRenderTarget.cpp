@@ -34,10 +34,11 @@ VulkanRenderTarget::VulkanRenderTarget(std::vector<VulkanImageView>&& imageViews
 {
     extent.height = this->imageViews.front().getImage().getExtent().height;
     extent.width = this->imageViews.front().getImage().getExtent().width;
+    layers = this->imageViews.front().getLayerCount();
 
     for (auto &imageView : this->imageViews) {
         const auto& image = imageView.getImage();
-        attatchments.emplace_back(image.getFormat(), image.getSampleCount(), image.getUsage());
+        attatchments.emplace_back(imageView.getFormat(), image.getSampleCount(), image.getUsage());
     }
 }
 
