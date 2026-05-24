@@ -21,9 +21,15 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice device) {
 		clockFeatures.pNext = &features12;
 		features12.pNext = &rtPipelineFeatures;
 		rtPipelineFeatures.pNext = &asFeatures;
+		#ifdef __APPLE__
+		asFeatures.pNext = &portabilitySubsetFeatures;
+		#endif
 		vkGetPhysicalDeviceFeatures2(device, &features2);
 
 		properties2.pNext = &rtProperties;
+		#ifdef __APPLE__
+		properties2.pNext = &portabilitySubsetProperties;
+		#endif
 		vkGetPhysicalDeviceProperties2(device, &properties2);
 	}
 
@@ -51,7 +57,9 @@ const VkPhysicalDeviceFeatures2& VulkanPhysicalDevice::getFeatures2() const { re
 const VkPhysicalDeviceShaderClockFeaturesKHR& VulkanPhysicalDevice::getClockFeatures() const { return clockFeatures; }
 const VkPhysicalDeviceRayTracingPipelineFeaturesKHR& VulkanPhysicalDevice::getRTPipelineFeatures() const {return rtPipelineFeatures; }
 const VkPhysicalDeviceAccelerationStructureFeaturesKHR& VulkanPhysicalDevice::getASFeatures() const {return asFeatures; }
-const std::vector<VkQueueFamilyProperties>& VulkanPhysicalDevice::getQueueFamalies() const { return queueFamilies; }
+const VkPhysicalDevicePortabilitySubsetFeaturesKHR &VulkanPhysicalDevice::getPortabilitySubsetFeatures() const { return portabilitySubsetFeatures; }
+
+const std::vector<VkQueueFamilyProperties> &VulkanPhysicalDevice::getQueueFamalies() const { return queueFamilies; }
 const std::vector<VkExtensionProperties>& VulkanPhysicalDevice::getExtensions() const { return extensions; }
 
 VkBool32 VulkanPhysicalDevice::isPresentSupported(VkSurfaceKHR surface, uint32_t queueFamilyIndex) const {

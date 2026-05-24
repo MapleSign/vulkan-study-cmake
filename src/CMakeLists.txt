@@ -152,6 +152,10 @@ add_executable(vulkan_study
 # set_property(TARGET vulkan_study PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:vulkan_study>")
 set_property(TARGET vulkan_study PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
 
+if (APPLE)
+    target_compile_definitions(vulkan_study PUBLIC VK_ENABLE_BETA_EXTENSIONS)
+endif()
+
 target_include_directories(vulkan_study PUBLIC 
     "${CMAKE_CURRENT_SOURCE_DIR}" 
     "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan"

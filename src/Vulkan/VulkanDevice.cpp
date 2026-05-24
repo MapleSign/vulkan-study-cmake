@@ -70,6 +70,16 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
     }
     rtPipelineFeatures.pNext = &asFeatures;
 
+    #ifdef __APPLE__
+    if (std::find(enabledExtensions.begin(), enabledExtensions.end(), VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) == enabledExtensions.end())
+    {
+        enabledExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+    }
+    VkPhysicalDevicePortabilitySubsetFeaturesKHR portabilityFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR };
+    portabilityFeatures = physicalDevice.getPortabilitySubsetFeatures();
+    asFeatures.pNext = &portabilityFeatures;
+    #endif
+
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
