@@ -11,10 +11,10 @@
 #include "host_device.h"
 
 layout(push_constant) uniform PushConstants {
-    PushConstantRaster constants;
+    PushConstantShadow constants;
 };
 
-layout(set = 1, binding = 1) buffer PointLightInfo {
+layout(set = 1, binding = 1) readonly buffer PointLightInfo {
     PointLight pointLights[];
 };
 
@@ -23,12 +23,14 @@ layout(buffer_reference, scalar) buffer Indices { ivec3 i[]; }; // Triangle indi
 layout(buffer_reference, scalar) buffer Materials { GltfMaterial m[]; }; // Array of all materials on an object
 layout(buffer_reference, scalar) buffer MatIndices { int i[]; }; // Material ID for each triangle
 
-layout(set = 0, binding = eObjDescs, scalar) buffer ObjDescBuffer { ObjDesc i[]; } objDesc;
+layout(set = 0, binding = eObjDescs, scalar) readonly buffer ObjDescBuffer { ObjDesc i[]; } objDesc;
 
 layout(set = 0, binding = eTextures) uniform sampler2D[] textureSampler;
 
-layout(location = 0) in vec2 fragCoord;
-layout(location = 1) in vec3 fragPos;
+layout(location = 0) in VS_OUT {
+    vec2 fragCoord;
+    vec3 fragPosWS;
+};
 
 void main()
 {
@@ -58,7 +60,7 @@ void main()
     }
 
     int lightIdx = gl_Layer / 6;
-    float lightDistance = length(fragPos - pointLights[lightIdx].position);
+    float lightDistance = length(fragPosWS - pointLights[lightIdx].position);
     lightDistance /= 25.0;
     gl_FragDepth = lightDistance;
 }

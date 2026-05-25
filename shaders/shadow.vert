@@ -8,7 +8,7 @@
 #include "host_device.h"
 
 layout(push_constant) uniform PushConstants {
-    PushConstantRaster constants;
+    PushConstantShadow constants;
 };
 
 layout(set = 0, binding = eGlobals, scalar) uniform GlobalUnifrom {
@@ -18,6 +18,14 @@ layout(set = 0, binding = eGlobals, scalar) uniform GlobalUnifrom {
 layout(set = 0, binding = eObjData, scalar) readonly buffer ObjectBuffer {
 	ObjectData objects[];
 } objectBuffer;
+
+layout(set = 1, binding = 0) readonly buffer DirLightInfo {
+    DirLight dirLights[];
+};
+
+layout(set = 1, binding = 1) readonly buffer PointLightInfo {
+    PointLight pointLights[];
+};
 
 layout(set = 1, binding = 2) uniform _ShadowUniform {
     ShadowData shadowUniform;
@@ -31,14 +39,23 @@ layout(location = 4) in vec3 inBitangent;
 
 layout(location = 0) out VS_OUT {
     vec2 fragCoord;
+    vec3 fragPosWS;
 };
 
 void main()
 {
     int id = constants.objId;
     mat4 model = objectBuffer.objects[id].model;
+    vec4 worldPos = model * vec4(inPosition, 1.0);
 
-    gl_Position = model * vec4(inPosition, 1.0);
+    mat4 projView = mat4(1.0);
+    if (constants.lightType == LIGHT_TYPE_DIR) {
+        projView = dirLights[constants.lightId].lightSpaces[constants.layerId];
+    } else if (constants.lightType == LIGHT_TYPE_POINT) {
+        projView = pointLights[constants.lightId].lightSpaces[constants.layerId];
+    }
+    gl_Position = projView * worldPos;
     
     fragCoord = inTexCoord;
+    fragPosWS = worldPos.xyz;
 }

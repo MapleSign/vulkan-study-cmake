@@ -139,11 +139,6 @@ int VulkanPhysicalDevice::getScore() const {
 	// Maximum possible size of textures affects graphics quality
 	score += properties.limits.maxImageDimension2D;
 
-	// Application can't function without geometry shaders
-	if (!features.geometryShader) {
-		return 0;
-	}
-
 	return score;
 }
 

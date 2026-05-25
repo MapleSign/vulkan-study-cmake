@@ -3,7 +3,7 @@
 #include "VulkanImageView.h"
 
 VulkanImageView::VulkanImageView(const VulkanImage &image, VkFormat format, uint32_t baseLayer, uint32_t layerCount):
-image{image}, baseLayer{baseLayer}, layerCount{layerCount}
+image{image}, baseLayer{baseLayer}
 {
     if (format == VK_FORMAT_UNDEFINED) {
         format = image.getFormat();
@@ -19,6 +19,7 @@ image{image}, baseLayer{baseLayer}, layerCount{layerCount}
     }
 
     layerCount = layerCount == 0 ? image.getArrayLayers() : layerCount;
+    this->layerCount = layerCount;
     VkImageViewType viewType;
     if (layerCount > 1) {
         if (image.getFlags() & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) {
@@ -46,7 +47,10 @@ image{image}, baseLayer{baseLayer}, layerCount{layerCount}
 
 VulkanImageView::VulkanImageView(VulkanImageView&& other) noexcept:
     image{other.image},
-    imageView{other.imageView}
+    imageView{other.imageView},
+    format{other.format},
+    baseLayer{other.baseLayer},
+    layerCount{other.layerCount}
 {
     other.imageView = VK_NULL_HANDLE;
 }

@@ -7,31 +7,33 @@
 #include "host_device.h"
 
 layout(push_constant) uniform PushConstants {
-    PushConstantRaster constants;
+    PushConstantShadow constants;
 };
 
-layout(set = 1, binding = 1) buffer PointLightInfo {
+layout(set = 1, binding = 1) readonly buffer PointLightInfo {
     PointLight pointLights[];
 };
 
 layout(triangles) in;
 layout(triangle_strip, max_vertices=18*4) out;
 
-layout(location = 0) in VS_OUT {
+struct VS_OUT {
     vec2 fragCoord;
-} gs_in[];
+    vec3 fragPosWS;
+};
 
-layout(location = 0) out vec2 fragCoord;
-layout(location = 1) out vec3 fragPos;
+layout(location = 0) in VS_OUT gs_in[];
+
+layout(location = 0) out VS_OUT gs_out;
 
 void main() {
-    for (int lightIdx = 0; lightIdx < constants.pointLightNum; ++lightIdx) {
+    for (int lightIdx = 0; lightIdx < constants.lightNum; ++lightIdx) {
         for (int face = 0; face < 6; ++face) {
             gl_Layer = lightIdx * 6 + face;
             for (int i = 0; i < 3; ++i) {
                 gl_Position = pointLights[lightIdx].lightSpaces[face] * gl_in[i].gl_Position;
-                fragCoord = gs_in[i].fragCoord;
-                fragPos = gl_in[i].gl_Position.xyz;
+                gs_out.fragCoord = gs_in[i].fragCoord;
+                gs_out.fragPosWS = gs_in[i].fragPosWS;
                 EmitVertex();
             }
             EndPrimitive();

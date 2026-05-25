@@ -130,6 +130,20 @@ struct SSAOData
 };
 
 
+#define LIGHT_TYPE_DIR 0
+#define LIGHT_TYPE_POINT 1
+// Push constant structure for the raster
+struct PushConstantShadow
+{
+	int objId;
+    int lightType; // 0: dir, 1: point, -1: none - used for shadow with geom shader
+    int lightId; // dir id or point id
+	int layerId; // csm level for dir; face id for point
+
+    vec3 padding;
+    int lightNum;
+};
+
 // Push constant structure for the raster
 struct PushConstantRaster
 {

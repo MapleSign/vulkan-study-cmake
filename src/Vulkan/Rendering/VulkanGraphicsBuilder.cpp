@@ -78,6 +78,19 @@ void VulkanGraphicsBuilder::recreateGraphicsBuilder(const VkExtent2D extent)
 
 void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
 {
+    const auto& camera = scene->getActiveCamera();
+
+    // Light Scene Info
+    for (const auto& [name, light] : scene->getDirLightMap()) {
+        light->update(*camera, (float)extent.width / (float)extent.height);
+        renderingInfo.lightInfo.dirLights.push_back(*light);
+    }
+
+    for (const auto& [name, light] : scene->getPointLightMap()) {
+        light->update();
+        renderingInfo.lightInfo.pointLights.push_back(*light);
+    }
+
     globalPass->update(deltaTime, scene, shadowData);
 
     dirShadowPass->update(deltaTime, scene);
@@ -90,8 +103,8 @@ void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
 
 void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearColor)
 {
-    dirShadowPass->draw(cmdBuf, *(getGlobalData().descriptorSets[0]), *(getLightData().descriptorSets[0]));
-    pointShadowPass->draw(cmdBuf, *(getGlobalData().descriptorSets[0]), *(getLightData().descriptorSets[0]));
+    dirShadowPass->draw(cmdBuf, renderingInfo, *(getGlobalData().descriptorSets[0]), *(getLightData().descriptorSets[0]));
+    pointShadowPass->draw(cmdBuf, renderingInfo, *(getGlobalData().descriptorSets[0]), *(getLightData().descriptorSets[0]));
 
     std::vector<VkClearValue> clearValues{ GBufferType::Total };
     //clearValues[0].color = {{0.2f, 0.3f, 0.3f, 1.0f}};
@@ -310,50 +323,90 @@ ShadowRenderPass::ShadowRenderPass(const VulkanDevice& device, VulkanResourceMan
 
 void ShadowRenderPass::update(float deltaTime, const Scene* scene)
 {
-    pushConstants.dirLightNum = std::min(maxLightNum, toU32(scene->getDirLightMap().size()));
-    pushConstants.pointLightNum = std::min(maxLightNum, toU32(scene->getPointLightMap().size()));
+    pushConstants.lightType = LIGHT_TYPE_NONE;
+    pushConstants.lightNum = 0;
 }
 
-void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet)
+void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const GraphicsRenderingInfo& renderingInfo, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet)
 {
     std::vector<VkClearValue> clearValues{ 1 };
     //clearValues[0].color = {{0.2f, 0.3f, 0.3f, 1.0f}};
     clearValues[0].depthStencil = { 1.0f, 0 };
-    cmdBuf.beginRenderPass(*renderTarget, *renderPass, *framebuffer, clearValues, VK_SUBPASS_CONTENTS_INLINE);
+    
+    if (device.getFeatures().geometryShader) {
+        cmdBuf.beginRenderPass(*renderTarget, *renderPass, *framebuffer, clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
 
-    cmdBuf.bindPipeline(renderPipeline->getGraphicsPipeline());
+        cmdBuf.bindPipeline(renderPipeline->getGraphicsPipeline());
 
-    auto globalDescriptorSetHandle = globalSet.getHandle();
-    vkCmdBindDescriptorSets(cmdBuf.getHandle(),
-        renderPipeline->getGraphicsPipeline().getBindPoint(),
-        renderPipeline->getPipelineLayout().getHandle(),
-        0, 1, &globalDescriptorSetHandle, 0, nullptr);
+        auto globalDescriptorSetHandle = globalSet.getHandle();
+        vkCmdBindDescriptorSets(cmdBuf.getHandle(),
+            renderPipeline->getGraphicsPipeline().getBindPoint(),
+            renderPipeline->getPipelineLayout().getHandle(),
+            0, 1, &globalDescriptorSetHandle, 0, nullptr);
 
-    auto lightDescriptorSetHandle = lightSet.getHandle();
-    vkCmdBindDescriptorSets(cmdBuf.getHandle(),
-        renderPipeline->getGraphicsPipeline().getBindPoint(),
-        renderPipeline->getPipelineLayout().getHandle(),
-        1, 1, &lightDescriptorSetHandle, 0, nullptr);
+        auto lightDescriptorSetHandle = lightSet.getHandle();
+        vkCmdBindDescriptorSets(cmdBuf.getHandle(),
+            renderPipeline->getGraphicsPipeline().getBindPoint(),
+            renderPipeline->getPipelineLayout().getHandle(),
+            1, 1, &lightDescriptorSetHandle, 0, nullptr);
 
-    for (size_t i = 0; i < resManager.getRenderMeshNum(); ++i) {
-        const auto& renderMesh = resManager.getRenderMesh(i);
-        pushConstants.objId = i;
+        for (size_t i = 0; i < resManager.getRenderMeshNum(); ++i) {
+            const auto& renderMesh = resManager.getRenderMesh(i);
+            pushConstants.objId = i;
 
-        const auto& pipelineLayout = renderPipeline->getPipelineLayout();
-        vkCmdPushConstants(cmdBuf.getHandle(), pipelineLayout.getHandle(),
-            pipelineLayout.getPushConstantRanges()[0].stageFlags, 0, sizeof(PushConstantRaster), &pushConstants);
+            const auto& pipelineLayout = renderPipeline->getPipelineLayout();
+            vkCmdPushConstants(cmdBuf.getHandle(), pipelineLayout.getHandle(),
+                pipelineLayout.getPushConstantRanges()[0].stageFlags, 0, sizeof(PushConstantShadow), &pushConstants);
 
-        vkCmdBindVertexBuffers(cmdBuf.getHandle(), 0, 1, &renderMesh.vertexBuffer.buffer, &renderMesh.vertexBuffer.offset);
+            vkCmdBindVertexBuffers(cmdBuf.getHandle(), 0, 1, &renderMesh.vertexBuffer.buffer, &renderMesh.vertexBuffer.offset);
 
-        vkCmdBindIndexBuffer(cmdBuf.getHandle(), renderMesh.indexBuffer.buffer, renderMesh.indexBuffer.offset, renderMesh.indexType);
+            vkCmdBindIndexBuffer(cmdBuf.getHandle(), renderMesh.indexBuffer.buffer, renderMesh.indexBuffer.offset, renderMesh.indexType);
 
 
-        cmdBuf.drawIndexed(renderMesh.indexNum, 1, 0, 0, 0);
+            cmdBuf.drawIndexed(renderMesh.indexNum, 1, 0, 0, 0);
+        }
+
+
+        cmdBuf.endRenderPass();
     }
+    else {
+        for (size_t i = 0; i < maxLightNum; ++i) {
+            cmdBuf.beginRenderPass(*shadowRenderTargets[i], *renderPass, *shadowFramebuffers[i], clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
 
-    cmdBuf.endRenderPass();
+            cmdBuf.bindPipeline(renderPipeline->getGraphicsPipeline());
+
+            auto globalDescriptorSetHandle = globalSet.getHandle();
+            vkCmdBindDescriptorSets(cmdBuf.getHandle(),
+                renderPipeline->getGraphicsPipeline().getBindPoint(),
+                renderPipeline->getPipelineLayout().getHandle(),
+                0, 1, &globalDescriptorSetHandle, 0, nullptr);
+
+            auto lightDescriptorSetHandle = lightSet.getHandle();
+            vkCmdBindDescriptorSets(cmdBuf.getHandle(),
+                renderPipeline->getGraphicsPipeline().getBindPoint(),
+                renderPipeline->getPipelineLayout().getHandle(),
+                1, 1, &lightDescriptorSetHandle, 0, nullptr);
+
+            for (size_t j = 0; j < resManager.getRenderMeshNum(); ++j) {
+                const auto& renderMesh = resManager.getRenderMesh(j);
+                pushConstants.objId = j;
+
+                const auto& pipelineLayout = renderPipeline->getPipelineLayout();
+                vkCmdPushConstants(cmdBuf.getHandle(), pipelineLayout.getHandle(),
+                    pipelineLayout.getPushConstantRanges()[0].stageFlags, 0, sizeof(PushConstantShadow), &pushConstants);
+
+                vkCmdBindVertexBuffers(cmdBuf.getHandle(), 0, 1, &renderMesh.vertexBuffer.buffer, &renderMesh.vertexBuffer.offset);
+
+                vkCmdBindIndexBuffer(cmdBuf.getHandle(), renderMesh.indexBuffer.buffer, renderMesh.indexBuffer.offset, renderMesh.indexType);
+
+                cmdBuf.drawIndexed(renderMesh.indexNum, 1, 0, 0, 0);
+            }
+
+            cmdBuf.endRenderPass();
+        }
+    }
 }
 
 DirShadowRenderPass::DirShadowRenderPass(
@@ -362,47 +415,86 @@ DirShadowRenderPass::DirShadowRenderPass(
     ShadowRenderPass(device, resManager, extent, shaderRes, maxLightNum), maxCSMLevel{ maxCSMLevel }
 {
     auto depthFormat = findDepthFormat(device.getGPU().getHandle());
-    VulkanImage shadowDepthImage{
-        device, convert2Dto3D(extent), depthFormat, VK_IMAGE_TILING_OPTIMAL,
+    VulkanImageCreateInfo shadowDepthImageInfo{
+        convert2Dto3D(extent), depthFormat, VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         0,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        1, maxLightNum * maxCSMLevel
+        1, std::numeric_limits<uint32_t>::max()
     };
-    std::vector<VulkanImage> images{};
-    images.push_back(std::move(shadowDepthImage));
-    renderTarget = std::make_unique<VulkanRenderTarget>(std::move(images));
+    if (device.getFeatures().geometryShader) {
+        shadowDepthImageInfo.arrayLayers = maxLightNum * maxCSMLevel;
+        shadowImages.push_back(std::make_unique<VulkanImage>(device, shadowDepthImageInfo));
+        
+        std::vector<VulkanImageView> imageViews{};
+        imageViews.emplace_back(*shadowImages[0], VK_FORMAT_UNDEFINED);
+        renderTarget = std::make_unique<VulkanRenderTarget>(std::move(imageViews));
 
-    const auto& shadowImage = renderTarget->getImages()[0];
-    for (uint32_t i = 0; i < maxLightNum; ++i) {
-        shadowDepths.emplace_back(new VulkanImageView(shadowImage, VK_FORMAT_UNDEFINED, i, maxCSMLevel));
+        const auto& shadowImage = renderTarget->getImages()[0];
+        for (uint32_t i = 0; i < maxLightNum; ++i) {
+            shadowDepths.push_back(std::make_unique<VulkanImageView>(shadowImage, VK_FORMAT_UNDEFINED, i, maxCSMLevel));
+        }
+
+        auto attatchments = renderTarget->getAttatchments();
+        attatchments[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+        std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
+        renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos);
+        framebuffer = std::make_unique<VulkanFramebuffer>(device, *renderTarget, *renderPass);
+    }
+    else {
+        shadowDepthImageInfo.arrayLayers = 1u;
+        for (uint32_t i = 0; i < maxLightNum; ++i) {
+            for (uint32_t j = 0; j < maxCSMLevel; ++j) {
+                shadowImages.push_back(std::make_unique<VulkanImage>(device, shadowDepthImageInfo));
+                shadowDepths.push_back(std::make_unique<VulkanImageView>(*shadowImages.back(), VK_FORMAT_UNDEFINED, 0));
+                std::vector<VulkanImageView> imageViews;
+                imageViews.emplace_back(*shadowImages.back(), VK_FORMAT_UNDEFINED);
+                shadowRenderTargets.push_back(std::make_unique<VulkanRenderTarget>(std::move(imageViews)));
+            }
+        }
+
+        auto attatchments = shadowRenderTargets.front()->getAttatchments();
+        attatchments[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+        std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
+        renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos);
+        
+        for (uint32_t i = 0; i < maxLightNum; ++i) {
+            for (uint32_t j = 0; j < maxCSMLevel; ++j) {
+                shadowFramebuffers.push_back(std::make_unique<VulkanFramebuffer>(device, *shadowRenderTargets[i * maxCSMLevel + j], *renderPass));
+            }
+        }
     }
 
-    auto attatchments = renderTarget->getAttatchments();
-    attatchments[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-    std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
-    renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos);
-
-    framebuffer = std::make_unique<VulkanFramebuffer>(device, *renderTarget, *renderPass);
-
     auto vertShader = resManager.createShaderModule("shaders/spv/shadow.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
-    vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+    vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantShadow));
     vertShader.addShaderResources(shaderRes);
 
-    std::unique_ptr<VulkanShaderModule> geomShader =
-        std::make_unique<VulkanShaderModule>(
-            std::move(
-                resManager.createShaderModule("shaders/spv/dirShadow.geom.spv", VK_SHADER_STAGE_GEOMETRY_BIT, "main")
-            )
+    std::unique_ptr<VulkanShaderModule> geomShader = nullptr;
+    if (device.getFeatures().geometryShader) {
+        geomShader =
+            std::make_unique<VulkanShaderModule>(
+                std::move(
+                    resManager.createShaderModule("shaders/spv/dirShadow.geom.spv", VK_SHADER_STAGE_GEOMETRY_BIT, "main")
+                )
             );
-    geomShader->addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+        geomShader->addShaderResourcePushConstant(0, sizeof(PushConstantShadow));
+    }
 
     auto fragShader = resManager.createShaderModule("shaders/spv/dirShadow.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
-    fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+    fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantShadow));
 
     renderPipeline = std::make_unique<VulkanRenderPipeline>(device, resManager, std::move(vertShader), std::move(fragShader), std::move(geomShader));
     renderPipeline->prepare();
     renderPipeline->recreatePipeline(extent, *renderPass);
+}
+
+void DirShadowRenderPass::update(float deltaTime, const Scene *scene)
+{
+    ShadowRenderPass::update(deltaTime, scene);
+    if (!device.getFeatures().geometryShader) {
+        pushConstants.lightType = LIGHT_TYPE_DIR;
+    }
+    pushConstants.lightNum = std::min(maxLightNum, (uint32_t)scene->getDirLightMap().size());
 }
 
 PointShadowRenderPass::PointShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
@@ -410,45 +502,85 @@ PointShadowRenderPass::PointShadowRenderPass(const VulkanDevice& device, VulkanR
     ShadowRenderPass(device, resManager, extent, shaderRes, maxLightNum)
 {
     auto depthFormat = findDepthFormat(device.getGPU().getHandle());
-    VulkanImage shadowDepthImage{
-        device, convert2Dto3D(extent), depthFormat, VK_IMAGE_TILING_OPTIMAL,
+    VulkanImageCreateInfo shadowDepthImageInfo{
+        convert2Dto3D(extent), depthFormat, VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        1, maxLightNum * 6
+        1, std::numeric_limits<uint32_t>::max()
     };
-    std::vector<VulkanImage> images{};
-    images.push_back(std::move(shadowDepthImage));
-    renderTarget = std::make_unique<VulkanRenderTarget>(std::move(images));
+    if (device.getFeatures().geometryShader) {
+        shadowDepthImageInfo.arrayLayers = maxLightNum * 6u;
+        shadowImages.push_back(std::make_unique<VulkanImage>(device, shadowDepthImageInfo));
 
-    const auto& shadowImage = renderTarget->getImages()[0];
-    for (uint32_t i = 0; i < maxLightNum; ++i) {
-        shadowDepths.emplace_back(new VulkanImageView(shadowImage, VK_FORMAT_UNDEFINED, i * 6, 6));
+        std::vector<VulkanImageView> imageViews{};
+        imageViews.emplace_back(*shadowImages[0], VK_FORMAT_UNDEFINED);
+        renderTarget = std::make_unique<VulkanRenderTarget>(std::move(imageViews));
+        
+        const auto& shadowImage = renderTarget->getImages()[0];
+        for (uint32_t i = 0; i < maxLightNum; ++i) {
+            shadowDepths.push_back(std::make_unique<VulkanImageView>(shadowImage, VK_FORMAT_UNDEFINED, i * 6u, 6u));
+        }
+
+        auto attatchments = renderTarget->getAttatchments();
+        attatchments[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+        std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
+        renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos);
+
+        framebuffer = std::make_unique<VulkanFramebuffer>(device, *renderTarget, *renderPass);
+    }
+    else {
+        shadowDepthImageInfo.arrayLayers = 6u;
+        for (uint32_t i = 0; i < maxLightNum; ++i) {
+            shadowImages.push_back(std::make_unique<VulkanImage>(device, shadowDepthImageInfo));
+            shadowDepths.push_back(std::make_unique<VulkanImageView>(*shadowImages.back(), VK_FORMAT_UNDEFINED));
+            for (uint32_t j = 0; j < 6u; ++j) {
+                std::vector<VulkanImageView> imageViews;
+                imageViews.emplace_back(*shadowImages.back(), VK_FORMAT_UNDEFINED);
+                shadowRenderTargets.push_back(std::make_unique<VulkanRenderTarget>(std::move(imageViews)));
+            }
+        }
+
+        auto attatchments = shadowRenderTargets.front()->getAttatchments();
+        attatchments[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+        std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
+        renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos);
+        
+        for (uint32_t i = 0; i < maxLightNum; ++i) {
+            for (uint32_t j = 0; j < 6u; ++j) {
+                shadowFramebuffers.push_back(std::make_unique<VulkanFramebuffer>(device, *shadowRenderTargets[i * 6u + j], *renderPass));
+            }
+        }
     }
 
-    auto attatchments = renderTarget->getAttatchments();
-    attatchments[0].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-    std::vector<LoadStoreInfo> loadStoreInfos{ attatchments.size() };
-    renderPass = std::make_unique<VulkanRenderPass>(device, attatchments, loadStoreInfos);
-
-    framebuffer = std::make_unique<VulkanFramebuffer>(device, *renderTarget, *renderPass);
-
     auto vertShader = resManager.createShaderModule("shaders/spv/shadow.vert.spv", VK_SHADER_STAGE_VERTEX_BIT, "main");
-    vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+    vertShader.addShaderResourcePushConstant(0, sizeof(PushConstantShadow));
     vertShader.addShaderResources(shaderRes);
-
-    std::unique_ptr<VulkanShaderModule> geomShader =
-        std::make_unique<VulkanShaderModule>(
-            std::move(
-                resManager.createShaderModule("shaders/spv/pointShadow.geom.spv", VK_SHADER_STAGE_GEOMETRY_BIT, "main")
-            )
-        );
-    geomShader->addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+    
+    std::unique_ptr<VulkanShaderModule> geomShader = nullptr;
+    if (device.getFeatures().geometryShader) {
+        geomShader =
+            std::make_unique<VulkanShaderModule>(
+                std::move(
+                    resManager.createShaderModule("shaders/spv/pointShadow.geom.spv", VK_SHADER_STAGE_GEOMETRY_BIT, "main")
+                )
+            );
+        geomShader->addShaderResourcePushConstant(0, sizeof(PushConstantShadow));
+    }
 
     auto fragShader = resManager.createShaderModule("shaders/spv/pointShadow.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT, "main");
-    fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantRaster));
+    fragShader.addShaderResourcePushConstant(0, sizeof(PushConstantShadow));
 
     renderPipeline = std::make_unique<VulkanRenderPipeline>(device, resManager, std::move(vertShader), std::move(fragShader), std::move(geomShader));
     renderPipeline->prepare();
     renderPipeline->recreatePipeline(extent, *renderPass);
+}
+
+void PointShadowRenderPass::update(float deltaTime, const Scene* scene)
+{
+    ShadowRenderPass::update(deltaTime, scene);
+    if (!device.getFeatures().geometryShader) {
+        pushConstants.lightType = LIGHT_TYPE_POINT;
+    }
+    pushConstants.lightNum = std::min(maxLightNum, (uint32_t)scene->getPointLightMap().size());
 }

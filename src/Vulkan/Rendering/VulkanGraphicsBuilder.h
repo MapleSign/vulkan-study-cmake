@@ -15,6 +15,15 @@ class SkyboxSubpass;
 class SSAOSubpass;
 class SSAOBlurSubpass;
 
+struct GraphicsLightInfo {
+    std::vector<DirLight> dirLights;
+    std::vector<PointLight> pointLights;
+};
+
+struct GraphicsRenderingInfo {
+    GraphicsLightInfo lightInfo;
+};
+
 struct ShadowData {
     int shadowType = 1;
     int pcfFilterSize = 8;
@@ -26,6 +35,24 @@ struct ShadowData {
     int maxPointShadowNum = 2;
 
     glm::vec2 padding;
+};
+
+enum LightType {
+    LIGHT_TYPE_DIR = 0,
+    LIGHT_TYPE_POINT = 1,
+    LIGHT_TYPE_NONE = -1,
+};
+
+// Push constant structure for the raster
+struct PushConstantShadow
+{
+	int objId;
+    int lightType; // 0: dir, 1: point, -1: none - used for shadow with geom shader
+    int lightId; // dir id or point id
+	int layerId; // csm level for dir; face id for point
+
+    glm::vec3 padding;
+    int lightNum;
 };
 
 struct PushConstantRaster {
@@ -61,7 +88,7 @@ public:
     ~GraphicsRenderPass();
 
     virtual void update(float deltaTime, const Scene* scene) = 0;
-    virtual void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) = 0;
+    virtual void draw(VulkanCommandBuffer& cmdBuf, const GraphicsRenderingInfo& renderingInfo, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) = 0;
 
 protected:
     const VulkanDevice& device;
@@ -82,16 +109,19 @@ public:
         const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum);
 
     virtual void update(float deltaTime, const Scene* scene) override;
-    virtual void draw(VulkanCommandBuffer& cmdBuf, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
+    virtual void draw(VulkanCommandBuffer& cmdBuf, const GraphicsRenderingInfo& renderingInfo, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
 
     constexpr const std::vector<std::unique_ptr<VulkanImageView>>& getShadowDepths() const { return shadowDepths; }
 
 protected:
     uint32_t maxLightNum;
 
+    std::vector<std::unique_ptr<VulkanFramebuffer>> shadowFramebuffers;
+    std::vector<std::unique_ptr<VulkanRenderTarget>> shadowRenderTargets;
+    std::vector<std::unique_ptr<VulkanImage>> shadowImages;
     std::vector<std::unique_ptr<VulkanImageView>> shadowDepths;
 
-    PushConstantRaster pushConstants{};
+    PushConstantShadow pushConstants{};
 };
 
 class DirShadowRenderPass : public ShadowRenderPass
@@ -99,6 +129,8 @@ class DirShadowRenderPass : public ShadowRenderPass
 public:
     DirShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
         const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, uint32_t maxCSMLevel);
+
+    virtual void update(float deltaTime, const Scene* scene) override;
 private:
     uint32_t maxCSMLevel;
 };
@@ -108,6 +140,8 @@ class PointShadowRenderPass : public ShadowRenderPass
 public:
     PointShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
         const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum);
+
+    virtual void update(float deltaTime, const Scene* scene) override;
 };
 
 class VulkanGraphicsBuilder
@@ -146,6 +180,7 @@ private:
     std::unique_ptr<VulkanRenderPass> renderPass;
     std::unique_ptr<VulkanFramebuffer> framebuffer;
 
+    GraphicsRenderingInfo renderingInfo{};
     ShadowData shadowData{};
 
     std::unique_ptr<DirShadowRenderPass> dirShadowPass;
