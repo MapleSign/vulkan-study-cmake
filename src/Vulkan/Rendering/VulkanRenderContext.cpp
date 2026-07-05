@@ -11,7 +11,12 @@
 #include "VulkanRenderContext.h"
 
 FrameSyncObject::FrameSyncObject(const VulkanDevice& device):
-	imageAvailableSemaphores{device}, renderFinishedSemaphores{device}, inFlightFences{device}
+	imageAvailableSemaphores{device}, inFlightFences{device}
+{
+}
+
+SwapChainPresentSyncObject::SwapChainPresentSyncObject(const VulkanDevice &device):
+	renderFinishedSemaphores{device}
 {
 }
 
@@ -54,13 +59,14 @@ VkResult VulkanRenderContext::beginFrame()
 VkResult VulkanRenderContext::submit(VulkanQueue& queue)
 {
 	auto& frameSyncObject = frameSyncObjects[syncIndex];
+	auto& swapChainPresentSyncObject = swapChainPresentSyncObjects[activeFrameIndex];
 
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 	std::vector<VkSemaphore> waitSemaphores = { frameSyncObject.imageAvailableSemaphores.getHandle() };
 	std::vector<VkPipelineStageFlags> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	std::vector<VkSemaphore> signalSemaphores = { frameSyncObject.renderFinishedSemaphores.getHandle() };
+	std::vector<VkSemaphore> signalSemaphores = { swapChainPresentSyncObject.renderFinishedSemaphores.getHandle() };
 
 	queue.submit(getActiveFrame().getCommandBuffer(), waitSemaphores, waitStages, signalSemaphores, frameSyncObject.inFlightFences.getHandle());
 	return VK_SUCCESS;
@@ -68,8 +74,8 @@ VkResult VulkanRenderContext::submit(VulkanQueue& queue)
 
 VkResult VulkanRenderContext::present(VulkanQueue& queue)
 {
-	auto& frameSyncObject = frameSyncObjects[syncIndex];
-	std::vector<VkSemaphore> waitSemaphores = { frameSyncObject.renderFinishedSemaphores.getHandle() };
+	auto& swapChainPresentSyncObject = swapChainPresentSyncObjects[activeFrameIndex];
+	std::vector<VkSemaphore> waitSemaphores = { swapChainPresentSyncObject.renderFinishedSemaphores.getHandle() };
 
 	std::vector<VkSwapchainKHR> swapChains = { swapChain->getHandle() };
 
@@ -118,6 +124,10 @@ void VulkanRenderContext::handleSurfaceChange() {
 void VulkanRenderContext::recreateSwapChain(const VkExtent2D& extent) {
 	swapChain.reset();
 	swapChain = std::make_unique<VulkanSwapChain>(device, surface, extent);
+	swapChainPresentSyncObjects.clear();
+	for (size_t i = 0; i < swapChain->getImages().size(); ++i) {
+		swapChainPresentSyncObjects.emplace_back(device);
+	}
 
 	auto extent3d = swapChain->getExtent3D();
 	std::vector<std::unique_ptr<VulkanRenderTarget>> renderTargets{};

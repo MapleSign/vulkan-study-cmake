@@ -15,8 +15,12 @@ struct FrameSyncObject {
 	FrameSyncObject(const VulkanDevice& device);
 
 	VulkanSemaphore imageAvailableSemaphores;
-	VulkanSemaphore renderFinishedSemaphores;
 	VulkanFence inFlightFences;
+};
+
+struct SwapChainPresentSyncObject {
+	SwapChainPresentSyncObject(const VulkanDevice& device);
+	VulkanSemaphore renderFinishedSemaphores;
 };
 
 class VulkanRenderContext
@@ -61,6 +65,10 @@ private:
 	VulkanRenderTarget::CreateFunc createFunc;
 
 	uint32_t activeFrameIndex{ 0 };
+	// swap chain 的 present 和帧渲染是异步的，所等待的 semaphore 需要和 in flight frame 的分开
+	// 见 https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html
+	std::vector<SwapChainPresentSyncObject> swapChainPresentSyncObjects;
+
 	std::vector<std::unique_ptr<VulkanRenderFrame>> frames;
 
 	size_t threadCount{ 1 };
