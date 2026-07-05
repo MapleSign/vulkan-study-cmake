@@ -154,13 +154,15 @@ RenderMeshID VulkanResourceManager::requireRenderMesh(
     std::vector<int32_t> matIndices(indices.size() / 3, 0);
 
     VkBufferUsageFlags flag = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-    VkBufferUsageFlags rayTracingFlags = // used also for building acceleration structures 
-        flag | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    VkBufferUsageFlags bufferUsageFlags = flag;
+    if (device.getFeatures().accelerationStructure) {
+        bufferUsageFlags |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    }
 
     auto& vertexBuffer = requireBufferWithData(vertices,
-        rayTracingFlags | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        bufferUsageFlags | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     auto& indexBuffer = requireBufferWithData(indices,
-        rayTracingFlags | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        bufferUsageFlags | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     auto& matBuffer = requireBufferWithData(&texturedMat, sizeof(texturedMat), 
         flag | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     auto& matIndicesBuffer = requireBufferWithData(matIndices,
