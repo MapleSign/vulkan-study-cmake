@@ -36,6 +36,7 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
     deviceFeatures.features.geometryShader = VK_BOOL(features.geometryShader);
     deviceFeatures.features.shaderInt64 = VK_TRUE;
     deviceFeatures.features.imageCubeArray = VK_TRUE;
+    deviceFeatures.features.fragmentStoresAndAtomics = VK_TRUE;
 
     VkPhysicalDeviceShaderClockFeaturesKHR clockFreature{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR };
     if (features.shaderClock) {
@@ -46,6 +47,11 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
 
     deviceFeatures.pNext = &clockFreature;
 
+    VkPhysicalDeviceShaderDemoteToHelperInvocationFeatures demoteFeature{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES };
+    demoteFeature.shaderDemoteToHelperInvocation = VK_TRUE;
+
+    clockFreature.pNext = &demoteFeature;
+
     VkPhysicalDeviceVulkan12Features features12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     features12.bufferDeviceAddress = VK_TRUE;
     features12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
@@ -54,7 +60,7 @@ VulkanDevice::VulkanDevice(const VulkanPhysicalDevice &physicalDevice, VkSurface
     features12.descriptorIndexing = VK_TRUE;
     features12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
 
-    clockFreature.pNext = &features12;
+    demoteFeature.pNext = &features12;
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
     if (features.rtPipeline) {

@@ -18,7 +18,8 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice device) {
 	// raytracing properties
 	if (properties.apiVersion >= VK_API_VERSION_1_1) {
 		features2.pNext = &clockFeatures;
-		clockFeatures.pNext = &features12;
+		clockFeatures.pNext = &demoteFeature;
+		demoteFeature.pNext = &features12;
 		features12.pNext = &rtPipelineFeatures;
 		rtPipelineFeatures.pNext = &asFeatures;
 		#ifdef __APPLE__
