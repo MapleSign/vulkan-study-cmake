@@ -330,7 +330,6 @@ void ShadowRenderPass::update(float deltaTime, const Scene* scene)
 void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const GraphicsRenderingInfo& renderingInfo, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet)
 {
     std::vector<VkClearValue> clearValues{ 1 };
-    //clearValues[0].color = {{0.2f, 0.3f, 0.3f, 1.0f}};
     clearValues[0].depthStencil = { 1.0f, 0 };
     
     if (device.getFeatures().geometryShader) {
@@ -363,15 +362,20 @@ void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const GraphicsRendering
 
             vkCmdBindIndexBuffer(cmdBuf.getHandle(), renderMesh.indexBuffer.buffer, renderMesh.indexBuffer.offset, renderMesh.indexType);
 
-
             cmdBuf.drawIndexed(renderMesh.indexNum, 1, 0, 0, 0);
         }
-
 
         cmdBuf.endRenderPass();
     }
     else {
-        for (size_t i = 0; i < maxLightNum; ++i) {
+        uint32_t lightNum = pushConstants.lightNum;
+        if (lightNum == 0) return;
+
+        uint32_t totalPassCount = shadowFramebuffers.size();
+        uint32_t passCountPerLight = (maxLightNum > 0) ? totalPassCount / maxLightNum : totalPassCount;
+        uint32_t passCountToDraw = std::min(lightNum * passCountPerLight, totalPassCount);
+
+        for (size_t i = 0; i < passCountToDraw; ++i) {
             cmdBuf.beginRenderPass(*shadowRenderTargets[i], *renderPass, *shadowFramebuffers[i], clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
 
@@ -388,6 +392,10 @@ void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const GraphicsRendering
                 renderPipeline->getGraphicsPipeline().getBindPoint(),
                 renderPipeline->getPipelineLayout().getHandle(),
                 1, 1, &lightDescriptorSetHandle, 0, nullptr);
+
+            // 更新当前 pass 对应的光源索引和层级/面索引
+            pushConstants.lightId = static_cast<int>(i / passCountPerLight);
+            pushConstants.layerId = static_cast<int>(i % passCountPerLight);
 
             for (size_t j = 0; j < resManager.getRenderMeshNum(); ++j) {
                 const auto& renderMesh = resManager.getRenderMesh(j);
@@ -536,7 +544,7 @@ PointShadowRenderPass::PointShadowRenderPass(const VulkanDevice& device, VulkanR
             shadowDepths.push_back(std::make_unique<VulkanImageView>(*shadowImages.back(), VK_FORMAT_UNDEFINED));
             for (uint32_t j = 0; j < 6u; ++j) {
                 std::vector<VulkanImageView> imageViews;
-                imageViews.emplace_back(*shadowImages.back(), VK_FORMAT_UNDEFINED);
+                imageViews.emplace_back(*shadowImages.back(), VK_FORMAT_UNDEFINED, j, 1u);
                 shadowRenderTargets.push_back(std::make_unique<VulkanRenderTarget>(std::move(imageViews)));
             }
         }
