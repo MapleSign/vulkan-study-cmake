@@ -33,5 +33,6 @@ private:
     uint32_t baseLayer;
     uint32_t layerCount;
 
+    const VulkanDevice& device;
     const VulkanImage& image;
 };

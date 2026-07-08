@@ -3,7 +3,7 @@
 #include "VulkanImageView.h"
 
 VulkanImageView::VulkanImageView(const VulkanImage &image, VkFormat format, uint32_t baseLayer, uint32_t layerCount):
-image{image}, baseLayer{baseLayer}
+    device{image.getDevice()}, image{image}, baseLayer{baseLayer}
 {
     if (format == VK_FORMAT_UNDEFINED) {
         format = image.getFormat();
@@ -46,6 +46,7 @@ image{image}, baseLayer{baseLayer}
 }
 
 VulkanImageView::VulkanImageView(VulkanImageView&& other) noexcept:
+    device{other.device},
     image{other.image},
     imageView{other.imageView},
     format{other.format},
@@ -57,6 +58,6 @@ VulkanImageView::VulkanImageView(VulkanImageView&& other) noexcept:
 
 VulkanImageView::~VulkanImageView() {
     if (imageView != VK_NULL_HANDLE) {
-        vkDestroyImageView(image.getDevice().getHandle(), imageView, nullptr);
+        vkDestroyImageView(device.getHandle(), imageView, nullptr);
     }
 }

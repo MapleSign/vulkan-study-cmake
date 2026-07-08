@@ -438,9 +438,9 @@ DirShadowRenderPass::DirShadowRenderPass(
         imageViews.emplace_back(*shadowImages[0], VK_FORMAT_UNDEFINED);
         renderTarget = std::make_unique<VulkanRenderTarget>(std::move(imageViews));
 
-        const auto& shadowImage = renderTarget->getImages()[0];
+        const auto& shadowImageView = renderTarget->getViews()[0];
         for (uint32_t i = 0; i < maxLightNum; ++i) {
-            shadowDepths.push_back(std::make_unique<VulkanImageView>(shadowImage, VK_FORMAT_UNDEFINED, i, maxCSMLevel));
+            shadowDepths.push_back(std::make_unique<VulkanImageView>(shadowImageView.getImage(), VK_FORMAT_UNDEFINED, i, maxCSMLevel));
         }
 
         auto attatchments = renderTarget->getAttatchments();
@@ -525,9 +525,9 @@ PointShadowRenderPass::PointShadowRenderPass(const VulkanDevice& device, VulkanR
         imageViews.emplace_back(*shadowImages[0], VK_FORMAT_UNDEFINED);
         renderTarget = std::make_unique<VulkanRenderTarget>(std::move(imageViews));
         
-        const auto& shadowImage = renderTarget->getImages()[0];
+        const auto& shadowImageView = renderTarget->getViews()[0];
         for (uint32_t i = 0; i < maxLightNum; ++i) {
-            shadowDepths.push_back(std::make_unique<VulkanImageView>(shadowImage, VK_FORMAT_UNDEFINED, i * 6u, 6u));
+            shadowDepths.push_back(std::make_unique<VulkanImageView>(shadowImageView.getImage(), VK_FORMAT_UNDEFINED, i * 6u, 6u));
         }
 
         auto attatchments = renderTarget->getAttatchments();
