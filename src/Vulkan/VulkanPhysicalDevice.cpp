@@ -58,7 +58,9 @@ const VkPhysicalDeviceFeatures2& VulkanPhysicalDevice::getFeatures2() const { re
 const VkPhysicalDeviceShaderClockFeaturesKHR& VulkanPhysicalDevice::getClockFeatures() const { return clockFeatures; }
 const VkPhysicalDeviceRayTracingPipelineFeaturesKHR& VulkanPhysicalDevice::getRTPipelineFeatures() const {return rtPipelineFeatures; }
 const VkPhysicalDeviceAccelerationStructureFeaturesKHR& VulkanPhysicalDevice::getASFeatures() const {return asFeatures; }
+#ifdef __APPLE__
 const VkPhysicalDevicePortabilitySubsetFeaturesKHR &VulkanPhysicalDevice::getPortabilitySubsetFeatures() const { return portabilitySubsetFeatures; }
+#endif
 
 const std::vector<VkQueueFamilyProperties> &VulkanPhysicalDevice::getQueueFamalies() const { return queueFamilies; }
 const std::vector<VkExtensionProperties>& VulkanPhysicalDevice::getExtensions() const { return extensions; }
