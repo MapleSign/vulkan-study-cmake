@@ -87,6 +87,17 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
 endforeach(GLSL)
 
 add_custom_target(
-    Shaders 
+    Shaders
     DEPENDS ${SPIRV_BINARY_FILES}
+    )
+
+# copy assets and compiled shaders into bin/ after build
+add_custom_command(
+    TARGET Shaders POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_SOURCE_DIR}/shaders/spv"
+        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/spv"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_SOURCE_DIR}/assets"
+        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets"
     )
