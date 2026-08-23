@@ -1,7 +1,12 @@
+/.vscode
+/.vs
+
 /build
 /bin
+/out
+
 *.spv
 imgui.ini
-/.vscode
 vulkan_study.exe
 .DS_Store
+CMakeSettings.json
