@@ -106,7 +106,7 @@ class ShadowRenderPass : public GraphicsRenderPass
 {
 public:
     ShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
-        const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum);
+        const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, bool useGeomShader);
 
     virtual void update(float deltaTime, const Scene* scene) override;
     virtual void draw(VulkanCommandBuffer& cmdBuf, const GraphicsRenderingInfo& renderingInfo, const VulkanDescriptorSet& globalSet, const VulkanDescriptorSet& lightSet) override;
@@ -115,6 +115,7 @@ public:
 
 protected:
     uint32_t maxLightNum;
+    bool useGeomShader;
 
     std::vector<std::unique_ptr<VulkanFramebuffer>> shadowFramebuffers;
     std::vector<std::unique_ptr<VulkanRenderTarget>> shadowRenderTargets;
@@ -128,7 +129,7 @@ class DirShadowRenderPass : public ShadowRenderPass
 {
 public:
     DirShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
-        const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, uint32_t maxCSMLevel);
+        const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, uint32_t maxCSMLevel, bool useGeomShader);
 
     virtual void update(float deltaTime, const Scene* scene) override;
 private:
@@ -139,7 +140,7 @@ class PointShadowRenderPass : public ShadowRenderPass
 {
 public:
     PointShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
-        const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum);
+        const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, bool useGeomShader);
 
     virtual void update(float deltaTime, const Scene* scene) override;
 };
@@ -164,13 +165,25 @@ public:
 
     ShadowData& getShadowData() { return shadowData; }
 
+    bool isGeometryShaderSupported() const { return device.getFeatures().geometryShader; }
+    bool getUseGeometryShader() const { return useGeometryShader; }
+    // Rebuilds shadow passes with/without geometry shader (single-pass layered vs multi-pass)
+    void setUseGeometryShader(bool enabled);
+
+    bool getEnableSSAO() const { return enableSSAO; }
+    void setEnableSSAO(bool enabled) { enableSSAO = enabled; }
+
 private:
     void createRenderTarget();
     void createRenderPass();
+    void createShadowPasses();
 
     const VulkanDevice& device;
     VulkanResourceManager& resManager;
     VkExtent2D extent;
+
+    bool useGeometryShader;
+    bool enableSSAO;
 
     std::vector<const VulkanImageView*> gBuffer;
     const VulkanImageView* offscreenColor;

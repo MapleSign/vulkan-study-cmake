@@ -252,8 +252,6 @@ void VulkanApplication::mainLoop()
 
     loadScene(sceneFilePath[sceneItem]);
 
-    bool enablePostProcessing = false;
-
     const char* shadowTypeNames[] = { "ShadowMap", "PCF", "PCSS"};
     int shadowTypeNum = sizeof(shadowTypeNames) / sizeof(char*);
    
@@ -351,6 +349,14 @@ void VulkanApplication::mainLoop()
 
         if (ImGui::CollapsingHeader("Shadow"))
         {
+            if (graphicBuilder->isGeometryShaderSupported()) {
+                bool useGeometryShader = graphicBuilder->getUseGeometryShader();
+                if (ImGui::Checkbox("Geometry Shader (shadows)", &useGeometryShader)) {
+                    graphicBuilder->setUseGeometryShader(useGeometryShader);
+                    changed |= true;
+                }
+            }
+
             ImGui::SliderFloat("Bias", &graphicBuilder->getShadowData().bias, 0.0f, 0.005f, "%.4f");
             ImGui::Combo("Shadow Type", &graphicBuilder->getShadowData().shadowType, shadowTypeNames, shadowTypeNum);
             switch (graphicBuilder->getShadowData().shadowType)
@@ -400,6 +406,8 @@ void VulkanApplication::mainLoop()
                 "Bilateral filter"
             };
             
+
+            bool enablePostProcessing = false;
             ImGui::Checkbox("denoising", &enablePostProcessing);
             ImGui::Combo("Denoising algorithm", &pcPost.denoisingType, denoisingAlgorithmStr, denoisingAlgorithmSum);
             pcPost.enable = enablePostProcessing ? 1 : 0;
@@ -408,6 +416,12 @@ void VulkanApplication::mainLoop()
                 ImGui::Text("Bilateral Filter setting");
                 ImGui::SliderFloat("sigma space", &pcPost.sigmaSpace, 0.0, 5);
                 ImGui::SliderFloat("sigma color", &pcPost.sigmaColor, 0.0, 100);
+            }
+
+            bool enableSSAO = graphicBuilder->getEnableSSAO();
+            if (ImGui::Checkbox("SSAO", &enableSSAO)) {
+                graphicBuilder->setEnableSSAO(enableSSAO);
+                changed |= true;
             }
         }
 

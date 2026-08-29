@@ -9,6 +9,9 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent) :
     device{ device }, resManager{ resManager }, extent{ extent }
 {
+    useGeometryShader = device.getFeatures().geometryShader;
+    enableSSAO = true;
+
     createRenderTarget();
 
     createRenderPass();
@@ -17,6 +20,8 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
 
     globalPass = std::make_unique<GlobalSubpass>(device, resManager, extent, *renderPass, 1);
 
+    createShadowPasses();
+
     std::vector<VulkanShaderResource> shaderResources = globalPass->getShaderResources();
 
     skyboxPass = std::make_unique<SkyboxSubpass>(device, resManager, extent, shaderResources, *renderPass, 0);
@@ -24,11 +29,6 @@ VulkanGraphicsBuilder::VulkanGraphicsBuilder(
     ssaoBlurPass = std::make_unique<SSAOBlurSubpass>(device, resManager, extent, shaderResources, *renderPass, 3);
     lightingPass = std::make_unique<LightingSubpass>(device, resManager, extent, shaderResources, *renderPass, 4);
 
-    uint32_t shadowResolution = 4096;
-    dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ shadowResolution, shadowResolution }, shaderResources, shadowData.maxDirShadowNum, MAX_CSM_LEVEL);
-    pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ shadowResolution, shadowResolution }, shaderResources, shadowData.maxPointShadowNum);
-
-    globalPass->prepare(dirShadowPass->getShadowDepths(), pointShadowPass->getShadowDepths());
     ssaoPass->prepare(gBuffer);
     ssaoBlurPass->prepare(renderTarget->getViews());
     lightingPass->prepare(gBuffer);
@@ -50,6 +50,33 @@ VulkanGraphicsBuilder::~VulkanGraphicsBuilder()
     framebuffer.reset();
     renderPass.reset();
     renderTarget.reset();
+}
+
+void VulkanGraphicsBuilder::createShadowPasses()
+{
+    dirShadowPass.reset();
+    pointShadowPass.reset();
+
+    uint32_t shadowResolution = 4096;
+    std::vector<VulkanShaderResource> shaderResources = globalPass->getShaderResources();
+    dirShadowPass = std::make_unique<DirShadowRenderPass>(device, resManager, VkExtent2D{ shadowResolution, shadowResolution }, shaderResources, shadowData.maxDirShadowNum, MAX_CSM_LEVEL, useGeometryShader);
+    pointShadowPass = std::make_unique<PointShadowRenderPass>(device, resManager, VkExtent2D{ shadowResolution, shadowResolution }, shaderResources, shadowData.maxPointShadowNum, useGeometryShader);
+
+    globalPass->prepare(dirShadowPass->getShadowDepths(), pointShadowPass->getShadowDepths());
+}
+
+void VulkanGraphicsBuilder::setUseGeometryShader(bool enabled)
+{
+    if (!isGeometryShaderSupported())
+        enabled = false;
+
+    if (useGeometryShader == enabled)
+        return;
+
+    device.waitIdle();
+
+    useGeometryShader = enabled;
+    createShadowPasses();
 }
 
 void VulkanGraphicsBuilder::recreateGraphicsBuilder(const VkExtent2D extent)
@@ -96,8 +123,10 @@ void VulkanGraphicsBuilder::update(float deltaTime, const Scene* scene)
     dirShadowPass->update(deltaTime, scene);
     pointShadowPass->update(deltaTime, scene);
     skyboxPass->update(deltaTime, scene);
-    ssaoPass->update(deltaTime, scene);
-    ssaoBlurPass->update(deltaTime, scene);
+    if (enableSSAO) {
+        ssaoPass->update(deltaTime, scene);
+        ssaoBlurPass->update(deltaTime, scene);
+    }
     lightingPass->update(deltaTime, scene);
 }
 
@@ -110,6 +139,8 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
     //clearValues[0].color = {{0.2f, 0.3f, 0.3f, 1.0f}};
     clearValues[GBufferType::Color].color = { {clearColor.r, clearColor.g, clearColor.b, clearColor.a} };
     clearValues[GBufferType::Depth].depthStencil = { 1.0f, 0 };
+    // ao = 1.0 by default so lighting is unaffected when SSAO is disabled (attachment stays cleared)
+    clearValues[GBufferType::SSAO].color = { {1.0f, 0.0f, 0.0f, 1.0f} };
     cmdBuf.beginRenderPass(*renderTarget, *renderPass, *framebuffer, clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
     std::vector<VulkanDescriptorSet*> globalSets = { getGlobalData().descriptorSets[0], getLightData().descriptorSets[0] };
@@ -122,11 +153,13 @@ void VulkanGraphicsBuilder::draw(VulkanCommandBuffer& cmdBuf, glm::vec4 clearCol
 
     vkCmdNextSubpass(cmdBuf.getHandle(), VK_SUBPASS_CONTENTS_INLINE);
 
-    ssaoPass->draw(cmdBuf, globalSets);
+    if (enableSSAO)
+        ssaoPass->draw(cmdBuf, globalSets);
 
     vkCmdNextSubpass(cmdBuf.getHandle(), VK_SUBPASS_CONTENTS_INLINE);
 
-    ssaoBlurPass->draw(cmdBuf, globalSets);
+    if (enableSSAO)
+        ssaoBlurPass->draw(cmdBuf, globalSets);
 
     vkCmdNextSubpass(cmdBuf.getHandle(), VK_SUBPASS_CONTENTS_INLINE);
 
@@ -316,8 +349,8 @@ GraphicsRenderPass::~GraphicsRenderPass()
 }
 
 ShadowRenderPass::ShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
-    const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum) :
-    GraphicsRenderPass(device, resManager, extent), maxLightNum{ maxLightNum }
+    const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, bool useGeomShader) :
+    GraphicsRenderPass(device, resManager, extent), maxLightNum{ maxLightNum }, useGeomShader{ useGeomShader }
 {
 }
 
@@ -332,7 +365,7 @@ void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const GraphicsRendering
     std::vector<VkClearValue> clearValues{ 1 };
     clearValues[0].depthStencil = { 1.0f, 0 };
     
-    if (device.getFeatures().geometryShader) {
+    if (useGeomShader) {
         cmdBuf.beginRenderPass(*renderTarget, *renderPass, *framebuffer, clearValues, VK_SUBPASS_CONTENTS_INLINE);
 
 
@@ -419,8 +452,8 @@ void ShadowRenderPass::draw(VulkanCommandBuffer& cmdBuf, const GraphicsRendering
 
 DirShadowRenderPass::DirShadowRenderPass(
     const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
-    const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, uint32_t maxCSMLevel) :
-    ShadowRenderPass(device, resManager, extent, shaderRes, maxLightNum), maxCSMLevel{ maxCSMLevel }
+    const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, uint32_t maxCSMLevel, bool useGeomShader) :
+    ShadowRenderPass(device, resManager, extent, shaderRes, maxLightNum, useGeomShader), maxCSMLevel{ maxCSMLevel }
 {
     auto depthFormat = findDepthFormat(device.getGPU().getHandle());
     VulkanImageCreateInfo shadowDepthImageInfo{
@@ -430,7 +463,7 @@ DirShadowRenderPass::DirShadowRenderPass(
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         1, std::numeric_limits<uint32_t>::max()
     };
-    if (device.getFeatures().geometryShader) {
+    if (useGeomShader) {
         shadowDepthImageInfo.arrayLayers = maxLightNum * maxCSMLevel;
         shadowImages.push_back(std::make_unique<VulkanImage>(device, shadowDepthImageInfo));
         
@@ -478,7 +511,7 @@ DirShadowRenderPass::DirShadowRenderPass(
     vertShader.addShaderResources(shaderRes);
 
     std::unique_ptr<VulkanShaderModule> geomShader = nullptr;
-    if (device.getFeatures().geometryShader) {
+    if (useGeomShader) {
         geomShader =
             std::make_unique<VulkanShaderModule>(
                 std::move(
@@ -499,15 +532,15 @@ DirShadowRenderPass::DirShadowRenderPass(
 void DirShadowRenderPass::update(float deltaTime, const Scene *scene)
 {
     ShadowRenderPass::update(deltaTime, scene);
-    if (!device.getFeatures().geometryShader) {
+    if (!useGeomShader) {
         pushConstants.lightType = LIGHT_TYPE_DIR;
     }
     pushConstants.lightNum = std::min(maxLightNum, (uint32_t)scene->getDirLightMap().size());
 }
 
 PointShadowRenderPass::PointShadowRenderPass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent, 
-    const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum) :
-    ShadowRenderPass(device, resManager, extent, shaderRes, maxLightNum)
+    const std::vector<VulkanShaderResource> shaderRes, uint32_t maxLightNum, bool useGeomShader) :
+    ShadowRenderPass(device, resManager, extent, shaderRes, maxLightNum, useGeomShader)
 {
     auto depthFormat = findDepthFormat(device.getGPU().getHandle());
     VulkanImageCreateInfo shadowDepthImageInfo{
@@ -517,7 +550,7 @@ PointShadowRenderPass::PointShadowRenderPass(const VulkanDevice& device, VulkanR
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         1, std::numeric_limits<uint32_t>::max()
     };
-    if (device.getFeatures().geometryShader) {
+    if (useGeomShader) {
         shadowDepthImageInfo.arrayLayers = maxLightNum * 6u;
         shadowImages.push_back(std::make_unique<VulkanImage>(device, shadowDepthImageInfo));
 
@@ -566,7 +599,7 @@ PointShadowRenderPass::PointShadowRenderPass(const VulkanDevice& device, VulkanR
     vertShader.addShaderResources(shaderRes);
     
     std::unique_ptr<VulkanShaderModule> geomShader = nullptr;
-    if (device.getFeatures().geometryShader) {
+    if (useGeomShader) {
         geomShader =
             std::make_unique<VulkanShaderModule>(
                 std::move(
@@ -587,7 +620,7 @@ PointShadowRenderPass::PointShadowRenderPass(const VulkanDevice& device, VulkanR
 void PointShadowRenderPass::update(float deltaTime, const Scene* scene)
 {
     ShadowRenderPass::update(deltaTime, scene);
-    if (!device.getFeatures().geometryShader) {
+    if (!useGeomShader) {
         pushConstants.lightType = LIGHT_TYPE_POINT;
     }
     pushConstants.lightNum = std::min(maxLightNum, (uint32_t)scene->getPointLightMap().size());
