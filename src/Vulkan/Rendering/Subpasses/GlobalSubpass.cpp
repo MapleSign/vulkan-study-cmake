@@ -1,7 +1,5 @@
 #include "GlobalSubpass.h"
 
-#include <ctime>
-
 GlobalSubpass::GlobalSubpass(const VulkanDevice& device, VulkanResourceManager& resManager, VkExtent2D extent,
     const VulkanRenderPass& renderPass, uint32_t subpass) :
     VulkanSubpass(device, resManager, extent, {}, renderPass, subpass)
@@ -123,7 +121,7 @@ void GlobalSubpass::update(float deltaTime, const Scene* scene)
     ubo.proj[1][1] *= -1;
     ubo.viewInverse = glm::inverse(ubo.view);
     ubo.projInverse = glm::inverse(ubo.proj);
-    ubo.clock = std::time(nullptr);
+    ubo.clock = static_cast<int>(frameCount++);
 
     globalData.uniformBuffers[currentImage][0]->update(&ubo, sizeof(ubo));
 

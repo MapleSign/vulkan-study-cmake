@@ -26,5 +26,7 @@ private:
     SceneData globalData;
     SceneData lightData;
 
+    uint32_t frameCount{ 0 };
+
     PushConstantRaster pushConstants{};
 };
