@@ -3,11 +3,56 @@
 #include <cmath>
 #include <string>
 #include <filesystem>
+#include <functional>
+#include <utility>
+#include <vector>
 
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "GLTF/GLTFHelper.h"
+
+namespace {
+	// Build the local transform of a glTF node.
+	// A node either holds a 4x4 matrix (which takes precedence) or a TRS decomposition.
+	glm::mat4 getGLTFNodeLocalMatrix(const tinygltf::Node& tNode)
+	{
+		// glTF matrices are stored in column-major order, just like glm
+		if (tNode.matrix.size() == 16) {
+			return glm::mat4(glm::make_mat4(tNode.matrix.data()));
+		}
+
+		glm::mat4 local{ 1.0f };
+
+		if (tNode.translation.size() == 3) {
+			local = glm::translate(local, glm::vec3(
+				static_cast<float>(tNode.translation[0]),
+				static_cast<float>(tNode.translation[1]),
+				static_cast<float>(tNode.translation[2])));
+		}
+
+		if (tNode.rotation.size() == 4) {
+			// glTF stores quaternions as (x, y, z, w) while glm stores them as (w, x, y, z)
+			glm::quat rotation{
+				static_cast<float>(tNode.rotation[3]),
+				static_cast<float>(tNode.rotation[0]),
+				static_cast<float>(tNode.rotation[1]),
+				static_cast<float>(tNode.rotation[2])
+			};
+			local *= glm::mat4_cast(rotation);
+		}
+
+		if (tNode.scale.size() == 3) {
+			local = glm::scale(local, glm::vec3(
+				static_cast<float>(tNode.scale[0]),
+				static_cast<float>(tNode.scale[1]),
+				static_cast<float>(tNode.scale[2])));
+		}
+
+		return local;
+	}
+}
 
 Scene::Scene() :
 	activeCamera{ nullptr }
@@ -37,11 +82,50 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 	auto slashpos = std::string(filename).find_last_of('/');
 	std::string filepath = std::string(filename).substr(0, slashpos + 1);
 
-	for (auto& tNode : tModel.nodes) {
-		if (tNode.mesh < 0) {
-			continue;
+	/* Walk the scene graph and collect every node referencing a mesh together with its world transform.
+	   The transform is not stored on the mesh node itself but on its ancestors, so the whole
+	   parent chain has to be accumulated. */
+	std::vector<std::pair<int, glm::mat4>> meshNodes{};
+	std::function<void(int, const glm::mat4&)> traverseNode = [&](int nodeIdx, const glm::mat4& parentMatrix) {
+		const auto& tNode = tModel.nodes[nodeIdx];
+		const glm::mat4 worldMatrix = parentMatrix * getGLTFNodeLocalMatrix(tNode);
+
+		if (tNode.mesh >= 0) {
+			meshNodes.emplace_back(nodeIdx, worldMatrix);
 		}
 
+		for (int childIdx : tNode.children) {
+			if (childIdx >= 0 && childIdx < static_cast<int>(tModel.nodes.size()))
+				traverseNode(childIdx, worldMatrix);
+		}
+	};
+
+	int sceneIdx = tModel.defaultScene > -1 ? tModel.defaultScene : 0;
+	if (sceneIdx < static_cast<int>(tModel.scenes.size()) && !tModel.scenes[sceneIdx].nodes.empty()) {
+		for (int nodeIdx : tModel.scenes[sceneIdx].nodes) {
+			if (nodeIdx >= 0 && nodeIdx < static_cast<int>(tModel.nodes.size()))
+				traverseNode(nodeIdx, glm::identity<glm::mat4>());
+		}
+	}
+	else {
+		// No (non empty) scene declared: every node that is not a child of another node is a root node
+		std::vector<bool> hasParent(tModel.nodes.size(), false);
+		for (const auto& tNode : tModel.nodes) {
+			for (int childIdx : tNode.children) {
+				if (childIdx >= 0 && childIdx < static_cast<int>(tModel.nodes.size()))
+					hasParent[childIdx] = true;
+			}
+		}
+
+		// Traverse all root nodes (has no parent)
+		for (size_t nodeIdx = 0; nodeIdx < tModel.nodes.size(); ++nodeIdx) {
+			if (!hasParent[nodeIdx])
+				traverseNode(static_cast<int>(nodeIdx), glm::identity<glm::mat4>());
+		}
+	}
+
+	for (auto& [nodeIdx, worldMatrix] : meshNodes) {
+		auto& tNode = tModel.nodes[nodeIdx];
 		auto& tMesh = tModel.meshes[tNode.mesh];
 		std::vector<Mesh> meshes{};
 		meshes.reserve(tMesh.primitives.size());
@@ -49,7 +133,6 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 			std::vector<uint32_t> indices{};
 			std::vector<Vertex> vertices{};
 			std::vector<Texture> textures{};
-			GltfMaterial mat{};
 
 			/* Indices */
 			if (tPrim.indices >= 0) {
@@ -123,8 +206,10 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 			/* Vertices are filled */
 
 			/* Material and Textures */
-			auto& tMat = tModel.materials[tPrim.material];
-			importGLTFMaterial(mat, tMat);
+			// A primitive without a material uses the glTF default material
+			GltfMaterial mat{};
+			if (tPrim.material >= 0 && tPrim.material < static_cast<int>(tModel.materials.size()))
+				importGLTFMaterial(mat, tModel.materials[tPrim.material]);
 			// deal with textures
 			auto setTexture = [&](int& textureId)
 			{
@@ -153,27 +238,15 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 			meshes.emplace_back(nullptr, vertices, indices, textures, mat);
 		}
 
-		auto model = new Model(tNode.name, std::move(meshes));
-		if (!tNode.translation.empty())
-			model->transComp.translate = { tNode.translation[0], tNode.translation[1], tNode.translation[2] };
-		if (!tNode.scale.empty())
-			model->transComp.scale = { tNode.scale[0], tNode.scale[1], tNode.scale[2] };
+		std::string modelName = tNode.name;
+		if (modelName.empty())
+			modelName = tMesh.name;
+		if (modelName.empty())
+			modelName = "model_" + std::to_string(models.size());
 
-		if (!tNode.rotation.empty()) {
-			glm::quat rotation{ float(tNode.rotation[3]), float(tNode.rotation[0]), float(tNode.rotation[1]), float(tNode.rotation[2]) };
-			model->transComp.rotate = glm::vec4(glm::axis(rotation), 0.0f);
-			model->transComp.rotate.w = glm::degrees(glm::angle(rotation));
-
-			/*model->transComp.rotate = static_cast<float>(glm::degrees(tNode.rotation[3])) *
-				glm::vec3(
-					glm::dot(glm::vec3(1.f, 0.f, 0.f), axis),
-					glm::dot(glm::vec3(0.f, 1.f, 0.f), axis),
-					glm::dot(glm::vec3(0.f, 0.f, 1.f), axis)
-				);*/
-		}
-
-		if (!tNode.matrix.empty())
-			model->transComp.transform = glm::make_mat4(tNode.matrix.data());
+		auto model = new Model(modelName, std::move(meshes));
+		// The accumulated node hierarchy is the world transform of the mesh
+		model->transComp.transform = worldMatrix;
 		models.push_back(model);
 	}
 
