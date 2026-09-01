@@ -216,7 +216,7 @@ std::vector<Model*> Scene::loadGLTFFile(const char* filename)
 				if (textureId > -1) {
 					auto& tTex = tModel.textures[textureId];
 					auto& tImage = tModel.images[tTex.source];
-					Texture texture{ TextureType::DIFFUSE, filepath + tImage.uri};
+					Texture texture{ TextureType::DIFFUSE, filepath + decodeGLTFUri(tImage.uri)};
 					textures.push_back(texture);
 					textureId = textures.size() - 1;
 				}

@@ -12,6 +12,14 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 
+# On Windows stb_image opens files through the ANSI codepage unless this is defined,
+# so UTF-8 paths (e.g. the ones GLFW hands to the drag & drop callback) fail to open.
+# It makes stbi convert the path to UTF-16 and use _wfopen instead.
+# It has to be defined for every translation unit including stb_image.h.
+if (WIN32)
+    add_compile_definitions(STBI_WINDOWS_UTF8)
+endif()
+
 if (APPLE)
     find_package(Vulkan REQUIRED COMPONENTS MoltenVK)
     set(CMAKE_XCODE_GENERATE_SCHEME TRUE)

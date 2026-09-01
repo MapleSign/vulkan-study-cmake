@@ -2,6 +2,8 @@
 
 #include <tiny_gltf.h>
 
+#include <string>
+
 #include "Rendering/VulkanResource.h"
 
 #define KHR_MATERIALS_PBRSPECULARGLOSSINESS_EXTENSION_NAME "KHR_materials_pbrSpecularGlossiness"
@@ -199,3 +201,8 @@ void createTangents(
 	const std::vector<glm::vec2>& texCoords, std::vector<glm::vec3>& tangents, std::vector<glm::vec3>& bitangents);
 
 void importGLTFMaterial(GltfMaterial& mat, const tinygltf::Material& tMat);
+
+// Decodes the percent-encoding of a glTF URI (RFC 3986) into raw UTF-8 bytes.
+// tinygltf keeps the raw, still percent-encoded string in Image::uri, so every
+// consumer that turns the uri into a filesystem path must decode it first.
+std::string decodeGLTFUri(const std::string& uri);

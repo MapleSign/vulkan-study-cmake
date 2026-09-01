@@ -44,13 +44,15 @@ VulkanTexture::VulkanTexture(
 {
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load(filename, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+    // Must check before touching texWidth/texHeight: stbi leaves them untouched on failure
+    if (!pixels) {
+        throw std::runtime_error(std::string("failed to load texture image: ") + filename
+            + " (" + (stbi_failure_reason() ? stbi_failure_reason() : "unknown error") + ")");
+    }
+
     VkDeviceSize imageSize = texWidth * texHeight * 4;
     mipLevels = toU32(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
-
-
-    if (!pixels) {
-        throw std::runtime_error("failed to load texture image!");
-    }
 
     VulkanBuffer stagingBuffer{ device, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT };
@@ -91,7 +93,8 @@ VulkanTexture::VulkanTexture(
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load(filenames[i].c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         if (!pixels) {
-            throw std::runtime_error("failed to load texture image!");
+            throw std::runtime_error(std::string("failed to load texture image: ") + filenames[i]
+                + " (" + (stbi_failure_reason() ? stbi_failure_reason() : "unknown error") + ")");
         }
 
         if (i == 0) {

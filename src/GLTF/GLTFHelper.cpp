@@ -1,5 +1,32 @@
 #include "GLTFHelper.h"
 
+std::string decodeGLTFUri(const std::string& uri) {
+	auto hexValue = [](char c) -> int {
+		if (c >= '0' && c <= '9') return c - '0';
+		if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+		if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+		return -1;
+	};
+
+	std::string decoded;
+	decoded.reserve(uri.size());
+
+	for (size_t i = 0; i < uri.size(); ++i) {
+		if (uri[i] == '%' && i + 2 < uri.size()) {
+			const int hi = hexValue(uri[i + 1]);
+			const int lo = hexValue(uri[i + 2]);
+			if (hi >= 0 && lo >= 0) {
+				decoded += static_cast<char>((hi << 4) | lo);
+				i += 2;
+				continue;
+			}
+		}
+		decoded += uri[i];
+	}
+
+	return decoded;
+}
+
 void createNormals(const std::vector<uint32_t>& indices, const std::vector<glm::vec3>& positions, std::vector<glm::vec3>& normals) {
 	// Need to compute the normals
 	std::vector<glm::vec3> geonormal(positions.size());
