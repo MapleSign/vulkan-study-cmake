@@ -219,7 +219,8 @@ void main() {
 
     int numSamples = 64;
     BsdfSampleRec indirectBsdf;
-    uint seed = tea(int(gl_FragCoord.y + gl_FragCoord.x), global.clock);
+    uint pixelId = (uint(gl_FragCoord.x) << 16u) | uint(gl_FragCoord.y);
+    uint seed = tea(pixelId, uint(global.clock));
     vec3 sampleColor = vec3(0);
     for (int i = 0; i < numSamples; ++i) {
         indirectBsdf.f = PbrSample(state, viewDir, state.ffnormal, indirectBsdf.L, indirectBsdf.pdf, seed);
