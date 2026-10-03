@@ -1,3 +1,9 @@
+#ifndef PBR_GLSL
+#define PBR_GLSL
+
+#include "random.glsl"
+#include "raycommon.glsl"
+
 float powerHeuristic(float a, float b)
 {
     float t = a * a;
@@ -286,3 +292,5 @@ vec3 PbrEval(inout State state, vec3 V, vec3 N, vec3 L, inout float pdf) {
 
     return mix(brdf, bsdf, transmissionWeight);
 }
+
+#endif

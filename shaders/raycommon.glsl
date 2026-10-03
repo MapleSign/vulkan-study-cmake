@@ -1,3 +1,6 @@
+#ifndef RAYCOMMON_GLSL
+#define RAYCOMMON_GLSL
+
 #define INFINITY 1e32
 
 struct Ray
@@ -60,3 +63,5 @@ struct State {
     uint matId;
     Material mat;
 };
+
+#endif

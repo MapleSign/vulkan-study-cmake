@@ -1,5 +1,7 @@
 #include "gltf_material.glsl"
 #include "pbr.glsl"
+#include "raycommon.glsl"
+#include "random.glsl"
 
 vec3 pathtrace(Ray r,int maxDepth)
 {

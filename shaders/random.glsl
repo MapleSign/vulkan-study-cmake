@@ -1,3 +1,6 @@
+#ifndef RANDOM_GLSL
+#define RANDOM_GLSL
+
 #define M_PI 3.141592
 
 // Generate a random unsigned int from two unsigned int values, using 16 pairs
@@ -76,3 +79,5 @@ vec3 randonInUnitDisk(inout uint seed)
         }
     }
 }
+
+#endif

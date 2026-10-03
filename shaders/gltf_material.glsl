@@ -1,5 +1,8 @@
 #ifndef GLTFMATERIAL_GLSL
-#define GLTFMATERIAL_GLSL 1
+#define GLTFMATERIAL_GLSL
+
+#include "host_device.h"
+#include "raycommon.glsl"
 
 void getMetallicRoughness(inout State state, in GltfMaterial material)
 {

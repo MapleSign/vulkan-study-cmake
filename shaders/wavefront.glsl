@@ -1,3 +1,6 @@
+#ifndef WAVEFRONT_GLSL
+#define WAVEFRONT_GLSL
+
 #include "host_device.h"
 
 vec3 computeDiffuse(vec3 diffuse, vec3 ambient, vec3 lightDir, vec3 normal)
@@ -15,3 +18,5 @@ vec3 computeSpecular(vec3 objSpecular, float shininess, vec3 viewDir, vec3 light
     float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
     return vec3(objSpecular * spec);
 }
+
+#endif
