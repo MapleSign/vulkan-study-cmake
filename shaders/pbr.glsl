@@ -35,17 +35,21 @@ vec3 F_Schlick(vec3 f0, float VdotH) {
 }
 
 float FrDielectric(float cosTheta_i, float eta) {
-    float sinTheta2_i = 1 - cosTheta_i * cosTheta_i;
-    float sinTheta2_t = sinTheta2_i / (eta * eta);
+    cosTheta_i = clamp(abs(cosTheta_i), 0.0, 1.0);
+    if (eta == 1.0)
+        return 0.0;
+
+    float sinTheta2_i = 1.0 - cosTheta_i * cosTheta_i;
+    float sinTheta2_t = sinTheta2_i * eta * eta;
     if (sinTheta2_t >= 1.0)
         return 1.0;
-    float cosTheta_t = sqrt(1 - sinTheta2_t);
+    float cosTheta_t = sqrt(1.0 - sinTheta2_t);
 
-    float r_parl = (eta * cosTheta_i - cosTheta_t) / 
-        (eta * cosTheta_i + cosTheta_t);
-    float r_perp = (cosTheta_i - eta * cosTheta_t) / 
+    float r_parl = (cosTheta_i - eta * cosTheta_t) /
         (cosTheta_i + eta * cosTheta_t);
-    return (r_parl * r_parl + r_perp * r_perp) / 2;
+    float r_perp = (eta * cosTheta_i - cosTheta_t) /
+        (eta * cosTheta_i + cosTheta_t);
+    return (r_parl * r_parl + r_perp * r_perp) * 0.5;
 }
 
 float Lambda(float alpha, float cosTheta) {
