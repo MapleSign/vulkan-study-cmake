@@ -195,7 +195,7 @@ vec3 PbrSample(inout State state, vec3 V, vec3 N, inout vec3 L, inout float pdf,
                 else { // refract
                     L = normalize(refract(-V, H, eta));
                     brdf = state.mat.albedo * GgxEvalDielectricRefract(1.0 - Fr, alpha, roughness, eta, V, N, L, H, pdf);
-                    pdf *- 1 - Fr;
+                    pdf *= 1 - Fr;
                     // brdf = state.mat.albedo;
                     // pdf = abs(dot(N, L));
                 }
